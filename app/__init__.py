@@ -1,0 +1,1 @@
+"""RevMind Trading application package."""
