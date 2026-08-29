@@ -2,7 +2,7 @@
 
 Provider-agnostic AI-assisted market intelligence and paper-trading research platform.
 
-> **Current status: Phase 3 — Market Data Foundation. RevMind Trading currently DOES NOT execute
+> **Current status: Phase 4 — Ingestion & Observation-Time Foundation. RevMind Trading DOES NOT execute
 > trades.**
 
 ## Purpose
@@ -114,9 +114,15 @@ No live data source, broker, trading execution, or external network dependency i
 
 RevMind Trading distinguishes **event time**—when a market or source event occurred—from
 **observation time**—when RevMind Trading received or became aware of it. Canonical market-event
-models represent event time. A future ingestion/replay envelope will carry `observed_at`, source or
-provider identity, and ingestion metadata; that envelope is intentionally not part of Phase 3.
+models represent event time. The immutable `ObservedMarketData` envelope preserves the canonical
+payload, provider-neutral source identity, observation UUID, optional source record ID, and UTC
+`observed_at` timestamp.
 
-Historical evaluation must never expose an event to downstream logic before its recorded
-observation time. Event time alone is insufficient when source latency exists. No historical
-replay, backtest, or signal evaluation is valid until observation-time handling is implemented.
+`observed_at` is the knowledge boundary: a downstream component evaluating time T must never
+receive an observation recorded after T. Event time alone does not prove availability. Multiple
+sources may independently observe the same event, and repeated observations or revisions are
+preserved without reconciliation. The deterministic in-memory observation helper provides only
+point-in-time eligibility; it is not a replay engine.
+
+No real provider is connected. Historical replay, backtesting, signal evaluation, broker
+integration, and trade execution remain unimplemented.
