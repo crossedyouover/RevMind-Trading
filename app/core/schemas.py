@@ -96,6 +96,16 @@ class MarketRegimeType(StrEnum):
     MIXED = "MIXED"
 
 
+class Timeframe(StrEnum):
+    """Provider-neutral canonical market-bar intervals."""
+
+    ONE_MINUTE = "ONE_MINUTE"
+    FIVE_MINUTES = "FIVE_MINUTES"
+    FIFTEEN_MINUTES = "FIFTEEN_MINUTES"
+    ONE_HOUR = "ONE_HOUR"
+    ONE_DAY = "ONE_DAY"
+
+
 class Instrument(CanonicalModel):
     """A uniquely described market instrument."""
 
@@ -117,6 +127,7 @@ class MarketBar(CanonicalModel):
     """Canonical OHLCV bar at a UTC timestamp."""
 
     instrument: Instrument
+    timeframe: Timeframe
     timestamp: UtcDatetime
     open: NonNegativeDecimal
     high: NonNegativeDecimal

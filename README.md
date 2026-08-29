@@ -2,7 +2,8 @@
 
 Provider-agnostic AI-assisted market intelligence and paper-trading research platform.
 
-> **Current status: FOUNDATION ONLY. RevMind Trading currently DOES NOT execute trades.**
+> **Current status: Phase 3 — Market Data Foundation. RevMind Trading currently DOES NOT execute
+> trades.**
 
 ## Purpose
 
@@ -99,3 +100,23 @@ provider/model, and deterministic baseline.
 
 This point-in-time evidence is essential to avoid look-ahead bias and to make every model prove that
 it adds value over simpler methods. The evaluation system is not implemented yet.
+
+## Market-data foundation
+
+Market data enters RevMind Trading through a provider-neutral asynchronous boundary. Future
+providers must adapt external payloads into canonical `Instrument`, `MarketSnapshot`, and
+`MarketBar` models; arbitrary provider dictionaries must never enter downstream components.
+
+The current deterministic fake provider uses only preloaded in-memory canonical objects for tests.
+No live data source, broker, trading execution, or external network dependency is connected.
+
+### Event time and observation time
+
+RevMind Trading distinguishes **event time**—when a market or source event occurred—from
+**observation time**—when RevMind Trading received or became aware of it. Canonical market-event
+models represent event time. A future ingestion/replay envelope will carry `observed_at`, source or
+provider identity, and ingestion metadata; that envelope is intentionally not part of Phase 3.
+
+Historical evaluation must never expose an event to downstream logic before its recorded
+observation time. Event time alone is insufficient when source latency exists. No historical
+replay, backtest, or signal evaluation is valid until observation-time handling is implemented.

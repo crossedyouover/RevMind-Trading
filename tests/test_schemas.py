@@ -26,6 +26,7 @@ from app.core.schemas import (
     Signal,
     SignalDirection,
     SignalStatus,
+    Timeframe,
 )
 
 
@@ -37,6 +38,7 @@ def instrument() -> Instrument:
 def make_bar(instrument: Instrument, **overrides: object) -> MarketBar:
     values: dict[str, object] = {
         "instrument": instrument,
+        "timeframe": Timeframe.ONE_MINUTE,
         "timestamp": "2026-08-29T09:15:00Z",
         "open": "100.10",
         "high": "105.25",
@@ -150,8 +152,9 @@ def timestamp_model_inputs(
 ) -> list[tuple[type[BaseModel], dict[str, object]]]:
     timestamp = "2026-08-29T09:15:00Z"
     return [
-        (MarketBar, {"instrument": instrument, "timestamp": timestamp, "open": 1, "high": 1,
-                     "low": 1, "close": 1, "volume": 0}),
+        (MarketBar, {"instrument": instrument, "timeframe": "ONE_MINUTE",
+                     "timestamp": timestamp, "open": 1, "high": 1, "low": 1,
+                     "close": 1, "volume": 0}),
         (MarketSnapshot, {"instrument": instrument, "timestamp": timestamp, "last_price": 1}),
         (Signal, {"instrument": instrument, "created_at": timestamp, "signal_type": "type",
                   "direction": "LONG", "confidence": 0, "evidence": [],
