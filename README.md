@@ -2,7 +2,7 @@
 
 Provider-agnostic AI-assisted market intelligence and paper-trading research platform.
 
-> **Current status: Phase 4 — Ingestion & Observation-Time Foundation. RevMind Trading DOES NOT execute
+> **Current status: Phase 5 — Append-Only Historical Observation Store Foundation. RevMind Trading DOES NOT execute
 > trades.**
 
 ## Purpose
@@ -124,5 +124,18 @@ sources may independently observe the same event, and repeated observations or r
 preserved without reconciliation. The deterministic in-memory observation helper provides only
 point-in-time eligibility; it is not a replay engine.
 
-No real provider is connected. Historical replay, backtesting, signal evaluation, broker
-integration, and trade execution remain unimplemented.
+### Durable observation storage
+
+Phase 5 adds a RevMind-owned, append-only SQLite observation store. It persists canonical
+`ObservedMarketData` JSON, reconstructs the exact immutable domain model on retrieval, and checks
+indexed projections against that canonical record so corruption is reported rather than silently
+accepted. Exact UTC-microsecond observation-time projections support deterministic point-in-time
+queries, and stored history remains available after closing and reopening the database.
+
+The store rejects duplicate observation UUIDs, preserves repeated receipts, revisions, and
+multi-provider observations as distinct history, and uses an explicit database schema version.
+It does not deduplicate, reconcile revisions, or infer availability from event time.
+
+No real provider is connected. Replay, backtesting, an event runtime, indicators, strategies, LLM
+intelligence, risk decisions, portfolio optimization, broker/execution integration, UI,
+API/control plane, and Angelo OS integration remain unimplemented.
