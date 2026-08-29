@@ -24,22 +24,31 @@ from app.data.replay import (
 
 def _bar(timestamp: datetime) -> MarketBar:
     return MarketBar(
-        instrument=Instrument(symbol="NVDA", asset_class=AssetClass.EQUITY, exchange="XNAS", currency="USD"),
+        instrument=Instrument(
+            symbol="NVDA", asset_class=AssetClass.EQUITY, exchange="XNAS", currency="USD"
+        ),
         timeframe=Timeframe.FIVE_MINUTES,
         timestamp=timestamp,
-        open=Decimal("100"), high=Decimal("102"), low=Decimal("99"),
-        close=Decimal("101"), volume=Decimal("1000"),
+        open=Decimal("100"),
+        high=Decimal("102"),
+        low=Decimal("99"),
+        close=Decimal("101"),
+        volume=Decimal("1000"),
     )
 
 
-def _obs(*, event: datetime, observed: datetime, uid: UUID, source: str = "a", record: str = "same") -> ObservedMarketData:
-    return ObservedMarketData.model_validate({
-        "observation_id": uid,
-        "payload": _bar(event),
-        "observed_at": observed,
-        "source": SourceIdentity(name=source),
-        "source_record_id": record,
-    })
+def _obs(
+    *, event: datetime, observed: datetime, uid: UUID, source: str = "a", record: str = "same"
+) -> ObservedMarketData:
+    return ObservedMarketData.model_validate(
+        {
+            "observation_id": uid,
+            "payload": _bar(event),
+            "observed_at": observed,
+            "source": SourceIdentity(name=source),
+            "source_record_id": record,
+        }
+    )
 
 
 def _ids(batch: object) -> list[UUID]:
@@ -48,8 +57,16 @@ def _ids(batch: object) -> list[UUID]:
 
 def test_knowledge_time_not_event_time_controls_visibility(tmp_path: Path) -> None:
     path = tmp_path / "store.db"
-    a = _obs(event=datetime(2026, 1, 1, 10, tzinfo=UTC), observed=datetime(2026, 1, 1, 10, 5, tzinfo=UTC), uid=UUID("00000000-0000-4000-8000-000000000001"))
-    b = _obs(event=datetime(2026, 1, 1, 10, 2, tzinfo=UTC), observed=datetime(2026, 1, 1, 10, 3, tzinfo=UTC), uid=UUID("00000000-0000-4000-8000-000000000002"))
+    a = _obs(
+        event=datetime(2026, 1, 1, 10, tzinfo=UTC),
+        observed=datetime(2026, 1, 1, 10, 5, tzinfo=UTC),
+        uid=UUID("00000000-0000-4000-8000-000000000001"),
+    )
+    b = _obs(
+        event=datetime(2026, 1, 1, 10, 2, tzinfo=UTC),
+        observed=datetime(2026, 1, 1, 10, 3, tzinfo=UTC),
+        uid=UUID("00000000-0000-4000-8000-000000000002"),
+    )
     with SQLiteObservationStore(path) as store:
         store.append_many([a, b])
     with SQLiteHistoricalObservationReader(path) as reader:
@@ -61,7 +78,11 @@ def test_order_is_observed_at_then_uuid_not_insertion_order(tmp_path: Path) -> N
     path = tmp_path / "store.db"
     when = datetime(2026, 1, 1, 10, tzinfo=UTC)
     low = _obs(event=when, observed=when, uid=UUID("00000000-0000-4000-8000-000000000001"))
-    high = _obs(event=when - timedelta(hours=1), observed=when, uid=UUID("ffffffff-ffff-4fff-bfff-ffffffffffff"))
+    high = _obs(
+        event=when - timedelta(hours=1),
+        observed=when,
+        uid=UUID("ffffffff-ffff-4fff-bfff-ffffffffffff"),
+    )
     with SQLiteObservationStore(path) as store:
         store.append_many([high, low])
     with SQLiteHistoricalObservationReader(path) as reader:
@@ -90,7 +111,11 @@ def test_exact_cutoff_included_future_microsecond_excluded(tmp_path: Path) -> No
     path = tmp_path / "store.db"
     cutoff = datetime(2026, 1, 1, 10, tzinfo=UTC)
     exact = _obs(event=cutoff, observed=cutoff, uid=UUID("00000000-0000-4000-8000-000000000001"))
-    future = _obs(event=cutoff - timedelta(hours=1), observed=cutoff + timedelta(microseconds=1), uid=UUID("00000000-0000-4000-8000-000000000002"))
+    future = _obs(
+        event=cutoff - timedelta(hours=1),
+        observed=cutoff + timedelta(microseconds=1),
+        uid=UUID("00000000-0000-4000-8000-000000000002"),
+    )
     with SQLiteObservationStore(path) as store:
         store.append_many([future, exact])
     with SQLiteHistoricalObservationReader(path) as reader:
@@ -117,7 +142,12 @@ def test_repeated_record_multi_source_and_corrections_remain_distinct(tmp_path: 
     path = tmp_path / "store.db"
     when = datetime(2026, 1, 1, 10, tzinfo=UTC)
     observations = [
-        _obs(event=when, observed=when, uid=UUID(f"00000000-0000-4000-8000-{i:012d}"), source=("a" if i < 3 else "b"))
+        _obs(
+            event=when,
+            observed=when,
+            uid=UUID(f"00000000-0000-4000-8000-{i:012d}"),
+            source=("a" if i < 3 else "b"),
+        )
         for i in range(1, 4)
     ]
     with SQLiteObservationStore(path) as store:
@@ -151,7 +181,10 @@ def test_naive_as_of_rejected_and_offset_as_of_normalized(tmp_path: Path) -> Non
 
 def test_cursor_model_rejects_naive_time() -> None:
     with pytest.raises(ValidationError):
-        ReplayCursor(observed_at=datetime(2026, 1, 1), observation_id=UUID("00000000-0000-4000-8000-000000000001"))
+        ReplayCursor(
+            observed_at=datetime(2026, 1, 1),
+            observation_id=UUID("00000000-0000-4000-8000-000000000001"),
+        )
 
 
 def test_close_is_idempotent_and_reads_after_close_fail(tmp_path: Path) -> None:
@@ -159,7 +192,8 @@ def test_close_is_idempotent_and_reads_after_close_fail(tmp_path: Path) -> None:
     with SQLiteObservationStore(path):
         pass
     reader = SQLiteHistoricalObservationReader(path)
-    reader.close(); reader.close()
+    reader.close()
+    reader.close()
     with pytest.raises(ReplayUnavailableError):
         reader.read_batch(as_of=datetime(2026, 1, 1, tzinfo=UTC))
 
