@@ -2,7 +2,7 @@
 
 Provider-agnostic AI-assisted market intelligence and paper-trading research platform.
 
-> **Current status: Phase 6 — Deterministic Historical Replay & Point-in-Time Query Runtime. RevMind Trading DOES NOT execute trades.**
+> **Current status: Phase 7 — Deterministic Technical Analysis Engine Foundation. RevMind Trading DOES NOT execute trades.**
 
 ## Purpose
 
@@ -48,6 +48,23 @@ A historical reader owns a fixed SQLite read transaction for its lifecycle. Toge
 Batch reads default to 1,000 observations and are bounded at 10,000. Empty and exhausted batches are explicit, and continuation cursors are returned only when another eligible batch remains.
 
 Phase 6 introduces no replay clock or event scheduler. Future deterministic consumers can treat each delivered observation's `observed_at` as the effective knowledge clock; richer simulated-time behavior belongs to a later event runtime.
+
+## Deterministic technical evidence
+
+Phase 7 adds a batch-only, stateless technical-analysis reference engine. It produces one immutable
+technical snapshot per supplied canonical `MarketBar`, using the bar's event-time timestamp. The
+ten implemented feature families are close SMA, SMA-seeded close EMA, Wilder RSI, Wilder ATR,
+rolling highest high, rolling lowest low, arithmetic return, rolling volume mean, population
+volume standard deviation, and volume z-score.
+
+Calculations use `Decimal` throughout under a fixed local precision of 50 with
+`ROUND_HALF_EVEN`. Every feature is explicitly `WARMING_UP`, `AVAILABLE`, or `UNDEFINED`; the
+engine does not fabricate partial-window values or substitute values for undefined returns or
+z-scores. Results at bar N use only bars through N, so later bars cannot alter earlier evidence.
+
+The replay/data boundary remains responsible for deciding which bars were historically knowable.
+The technical engine does not access storage, replay, providers, system time, or networks. It
+contains no strategy decisions, LLM intelligence, broker execution, or live TradingView inference.
 
 ## Future architecture
 
