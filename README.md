@@ -2,7 +2,7 @@
 
 Provider-agnostic AI-assisted market intelligence and paper-trading research platform.
 
-> **Current status: Phase 8 — Deterministic Market Evidence Foundation. RevMind Trading DOES NOT execute trades.**
+> **Current status: Phase 9 — Deterministic Setup Composition Foundation. RevMind Trading DOES NOT execute trades.**
 
 ## Purpose
 
@@ -88,6 +88,19 @@ inputs through N.
 Phase 8 does not add setup composition, trading signals, recommendations, strategy logic, LLM
 reasoning, risk approval, persistence, or execution.
 
+## Deterministic setup composition
+
+Phase 9 composes each current Phase 8 evidence snapshot into two frozen descriptive hypotheses:
+`UPSIDE_BREAKOUT_ABOVE_SMA` and `DOWNSIDE_BREAKDOWN_BELOW_SMA`. Every immutable setup snapshot
+contains both hypotheses in canonical order, including warming, undefined, inactive, and active
+states. Composition uses only exact current-snapshot Phase 8 evidence and never scans prior or
+future setup history.
+
+An `ACTIVE` setup means only that its explicitly declared deterministic evidence conditions are
+currently satisfied. It is not a signal, recommendation, prediction, or instruction to buy, sell,
+enter, exit, or trade, and no predictive validity is claimed. Phase 9 has no scoring, confidence,
+ranking, risk authority, portfolio authority, LLM reasoning, persistence, or execution behavior.
+
 ## Future architecture
 
 The intended flow remains:
@@ -107,4 +120,4 @@ Market Data
 → Evaluation & Learning
 ```
 
-No real provider, setup or strategy engine, backtesting engine, LLM intelligence, portfolio optimizer, execution integration, REST/WebSocket control plane, web UI, or Angelo OS integration is implemented yet.
+No real provider, strategy engine, backtesting engine, LLM intelligence, portfolio optimizer, execution integration, REST/WebSocket control plane, web UI, or Angelo OS integration is implemented yet.
