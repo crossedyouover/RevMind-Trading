@@ -66,7 +66,9 @@ class SQLiteHistoricalObservationReader:
 
     The read transaction is established during construction and remains open for the reader
     lifecycle. Later commits from other connections therefore do not become visible to an active
-    replay. ``observed_at`` alone controls historical eligibility; payload event time never does.
+    replay. The first valid ``as_of`` passed to ``read_batch`` is also bound to that reader
+    lifecycle, so pagination cannot silently widen or narrow the historical knowledge cutoff.
+    ``observed_at`` alone controls historical eligibility; payload event time never does.
     """
 
     def __init__(self, path: Path) -> None:
@@ -78,6 +80,7 @@ class SQLiteHistoricalObservationReader:
             raise ReplayUnavailableError("replay database does not exist or is not a file")
 
         self._connection: sqlite3.Connection | None = None
+        self._as_of_utc_us: int | None = None
         try:
             connection = sqlite3.connect(
                 str(path),
@@ -125,10 +128,11 @@ class SQLiteHistoricalObservationReader:
         after: ReplayCursor | None = None,
         limit: int = DEFAULT_REPLAY_LIMIT,
     ) -> ReplayBatch:
-        """Read canonical observations eligible by knowledge time from the fixed snapshot."""
+        """Read canonical observations from one fixed snapshot and knowledge-time cutoff."""
         cutoff = self._request_time_to_microseconds(as_of)
         validated_limit = self._validate_limit(limit)
         connection = self._require_connection()
+        self._bind_as_of(cutoff)
 
         parameters: tuple[object, ...]
         if after is None:
@@ -192,6 +196,15 @@ class SQLiteHistoricalObservationReader:
             )
 
         return ReplayBatch(observations=observations, next_cursor=None, exhausted=True)
+
+    def _bind_as_of(self, cutoff: int) -> None:
+        if self._as_of_utc_us is None:
+            self._as_of_utc_us = cutoff
+            return
+        if cutoff != self._as_of_utc_us:
+            raise ReplayInvalidRequestError(
+                "as_of must remain fixed for the historical replay reader lifecycle"
+            )
 
     def _validate_snapshot_schema(self) -> None:
         connection = self._require_connection()

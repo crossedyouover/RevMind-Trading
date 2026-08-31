@@ -107,6 +107,38 @@ def test_cursor_pagination_has_no_gaps_or_duplicates(tmp_path: Path) -> None:
     assert third.next_cursor is None
 
 
+def test_reader_binds_first_as_of_for_lifecycle(tmp_path: Path) -> None:
+    path = tmp_path / "store.db"
+    cutoff = datetime(2026, 1, 1, 10, tzinfo=UTC)
+    observations = [
+        _obs(
+            event=cutoff,
+            observed=cutoff,
+            uid=UUID(f"00000000-0000-4000-8000-{i:012d}"),
+        )
+        for i in range(1, 3)
+    ]
+    with SQLiteObservationStore(path) as store:
+        store.append_many(observations)
+    with SQLiteHistoricalObservationReader(path) as reader:
+        first = reader.read_batch(as_of=cutoff, limit=1)
+        equivalent_offset = datetime(
+            2026,
+            1,
+            1,
+            11,
+            tzinfo=timezone(timedelta(hours=1)),
+        )
+        second = reader.read_batch(
+            as_of=equivalent_offset,
+            after=first.next_cursor,
+            limit=1,
+        )
+        assert _ids(second) == [observations[1].observation_id]
+        with pytest.raises(ReplayInvalidRequestError):
+            reader.read_batch(as_of=cutoff + timedelta(microseconds=1))
+
+
 def test_exact_cutoff_included_future_microsecond_excluded(tmp_path: Path) -> None:
     path = tmp_path / "store.db"
     cutoff = datetime(2026, 1, 1, 10, tzinfo=UTC)
@@ -163,7 +195,10 @@ def test_invalid_limits_rejected(tmp_path: Path, limit: object) -> None:
         pass
     with SQLiteHistoricalObservationReader(path) as reader:
         with pytest.raises(ReplayInvalidRequestError):
-            reader.read_batch(as_of=datetime.now(UTC), limit=limit)  # type: ignore[arg-type]
+            reader.read_batch(
+                as_of=datetime(2026, 1, 1, tzinfo=UTC),
+                limit=limit,  # type: ignore[arg-type]
+            )
 
 
 def test_naive_as_of_rejected_and_offset_as_of_normalized(tmp_path: Path) -> None:
