@@ -2,7 +2,7 @@
 
 Provider-agnostic AI-assisted market intelligence and paper-trading research platform.
 
-> **Current status: Phase 7 — Deterministic Technical Analysis Engine Foundation. RevMind Trading DOES NOT execute trades.**
+> **Current status: Phase 8 — Deterministic Market Evidence Foundation. RevMind Trading DOES NOT execute trades.**
 
 ## Purpose
 
@@ -66,6 +66,28 @@ The replay/data boundary remains responsible for deciding which bars were histor
 The technical engine does not access storage, replay, providers, system time, or networks. It
 contains no strategy decisions, LLM intelligence, broker execution, or live TradingView inference.
 
+## Deterministic market evidence
+
+Phase 8 adds a batch-only, stateless interpretation layer over structurally aligned canonical
+`MarketBar` and Phase 7 `TechnicalSnapshot` histories. It emits one immutable `EvidenceSnapshot`
+per aligned input pair. Every snapshot preserves the complete, canonically ordered 14-key evidence
+state, including `WARMING_UP`, `UNDEFINED`, and inactive outcomes rather than only active events.
+
+Evidence rules use exact configured Phase 7 feature keys and periods. Missing inputs fail closed;
+features are never substituted or recalculated. Breakout and breakdown compare the current close
+with the previous snapshot's rolling extreme, preventing a current-bar tautology. Typed provenance
+records the actual technical feature sources, current measurements, and configured thresholds used
+by each rule.
+
+`AlignedTechnicalHistory` guarantees structural alignment of count, canonical instrument,
+timeframe, timestamp, and strict chronological order. It does not prove semantic or cryptographic
+lineage between supplied bars and technical snapshots. The replay boundary remains responsible for
+historical knowability; Phase 8 accepts neither `observed_at` nor `as_of`, and output at N uses only
+inputs through N.
+
+Phase 8 does not add setup composition, trading signals, recommendations, strategy logic, LLM
+reasoning, risk approval, persistence, or execution.
+
 ## Future architecture
 
 The intended flow remains:
@@ -85,4 +107,4 @@ Market Data
 → Evaluation & Learning
 ```
 
-No real provider, indicator engine, strategy engine, backtesting engine, LLM intelligence, portfolio optimizer, execution integration, REST/WebSocket control plane, web UI, or Angelo OS integration is implemented yet.
+No real provider, setup or strategy engine, backtesting engine, LLM intelligence, portfolio optimizer, execution integration, REST/WebSocket control plane, web UI, or Angelo OS integration is implemented yet.
