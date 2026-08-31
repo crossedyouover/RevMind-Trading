@@ -2,7 +2,7 @@
 
 Provider-agnostic AI-assisted market intelligence and paper-trading research platform.
 
-> **Current status: Phase 9 — Deterministic Setup Composition Foundation. RevMind Trading DOES NOT execute trades.**
+> **Current status: Phase 10 — Deterministic Scanner Foundation. RevMind Trading DOES NOT execute trades.**
 
 ## Purpose
 
@@ -100,6 +100,24 @@ An `ACTIVE` setup means only that its explicitly declared deterministic evidence
 currently satisfied. It is not a signal, recommendation, prediction, or instruction to buy, sell,
 enter, exit, or trade, and no predictive validity is claimed. Phase 9 has no scoring, confidence,
 ranking, risk authority, portfolio authority, LLM reasoning, persistence, or execution behavior.
+
+## Deterministic universe scanning
+
+Phase 10 scans an explicitly supplied, single-timeframe universe of complete Phase 9
+`SetupSnapshot` values. Inputs must already be unique and ordered by complete canonical instrument
+identity; the scanner never sorts, repairs, deduplicates, selects a latest state, or filters the
+universe. Every supplied instrument remains in the immutable output, including instruments whose
+setups are warming, undefined, or inactive. Active setup keys are only an exact deterministic
+projection of the complete retained Phase 9 state.
+
+Each scan has a caller-supplied `scan_as_of` boundary, and every source setup event timestamp must
+be at or before it. `scan_as_of` is not `observed_at`, ingestion time, or proof that information was
+historically available. The upstream observation-time/replay pipeline remains responsible for
+point-in-time eligibility.
+
+Scanner identity ordering is not opportunity ranking. Phase 10 performs no ranking, scoring,
+prediction, recommendation, signal generation, strategy decision, risk or portfolio approval, LLM
+reasoning, provider access, persistence, networking, or execution.
 
 ## Future architecture
 
