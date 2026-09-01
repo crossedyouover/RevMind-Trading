@@ -139,6 +139,25 @@ WebSockets, smart fallback, provider routing, data repair, freshness policy, LLM
 connectivity, or execution. Hosted, commercial, or redistributed market-data use requires a
 separate review of provider and exchange terms.
 
+## Real-data ingestion and observation coordination
+
+Phase 12 adds a provider-independent application boundary connecting `MarketDataProvider`
+responses to the append-only observation store:
+
+```text
+Provider → canonical payload → ingestion coordinator
+         → ObservedMarketData → ObservationStore → replay
+```
+
+Provider payload timestamps remain event time. Immediately after each provider call completes,
+the coordinator captures one UTC `observed_at` receipt boundary shared by every payload from that
+call. It then constructs all immutable observation envelopes before performing one atomic batch
+write. Repeated acquisitions are retained with distinct observation identities; there is no hidden
+deduplication or overwriting.
+
+The coordinator owns neither scheduling nor streaming, transport, replay, analytics, trading, or
+execution. Those responsibilities remain outside this ingestion boundary.
+
 ## Future architecture
 
 The intended flow remains:
