@@ -2,7 +2,7 @@
 
 Provider-agnostic AI-assisted market intelligence and paper-trading research platform.
 
-> **Current status: Phase 10 — Deterministic Scanner Foundation. RevMind Trading DOES NOT execute trades.**
+> **Current status: Phase 11 — Alpaca Market Data Adapter Foundation. RevMind Trading DOES NOT execute trades.**
 
 ## Purpose
 
@@ -118,6 +118,26 @@ point-in-time eligibility.
 Scanner identity ordering is not opportunity ranking. Phase 10 performs no ranking, scoring,
 prediction, recommendation, signal generation, strategy decision, risk or portfolio approval, LLM
 reasoning, provider access, persistence, networking, or execution.
+
+## Read-only Alpaca market data
+
+Phase 11 adds the first isolated real market-data adapter. Alpaca is optional and is not a core
+dependency or automatic fallback. Initial support is limited to explicitly bound USD equity and
+ETF identities using Alpaca's stock historical-bar and snapshot HTTP endpoints. Credentials are
+optional; without both keys only this adapter is unavailable. Tests use mocked HTTP and require no
+network or secrets.
+
+The adapter returns canonical `MarketBar` and `MarketSnapshot` payloads only. Provider event time
+remains payload time and never becomes `observed_at`; the existing ingestion boundary retains sole
+ownership of observation identity and knowledge time. Alpaca nanosecond timestamps are explicitly
+truncated, never rounded, to the frozen canonical microsecond resolution. Composite snapshot
+components are not asserted to share an event time: the canonical snapshot uses only latest-trade
+price and time, leaving optional daily volume and percentage change absent.
+
+IEX and SIP feeds have different coverage and entitlement requirements. Phase 11 adds no
+WebSockets, smart fallback, provider routing, data repair, freshness policy, LLM behavior, broker
+connectivity, or execution. Hosted, commercial, or redistributed market-data use requires a
+separate review of provider and exchange terms.
 
 ## Future architecture
 
