@@ -2,7 +2,7 @@
 
 Provider-agnostic AI-assisted market intelligence and paper-trading research platform.
 
-> **Current status: Phase 11 — Alpaca Market Data Adapter Foundation. RevMind Trading DOES NOT execute trades.**
+> **Current status: Phase 13 — Point-in-Time Bar Materialization. RevMind Trading DOES NOT execute trades.**
 
 ## Purpose
 
@@ -158,6 +158,25 @@ deduplication or overwriting.
 The coordinator owns neither scheduling nor streaming, transport, replay, analytics, trading, or
 execution. Those responsibilities remain outside this ingestion boundary.
 
+## Deterministic point-in-time bar materialization
+
+Phase 13 adds a pure boundary between historical replay and deterministic technical analysis. It
+accepts an explicitly supplied sequence of canonical observations already ordered by the frozen
+knowledge key `(observed_at, observation_id)` and rejects future-known or noncanonical input. It
+does not open replay storage, call providers, or own a clock.
+
+Each request fixes one complete instrument identity, timeframe, source, knowledge-time `as_of`,
+and optional half-open event-time range. Snapshots and nonmatching observations remain historical
+facts but are excluded from that requested bar series. Sources are never blended and there is no
+implicit preference or fallback.
+
+When repeated receipts or corrections exist for the same bar event timestamp, the latest
+observation in canonical knowledge order wins among facts known by `as_of`. The output preserves
+the selected observation ID, receipt time, source, and optional source record ID for every bar,
+and orders the selected history strictly by event time for Phase 7 consumption. No gaps are
+filled, bars are not resampled or repaired, and no analytical, strategy, risk, LLM, portfolio,
+alerting, or execution decision is made.
+
 ## Future architecture
 
 The intended flow remains:
@@ -177,4 +196,4 @@ Market Data
 → Evaluation & Learning
 ```
 
-No real provider, strategy engine, backtesting engine, LLM intelligence, portfolio optimizer, execution integration, REST/WebSocket control plane, web UI, or Angelo OS integration is implemented yet.
+No strategy engine, backtesting engine, LLM intelligence, portfolio optimizer, execution integration, REST/WebSocket control plane, web UI, or Angelo OS integration is implemented yet.
