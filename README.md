@@ -2,7 +2,7 @@
 
 Provider-agnostic AI-assisted market intelligence and paper-trading research platform.
 
-> **Current status: Phase 14 — Single-Series Research Pipeline. RevMind Trading DOES NOT execute trades.**
+> **Current status: Phase 15 — Multi-Instrument Universe Coordination. RevMind Trading DOES NOT execute trades.**
 
 ## Purpose
 
@@ -190,6 +190,19 @@ read replay storage, call providers, own a clock, scan or rank a universe, creat
 recommendation, inspect a portfolio, approve risk, invoke an LLM, alert, or execute. Its explicit
 request/result boundary can be invoked by a future control plane without moving domain authority
 into Angelo OS or weakening deterministic risk veto supremacy.
+
+## Deterministic multi-instrument universe coordination
+
+Phase 15 accepts an immutable collection of complete Phase 14 results in strict canonical
+instrument order. Every series must share an explicit knowledge-time cutoff and timeframe. For
+each instrument it selects the latest setup snapshot whose event time is at or before the explicit
+scan boundary, then invokes the frozen Phase 10 scanner exactly once.
+
+Series with no eligible history remain present in the Phase 15 result with an explicit
+`NO_ELIGIBLE_HISTORY` status; no setup is fabricated for them. The scanner projection contains
+exactly the available selected setups, while the complete result retains every Phase 14 series
+and its Phase 13 observation provenance. Phase 15 performs no ranking, recommendation, signal,
+portfolio, risk, LLM, alert, provider, storage, control-plane, or execution work.
 
 ## Future architecture
 
