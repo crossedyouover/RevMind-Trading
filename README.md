@@ -2,7 +2,7 @@
 
 Provider-agnostic AI-assisted market intelligence and paper-trading research platform.
 
-> **Current status: Phase 15 — Multi-Instrument Universe Coordination. RevMind Trading DOES NOT execute trades.**
+> **Current status: Phase 16 — Point-in-Time Catalyst Evidence. RevMind Trading DOES NOT execute trades.**
 
 ## Purpose
 
@@ -203,6 +203,17 @@ Series with no eligible history remain present in the Phase 15 result with an ex
 exactly the available selected setups, while the complete result retains every Phase 14 series
 and its Phase 13 observation provenance. Phase 15 performs no ranking, recommendation, signal,
 portfolio, risk, LLM, alert, provider, storage, control-plane, or execution work.
+
+## Point-in-time catalyst and news facts
+
+Phase 16 adds provider-neutral immutable catalyst facts with separate publication event time and
+RevMind observation time. Historical eligibility depends only on `observed_at <= as_of`.
+Materialization requires an explicit source, preserves unkeyed repeated facts, and selects the
+latest knowledge-ordered version only when a source record ID explicitly identifies revisions.
+
+Optional instrument, source-authority, and half-open publication-time filters are deterministic.
+Unknown publication time is never guessed. Phase 16 adds no provider, fetching, parsing, LLM
+summary, sentiment, inference, ranking, recommendation, persistence, risk, alert, or execution.
 
 ## Future architecture
 
