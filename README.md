@@ -2,7 +2,7 @@
 
 Provider-agnostic AI-assisted market intelligence and paper-trading research platform.
 
-> **Current status: Phase 13 — Point-in-Time Bar Materialization. RevMind Trading DOES NOT execute trades.**
+> **Current status: Phase 14 — Single-Series Research Pipeline. RevMind Trading DOES NOT execute trades.**
 
 ## Purpose
 
@@ -176,6 +176,20 @@ the selected observation ID, receipt time, source, and optional source record ID
 and orders the selected history strictly by event time for Phase 7 consumption. No gaps are
 filled, bars are not resampled or repaired, and no analytical, strategy, risk, LLM, portfolio,
 alerting, or execution decision is made.
+
+## Deterministic single-series research composition
+
+Phase 14 adds a pure orchestration boundary for one completed Phase 13 materialized history. It
+runs the frozen Phase 7 technical engine, Phase 8 market-evidence engine, and Phase 9 setup
+composer exactly once in that order, using explicit deterministic configurations. The immutable
+result retains the complete Phase 13 request and selected-observation provenance while requiring
+one-to-one instrument, timeframe, and event-time alignment at every analytical stage.
+
+Empty histories remain explicit and produce empty aligned stage outputs. The pipeline does not
+read replay storage, call providers, own a clock, scan or rank a universe, create a signal or
+recommendation, inspect a portfolio, approve risk, invoke an LLM, alert, or execute. Its explicit
+request/result boundary can be invoked by a future control plane without moving domain authority
+into Angelo OS or weakening deterministic risk veto supremacy.
 
 ## Future architecture
 
