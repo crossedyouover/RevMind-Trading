@@ -24,14 +24,16 @@ git status --short --branch
 git rev-parse HEAD
 git rev-parse origin/main
 git rev-parse "phase15-frozen^{}"
+git merge-base --is-ancestor "phase15-frozen^{}" HEAD
 .\.venv\Scripts\python.exe -m pytest -q --basetemp=.pytest_continuation_tmp
 .\.venv\Scripts\python.exe -m ruff check app tests
 .\.venv\Scripts\python.exe -m mypy app
 git diff --check
 ```
 
-The three Git revisions must resolve to
-`28f73f194ac6c333299d71247eafb4334d324fbf` before the next phase starts.
+`HEAD` and `origin/main` must match, the peeled Phase 15 tag must resolve to
+`28f73f194ac6c333299d71247eafb4334d324fbf`, and the ancestry check must exit successfully. The
+continuation-contract documentation may legitimately follow the frozen implementation tag.
 
 ## Frozen architecture constraints
 
@@ -170,8 +172,8 @@ regulatory, operational, and human-authorization design after successful paper/s
 
 For Phase `N`, always:
 
-1. Verify `HEAD`, `origin/main`, and `phase(N-1)-frozen^{}` are identical and the tree is clean.
-2. Create `phaseN-<narrow-scope>` from that exact SHA.
+1. Verify `HEAD == origin/main`, the prior peeled frozen tag is an ancestor, and the tree is clean.
+2. Create `phaseN-<narrow-scope>` from current verified `HEAD`, retaining the frozen ancestry.
 3. Freeze the design and non-goals before implementation.
 4. Implement immutable contracts and the smallest pure/application boundary that satisfies them.
 5. Add permanent adversarial tests, including forbidden-dependency and side-effect audits.
