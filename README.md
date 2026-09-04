@@ -2,7 +2,7 @@
 
 Provider-agnostic AI-assisted market intelligence and paper-trading research platform.
 
-> **Current status: Phase 20 — Deterministic Paper Portfolio Context. RevMind Trading DOES NOT execute trades.**
+> **Current status: Phase 21 — Deterministic Paper Risk Gate. RevMind Trading DOES NOT execute trades.**
 
 ## Purpose
 
@@ -261,6 +261,18 @@ scheduler, LLM, portfolio/risk decision, alert, control-plane integration, or ex
 `PHASE18_DESIGN.md` for rules and limits.
 
 ## Future architecture
+
+Phase 21 adds a deterministic gate for one hypothetical paper share change against complete
+portfolio context and an explicit, versioned caller policy. It returns VETO or PASS_CHECKS.
+PASS_CHECKS means only these bounded checks passed for the retained inputs; it never authorizes
+execution or asserts buying power. No default numerical risk thresholds are supplied.
+
+The gate checks identity/currency bindings, PIT and freshness, complete positive-price valuation,
+pending actions, and minimum equity before projection. Any pending action vetoes this first
+version. Projected quantity/notional, cash floor, gross and per-instrument exposure, concentration,
+and short-position rules apply to the entire projected account. It never resizes a proposal or
+overrides a veto. All applicable reasons are retained in deterministic order; arithmetic failure
+is non-passing. See `PHASE21_DESIGN.md` for paper-only scope and unmodeled risks.
 
 Phase 20 adds immutable context for one explicitly sourced paper account, restricted to equity/ETF
 shares in one valuation currency. It retains account, mark, and pending-action receipt times and

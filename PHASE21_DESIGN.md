@@ -1,6 +1,6 @@
 # Phase 21 — Deterministic Paper Risk Gate
 
-Status: design only; no risk implementation or phase21-frozen tag yet.
+Status: implementation contract; freeze requires the full merge gate and remote verification.
 Base: `afddaad633acabc9ec6479cf0492bfbc8720b0dc`.
 Frozen ancestor: `phase20-frozen`, `0fd80af25b2ffb69a1b3c38cca825aac91202939`.
 
@@ -186,5 +186,8 @@ Review severity/scope, run focused/full pytest, Ruff, strict mypy, and diff chec
 repeat after merge before tagging/pushing/verifying phase21-frozen and updating PROJECT_STATE.
 
 Design review resolves pending-action ambiguity by veto, makes every threshold caller-supplied,
-and separates passing a bounded paper check from execution authority. This document is not evidence
-that Phase 21 code, tests, or a deployable risk service exist.
+and separates passing a bounded paper check from execution authority. Policy version identifies
+caller-supplied configuration; this boundary does not prove that policy was historically deployed
+or manage a policy registry. Production callers must preserve the exact policy with every result.
+The implementation adds no real-money suitability claim. Verification and the frozen merge SHA
+are recorded in PROJECT_STATE.md after successful remote verification.
