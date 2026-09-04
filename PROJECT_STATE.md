@@ -7,14 +7,14 @@ this file and `README.md` before making changes.
 
 - Repository: `C:\Users\user\Documents\RevMind-Trading`
 - Canonical branch: `main` (`master` is the local tracking branch)
-- Frozen through: Phase 16
-- Frozen commit: `eb73f506c1f78b1b4bd4c225ce8c93abd3f318a2`
-- Frozen tag: `phase16-frozen` (peeled tag resolves to the frozen commit)
-- Last verified gate: 494 tests passed, Ruff clean, mypy strict clean, `git diff --check`
+- Frozen through: Phase 17
+- Frozen commit: `937f8876a6bc27fdc707bf982df732728d3ccfa0`
+- Frozen tag: `phase17-frozen` (peeled tag resolves to the frozen commit)
+- Last verified gate: 598 tests passed, Ruff clean, mypy strict clean, `git diff --check`
   clean, tracked worktree clean
 - Current capability: deterministic, point-in-time-safe flow from canonical market observations
   through technical analysis, market evidence, setup composition, and multi-instrument scanning,
-  plus provider-neutral point-in-time catalyst/news fact materialization
+  plus provider-neutral point-in-time catalyst/news and insider transaction fact materialization
 - Trading status: no broker execution, automatic trading, or real-money authority exists
 
 Verify the restart point before beginning work:
@@ -24,17 +24,22 @@ Set-Location "C:\Users\user\Documents\RevMind-Trading"
 git status --short --branch
 git rev-parse HEAD
 git rev-parse origin/main
-git rev-parse "phase16-frozen^{}"
-git merge-base --is-ancestor "phase16-frozen^{}" HEAD
+git rev-parse "phase17-frozen^{}"
+git merge-base --is-ancestor "phase17-frozen^{}" HEAD
 .\.venv\Scripts\python.exe -m pytest -q --basetemp=.pytest_continuation_tmp
 .\.venv\Scripts\python.exe -m ruff check app tests
 .\.venv\Scripts\python.exe -m mypy app
 git diff --check
 ```
 
-`HEAD` and `origin/main` must match, the peeled Phase 16 tag must resolve to
-`eb73f506c1f78b1b4bd4c225ce8c93abd3f318a2`, and the ancestry check must exit successfully. The
+`HEAD` and `origin/main` must match, the peeled Phase 17 tag must resolve to
+`937f8876a6bc27fdc707bf982df732728d3ccfa0`, and the ancestry check must exit successfully. The
 continuation-contract documentation may legitimately follow the frozen implementation tag.
+
+Phase 17 verification included 104 focused insider tests and the full 598-test suite on both the
+feature branch and merge commit. Test databases used a writable directory outside the repository.
+The existing user-level Git ignore and older pytest temp-directory permission warnings are
+environmental; do not suppress untracked files and then claim they were exhaustively inspected.
 
 ## Frozen architecture constraints
 
@@ -81,6 +86,7 @@ These rules survive every future phase:
 | 14 | Deterministic single-series research pipeline | `phase14-frozen` |
 | 15 | Deterministic multi-instrument universe coordination | `phase15-frozen` |
 | 16 | Point-in-time catalyst and news evidence | `phase16-frozen` |
+| 17 | Point-in-time insider transaction facts (not broader market flow) | `phase17-frozen` |
 
 Phases 1–6 predate the frozen-tag convention. Their commits are immutable historical foundations
 and must not be rewritten.
@@ -107,16 +113,21 @@ portfolio action, or order.
 Each item begins with a design audit. Phase numbers below are the continuation sequence; scope must
 stay narrow enough to test and freeze independently.
 
-### Phase 16 — Point-in-time catalyst and news evidence foundation
+### Phase 16 — Point-in-time catalyst and news evidence foundation (completed)
 
 Define provider-neutral canonical news/catalyst observations, source authority, receipt time,
 revision preservation, and deterministic PIT selection. Do not add LLM summarization, sentiment,
 ranking, or provider-specific behavior to the core.
 
-### Phase 17 — Point-in-time insider and flow evidence foundation
+### Phase 17 — Point-in-time insider transaction facts (completed)
 
-Define canonical insider/flow facts with source provenance and historical knowability. Preserve
-amendments and repeated filings; do not infer direction, conviction, or trade intent in ingestion.
+Implemented immutable source transaction observations with separate receipt, filing-time, and
+calendar-date semantics; exact optional Decimal assertions; and revision-before-filter PIT
+selection. No direction, conviction, or trade intent is inferred. See `PHASE17_DESIGN.md`.
+
+Broader flow evidence remains deferred, not completed by insider records. Order flow, fund flows,
+and ownership aggregates require distinct source contracts and a separate design before use by
+specialist intelligence desks. No live insider provider, filing parser, or persistence was added.
 
 ### Phase 18 — Deterministic market-regime evidence
 
@@ -190,7 +201,8 @@ For Phase `N`, always:
 
 ## Exact next action
 
-Start Phase 17 with design only, based on current verified `main` with `phase16-frozen` ancestry.
-The first design question is the smallest canonical insider/flow fact that preserves filing event
-time, observation time, amendments, source provenance, instrument identity, and exact transaction
-values without inferring direction, conviction, or trade intent.
+Start Phase 18 with design only, based on current verified `main` with `phase17-frozen` ancestry.
+Define the smallest explicit deterministic regime evidence contract: source inputs, their PIT
+boundary, calculation rules and configuration, and complete available/warming/undefined states.
+Do not equate an insider transaction with market flow or introduce an LLM, portfolio, risk, or
+execution decision in the regime evidence engine.
