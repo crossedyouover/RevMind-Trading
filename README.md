@@ -2,7 +2,7 @@
 
 Provider-agnostic AI-assisted market intelligence and paper-trading research platform.
 
-> **Current status: Phase 22 — Deterministic Head-of-Desk Composition. RevMind Trading DOES NOT execute trades.**
+> **Current status: Phases 23–26 — Local Delivery, Evaluation, Offline Shadow Runtime, and Control Contracts. RevMind Trading DOES NOT execute trades.**
 
 ## Purpose
 
@@ -262,6 +262,18 @@ scheduler, LLM, portfolio/risk decision, alert, control-plane integration, or ex
 
 ## Future architecture
 
+Phases 23–26 add a durable SQLite alert outbox, append-only decision/outcome journal, bounded
+explicit-clock offline shadow runtime, and versioned grant-scoped local control commands.
+The only supplied transport is a recording sink. The journal's forward reference-price metric
+is not fill P&L. The runtime persists checkpoints and supports restart; unresolved delivery or
+command outcomes are not automatically retried. Control grants bind caller, run, exact manifest,
+and allowed actions; they cannot override domain or risk rules.
+
+See [SHADOW_RUN_GUIDE.md](SHADOW_RUN_GUIDE.md) for a synthetic demo and local control invocation.
+The 1,440-step synthetic replay is software verification, not a sustained live-market trial.
+Live ingestion orchestration, external alert adapters, real Angelo transport/authentication,
+extended operational trials, and real-money execution are not enabled by these foundations.
+
 Phase 22 adds deterministic research-disposition composition: QUIET by default, WATCHLIST only
 with an active configured setup and a matching passing paper-risk result, and ALERT only with
 supporting aligned trend evidence and explicit policy opt-in. These records are not delivered
@@ -324,4 +336,6 @@ Market Data
 → Evaluation & Learning
 ```
 
-No strategy engine, backtesting engine, LLM intelligence, portfolio optimizer, execution integration, REST/WebSocket control plane, web UI, or Angelo OS integration is implemented yet.
+No strategy engine, full backtesting engine, LLM intelligence, portfolio optimizer, execution
+integration, REST/WebSocket control server, web UI, or live Angelo OS connection is implemented.
+The local control contract is an integration seam, not a deployed authenticated network service.

@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "command_id": "00000000-0000-4000-8000-000000008000",
+  "principal_id": "local-demo-host",
+  "run_id": "00000000-0000-4000-8000-000000007000",
+  "plan_digest": "c3103d5c259e6a495dd96c241461c1242b81add97be9199f30f3214091d81579",
+  "action": "STATUS",
+  "issued_at": "2025-02-01T00:00:00Z",
+  "max_jobs": 1,
+  "plan": null
+}

@@ -1,0 +1,8 @@
+[
+  {
+    "principal_id": "local-demo-host",
+    "run_id": "00000000-0000-4000-8000-000000007000",
+    "plan_digest": "c3103d5c259e6a495dd96c241461c1242b81add97be9199f30f3214091d81579",
+    "actions": ["STATUS", "HEALTH", "AUDIT"]
+  }
+]
