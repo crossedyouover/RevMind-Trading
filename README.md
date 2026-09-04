@@ -270,6 +270,9 @@ command outcomes are not automatically retried. Control grants bind caller, run,
 and allowed actions; they cannot override domain or risk rules.
 
 See [SHADOW_RUN_GUIDE.md](SHADOW_RUN_GUIDE.md) for a synthetic demo and local control invocation.
+The Phase 27 first-slice [CAPTURE_RUN_GUIDE.md](CAPTURE_RUN_GUIDE.md) adds a separate mock-only
+capture-to-research demo with durable sealed PIT inputs. This does not make the frozen runtime
+live-capable and does not complete Phase 27's broader live-shadow integration design.
 The 1,440-step synthetic replay is software verification, not a sustained live-market trial.
 Live ingestion orchestration, external alert adapters, real Angelo transport/authentication,
 extended operational trials, and real-money execution are not enabled by these foundations.
