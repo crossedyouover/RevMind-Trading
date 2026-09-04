@@ -1,6 +1,7 @@
 # Phase 17 — Point-in-Time Insider Transaction Facts
 
-Status: design draft, not an implementation freeze.
+Status: implementation contract. A freeze exists only when `phase17-frozen` is present and its
+peeled commit has passed the documented quality gate and remote verification.
 
 Base: `01e17a57f57a822954b76feedd7da4e623d92ea8`, containing frozen Phase 16
 `eb73f506c1f78b1b4bd4c225ce8c93abd3f318a2` and its published handoff update.
@@ -53,6 +54,14 @@ an old version could be incorrectly resurrected when a newer correction changes 
 Retain all original facts upstream; selection must not mutate or delete observations.
 
 ## Request and result
+
+Public contracts are `ObservedInsiderTransaction`, `InsiderMaterializationRequest`, and
+`MaterializedInsiderHistory` in `app.insiders`. The pure reference implementation is
+`DeterministicInsiderMaterializationEngine`. Date bounds are `transaction_start`/`transaction_end`;
+filing-time bounds are `filing_start`/`filing_end`. Result counters are
+`inspected_receipt_count`, `source_receipt_count`, `revision_winner_count`, and
+`matching_winner_count`. The two-pass selection algorithm preserves knowledge order in O(n)
+work without sorting the input or selected output.
 
 The immutable request fixes `as_of`, source, and optional exact instrument, transaction-date range,
 and filing-time range. Both ranges are half-open with independently optional bounds. Unknown dates

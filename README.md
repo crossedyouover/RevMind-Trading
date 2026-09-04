@@ -2,7 +2,7 @@
 
 Provider-agnostic AI-assisted market intelligence and paper-trading research platform.
 
-> **Current status: Phase 16 — Point-in-Time Catalyst Evidence. RevMind Trading DOES NOT execute trades.**
+> **Current status: Phase 17 — Point-in-Time Insider Transaction Facts. RevMind Trading DOES NOT execute trades.**
 
 ## Purpose
 
@@ -214,6 +214,28 @@ latest knowledge-ordered version only when a source record ID explicitly identif
 Optional instrument, source-authority, and half-open publication-time filters are deterministic.
 Unknown publication time is never guessed. Phase 16 adds no provider, fetching, parsing, LLM
 summary, sentiment, inference, ranking, recommendation, persistence, risk, alert, or execution.
+
+## Point-in-time insider transaction facts
+
+Phase 17 adds an isolated `app.insiders` boundary for source-reported individual transactions.
+Observations have explicit UUID4 receipt identities and UTC knowledge timestamps. Transaction
+calendar dates remain dates; optional filing timestamps are separate from receipt time. Reported
+quantity, price, and total value use exact nonnegative Decimals with missing values retained as
+absent, without inferring direction or recalculating source assertions.
+
+Materialization requires an immutable tuple in strict `(observed_at, observation_id)` order.
+Every receipt must satisfy the requested `as_of`, including facts from excluded sources. Within
+the explicitly selected source, the latest receipt for each source transaction ID wins; unkeyed
+receipts remain independent. A transaction ID must identify one transaction across revisions,
+not a whole filing. Instrument and half-open transaction-date/filing-time filters apply **after**
+revision selection, so an old matching version cannot reappear when a correction changes a field.
+Output remains in knowledge order, retaining the complete selected envelopes and stage counts.
+
+The engine does not prove that inputs are complete or authentic, infer publisher revision order,
+or implement withdrawals/tombstones. It performs no I/O, provider fetching, filing parsing, broader
+flow analysis, ranking, recommendation, LLM reasoning, risk approval, alerts, or execution. Existing
+frozen contracts are unchanged; future control-plane callers have no risk-veto bypass through this
+boundary. See `PHASE17_DESIGN.md` for the scope and verification requirements.
 
 ## Future architecture
 
