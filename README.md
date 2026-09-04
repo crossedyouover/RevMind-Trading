@@ -2,7 +2,7 @@
 
 Provider-agnostic AI-assisted market intelligence and paper-trading research platform.
 
-> **Current status: Phase 18 — Deterministic Trend-Regime Evidence. RevMind Trading DOES NOT execute trades.**
+> **Current status: Phase 19 — Specialist Advisory Evidence Boundaries. RevMind Trading DOES NOT execute trades.**
 
 ## Purpose
 
@@ -261,6 +261,17 @@ scheduler, LLM, portfolio/risk decision, alert, control-plane integration, or ex
 `PHASE18_DESIGN.md` for rules and limits.
 
 ## Future architecture
+
+Phase 19 adds four pure typed desk adapters for catalyst facts, insider transactions, single-series
+trend evidence, and complete setup research histories. Reports retain all upstream provenance,
+configuration, ordering, and availability states. Explicit evaluation time bounds source knowledge
+and bar events; reports never backdate later evidence or silently trim inputs.
+
+`PRESENT` means records exist, not that they are actionable; `EMPTY` means only that the supplied
+scoped history contains no records. Missing or invalid input fails validation. These adapters do
+not recompute analytics, interpret source prose, call LLMs, rank opportunities, approve risk, or
+issue orders. Broader flow/regime inference and cross-desk decisions remain deferred.
+See `PHASE19_DESIGN.md` for the implemented contract and authority limits.
 
 The intended flow remains:
 
