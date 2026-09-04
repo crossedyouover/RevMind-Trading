@@ -7,18 +7,23 @@ this file and `README.md` before making changes.
 
 - Repository: `C:\Users\user\Documents\RevMind-Trading`
 - Canonical branch: `main` (`master` is the local tracking branch)
-- Frozen through: Phase 22 (deterministic research disposition, no delivery or execution)
-- Frozen commit: `0460e0563e5213a91e8866152f7f1afdf73d1e76`
-- Frozen tag: `phase22-frozen` (peeled tag resolves to the frozen commit)
-- Last verified gate: 969 tests passed, Ruff clean, mypy strict clean, `git diff --check`
+- Frozen through: Phase 26 (offline/local implementation milestones; live deployment deferred)
+- Frozen commit: `f487a1d82caf2bb2c79dd43318dd780f05e44e24`
+- Frozen tag: `phase26-frozen` (peeled tag resolves to the frozen commit)
+- Last verified gate: 1,003 tests passed, Ruff clean, mypy strict clean (86 source files), `git diff --check`
   clean, tracked worktree clean
 - Current capability: deterministic, point-in-time-safe flow from canonical market observations
   through technical analysis, market evidence, setup composition, and multi-instrument scanning,
   plus provider-neutral point-in-time catalyst/news and insider transaction fact materialization,
   and deterministic single-series trend-regime evidence, exposed through four pure typed
   specialist advisory evidence reports, PIT-safe single-currency paper portfolio context,
-  an explicit-policy deterministic paper risk gate, and QUIET/WATCHLIST/ALERT research composition
+  an explicit-policy deterministic paper risk gate, and QUIET/WATCHLIST/ALERT research composition.
+  Local application infrastructure now adds a durable alert outbox, append-only evaluation journal,
+  explicit-clock restartable offline shadow runtime, and versioned grant-scoped control contracts
 - Trading status: no broker execution, automatic trading, or real-money authority exists
+- Deployment status: no live delivery adapter, continuous live-market trial, background scheduler,
+  network control endpoint, or real Angelo OS integration is enabled. Local grants require a trusted
+  host; they are not remote authentication. See `SHADOW_RUN_GUIDE.md` for the verified offline demo
 
 Verify the restart point before beginning work:
 
@@ -27,22 +32,24 @@ Set-Location "C:\Users\user\Documents\RevMind-Trading"
 git status --short --branch
 git rev-parse HEAD
 git rev-parse origin/main
-git rev-parse "phase22-frozen^{}"
-git merge-base --is-ancestor "phase22-frozen^{}" HEAD
+git rev-parse "phase26-frozen^{}"
+git merge-base --is-ancestor "phase26-frozen^{}" HEAD
 .\.venv\Scripts\python.exe -m pytest -q --basetemp=.pytest_continuation_tmp
 .\.venv\Scripts\python.exe -m ruff check app tests
 .\.venv\Scripts\python.exe -m mypy app
 git diff --check
 ```
 
-`HEAD` and `origin/main` must match, the peeled Phase 22 tag must resolve to
-`0460e0563e5213a91e8866152f7f1afdf73d1e76`, and the ancestry check must exit successfully. The
+`HEAD` and `origin/main` must match, the peeled Phase 26 tag must resolve to
+`f487a1d82caf2bb2c79dd43318dd780f05e44e24`, and the ancestry check must exit successfully. The
 continuation-contract documentation may legitimately follow the frozen implementation tag.
 
-Phase 22 verification included 40 focused composition tests and the full 969-test suite on both
-the feature branch and merge commit. Remote main and the peeled frozen tag were verified to the
-exact merge SHA before this documentation update. Test databases used a writable directory outside
-the repository.
+Phases 23–26 passed their feature-branch and merge gates with respectively 978, 985, 991, and
+1,003 total tests (9, 7, 6, and 12 focused tests). Each remote main and peeled frozen tag was
+verified to its exact merge SHA before advancing. The Phase 25 tests include 1,440 synthetic
+minute-spaced steps with a restart; this is not evidence of sustained live-market operation.
+The manifest register/start/tick/status and local control CLI examples were exercised successfully.
+Test and demo databases used a writable directory outside the repository.
 The existing user-level Git ignore and older pytest temp-directory permission warnings are
 environmental; do not suppress untracked files and then claim they were exhaustively inspected.
 
@@ -97,6 +104,17 @@ These rules survive every future phase:
 | 20 | Deterministic single-currency equity/ETF paper portfolio context | `phase20-frozen` |
 | 21 | Explicit-policy deterministic paper risk gate with unconditional veto | `phase21-frozen` |
 | 22 | Deterministic Head-of-Desk research disposition with risk veto supremacy | `phase22-frozen` |
+| 23 | Durable provider-neutral alert outbox; local recording transport | `phase23-frozen` |
+| 24 | Append-only evaluation journal and reference-price outcome metric | `phase24-frozen` |
+| 25 | Restartable explicit-clock offline shadow runtime and CLI | `phase25-frozen` |
+| 26 | Versioned host-granted local control contracts and CLI | `phase26-frozen` |
+
+Latest frozen merge SHAs:
+
+- Phase 23: `403cdac14dc45b7db884f96238994bf6d95be3af`
+- Phase 24: `4ede6311a72bb69f3082067fabad1610e9f3a3f1`
+- Phase 25: `e24c3e99a93b46f61f006b4229df27f9ed04353e`
+- Phase 26: `f487a1d82caf2bb2c79dd43318dd780f05e44e24`
 
 Phases 1–6 predate the frozen-tag convention. Their commits are immutable historical foundations
 and must not be rewritten.
@@ -118,7 +136,7 @@ Provider adapter
 The output is descriptive research state, not a signal, prediction, recommendation, risk approval,
 portfolio action, or order.
 
-## Agreed remaining roadmap
+## Agreed roadmap and implementation boundaries
 
 Each item begins with a design audit. Phase numbers below are the continuation sequence; scope must
 stay narrow enough to test and freeze independently.
@@ -178,27 +196,34 @@ configured setup; ALERT additionally requires aligned directional trend and expl
 Risk vetoes and missing risk always block promotion. Optional catalyst/insider reports remain
 scoped context, not sentiment. No delivery, LLM, execution, or override. See PHASE22_DESIGN.md.
 
-### Phase 23 — Alert delivery boundary
+### Phase 23 — Alert delivery boundary (local infrastructure completed)
 
-Deliver immutable approved alert records through provider-neutral adapters. Alerts are not orders.
-Add idempotency and auditability without allowing delivery providers to change decisions.
+Implemented immutable ALERT-only envelopes, explicit destination authority, durable claims,
+append-only attempt events, expiry, and explicit definite-failure retries. Uncertain/crashed claims
+never auto-resend. The reference transport records locally; real messaging adapters remain deferred.
+Alerts are not orders and external exactly-once delivery is not claimed. See `PHASE23_DESIGN.md`.
 
-### Phase 24 — Evaluation journal and outcome measurement
+### Phase 24 — Evaluation journal and outcome measurement (bounded implementation completed)
 
-Persist decision-time inputs, outputs, versions, outcomes, and counterfactual evaluation without
-future leakage. Learning may propose configuration changes but cannot silently mutate frozen rules.
+Implemented append-only complete decision records, PIT-safe outcome receipts, digest verification,
+and a versioned forward reference-price return metric. This is not fill P&L, causal counterfactual
+evaluation, or evidence of profitable performance. No learning or policy mutation is enabled.
+Broader empirical evaluation remains future work. See `PHASE24_DESIGN.md`.
 
-### Phase 25 — Paper/shadow runtime
+### Phase 25 — Paper/shadow runtime (offline implementation completed; live trial deferred)
 
-Add explicit scheduling and simulated-time/live-shadow coordination around the frozen domain
-boundaries. No real broker execution. Demonstrate replay equivalence, observability, recovery,
-idempotency, and sustained paper operation.
+Implemented immutable canonical request manifests, bounded explicit-time ticks, durable checkpoints,
+pause/start/status/audit, recovery and idempotent journal/outbox coordination. A 1,440-step synthetic
+test exercises restart and scheduling. The runner does not fetch live data, simulate broker fills,
+install a background service, or establish sustained live-market performance. See `PHASE25_DESIGN.md`.
 
-### Phase 26 — Angelo OS control compatibility
+### Phase 26 — Angelo OS control compatibility (local contracts completed; integration deferred)
 
-Expose versioned commands, status, health, and audit retrieval around application boundaries.
-Angelo OS may start, stop, inspect, and configure authorized runs; it may not bypass PIT selection,
-risk vetoes, audit persistence, or execution policy.
+Implemented versioned REGISTER/START/PAUSE/TICK/STATUS/HEALTH/AUDIT commands, exact principal/action/
+run/manifest grants, audited denials, and durable idempotent command responses. Unresolved claims
+do not re-execute. Configuration registers a new immutable plan, never overrides risk or edits a
+running plan. A trusted local host supplies identity/grants; real Angelo OS transport, authenticated
+identity, deployment security, and service operation remain deferred. See `PHASE26_DESIGN.md`.
 
 Real-money execution is deliberately outside this roadmap. It requires a separate security,
 regulatory, operational, and human-authorization design after successful paper/shadow evidence.
@@ -223,8 +248,11 @@ For Phase `N`, always:
 
 ## Exact next action
 
-Start Phase 23 with design only, based on current verified `main` with `phase22-frozen` ancestry.
-Define a provider-neutral alert delivery boundary over fully validated ALERT dispositions, with
-explicit destination authority, idempotency, retry/uncertain-outcome semantics, and durable audit
-requirements. QUIET/WATCHLIST must not be promoted into alerts by delivery code. Preserve risk
-vetoes and exact provenance; no broker execution, LLM override, or implicit live-message sending.
+The authorized Phase 23–26 offline/local implementation sequence is frozen and published.
+Use `SHADOW_RUN_GUIDE.md` to run and inspect the synthetic demonstration without credentials.
+Next work is a separate live-shadow deployment design: select authorized data sources and
+entitlements, explicit operating/risk policies, any real alert destination, runtime host and
+scheduler, and authenticated Angelo OS transport. Define backup/recovery, operational acceptance,
+and a sustained paper-only observation period before enabling external effects. Do not infer
+permission to obtain credentials, send live messages, deploy a network service, or place orders.
+Preserve all frozen boundaries and use Phase 26 ancestry; do not reopen frozen phases implicitly.
