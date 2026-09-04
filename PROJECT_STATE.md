@@ -7,13 +7,14 @@ this file and `README.md` before making changes.
 
 - Repository: `C:\Users\user\Documents\RevMind-Trading`
 - Canonical branch: `main` (`master` is the local tracking branch)
-- Frozen through: Phase 15
-- Frozen commit: `28f73f194ac6c333299d71247eafb4334d324fbf`
-- Frozen tag: `phase15-frozen` (peeled tag resolves to the frozen commit)
-- Last verified gate: 486 tests passed, Ruff clean, mypy strict clean, `git diff --check`
+- Frozen through: Phase 16
+- Frozen commit: `eb73f506c1f78b1b4bd4c225ce8c93abd3f318a2`
+- Frozen tag: `phase16-frozen` (peeled tag resolves to the frozen commit)
+- Last verified gate: 494 tests passed, Ruff clean, mypy strict clean, `git diff --check`
   clean, tracked worktree clean
 - Current capability: deterministic, point-in-time-safe flow from canonical market observations
-  through technical analysis, market evidence, setup composition, and multi-instrument scanning
+  through technical analysis, market evidence, setup composition, and multi-instrument scanning,
+  plus provider-neutral point-in-time catalyst/news fact materialization
 - Trading status: no broker execution, automatic trading, or real-money authority exists
 
 Verify the restart point before beginning work:
@@ -23,16 +24,16 @@ Set-Location "C:\Users\user\Documents\RevMind-Trading"
 git status --short --branch
 git rev-parse HEAD
 git rev-parse origin/main
-git rev-parse "phase15-frozen^{}"
-git merge-base --is-ancestor "phase15-frozen^{}" HEAD
+git rev-parse "phase16-frozen^{}"
+git merge-base --is-ancestor "phase16-frozen^{}" HEAD
 .\.venv\Scripts\python.exe -m pytest -q --basetemp=.pytest_continuation_tmp
 .\.venv\Scripts\python.exe -m ruff check app tests
 .\.venv\Scripts\python.exe -m mypy app
 git diff --check
 ```
 
-`HEAD` and `origin/main` must match, the peeled Phase 15 tag must resolve to
-`28f73f194ac6c333299d71247eafb4334d324fbf`, and the ancestry check must exit successfully. The
+`HEAD` and `origin/main` must match, the peeled Phase 16 tag must resolve to
+`eb73f506c1f78b1b4bd4c225ce8c93abd3f318a2`, and the ancestry check must exit successfully. The
 continuation-contract documentation may legitimately follow the frozen implementation tag.
 
 ## Frozen architecture constraints
@@ -79,6 +80,7 @@ These rules survive every future phase:
 | 13 | Deterministic PIT bar materialization | `phase13-frozen` |
 | 14 | Deterministic single-series research pipeline | `phase14-frozen` |
 | 15 | Deterministic multi-instrument universe coordination | `phase15-frozen` |
+| 16 | Point-in-time catalyst and news evidence | `phase16-frozen` |
 
 Phases 1–6 predate the frozen-tag convention. Their commits are immutable historical foundations
 and must not be rewritten.
@@ -188,7 +190,7 @@ For Phase `N`, always:
 
 ## Exact next action
 
-Start Phase 16 with design only, based on `phase15-frozen`. The first design question is the
-smallest canonical catalyst/news fact that can preserve event time, observation time, source
-authority, revisions, instrument relationships, and raw-source references without embedding
-provider schemas or LLM-generated interpretation.
+Start Phase 17 with design only, based on current verified `main` with `phase16-frozen` ancestry.
+The first design question is the smallest canonical insider/flow fact that preserves filing event
+time, observation time, amendments, source provenance, instrument identity, and exact transaction
+values without inferring direction, conviction, or trade intent.
