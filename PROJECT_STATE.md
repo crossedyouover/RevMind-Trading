@@ -7,15 +7,16 @@ this file and `README.md` before making changes.
 
 - Repository: `C:\Users\user\Documents\RevMind-Trading`
 - Canonical branch: `main` (`master` is the local tracking branch)
-- Frozen through: Phase 18 (single-series trend component; broader regimes deferred)
-- Frozen commit: `78e109241a09fac9ea6eb24a86366a0eebd43330`
-- Frozen tag: `phase18-frozen` (peeled tag resolves to the frozen commit)
-- Last verified gate: 663 tests passed, Ruff clean, mypy strict clean, `git diff --check`
+- Frozen through: Phase 19 (advisory evidence boundaries, no LLM or decision authority)
+- Frozen commit: `66772c8a1ba479338699b7c97110523af8daf631`
+- Frozen tag: `phase19-frozen` (peeled tag resolves to the frozen commit)
+- Last verified gate: 725 tests passed, Ruff clean, mypy strict clean, `git diff --check`
   clean, tracked worktree clean
 - Current capability: deterministic, point-in-time-safe flow from canonical market observations
   through technical analysis, market evidence, setup composition, and multi-instrument scanning,
   plus provider-neutral point-in-time catalyst/news and insider transaction fact materialization,
-  and deterministic single-series trend-regime evidence
+  and deterministic single-series trend-regime evidence, exposed through four pure typed
+  specialist advisory evidence reports
 - Trading status: no broker execution, automatic trading, or real-money authority exists
 
 Verify the restart point before beginning work:
@@ -25,19 +26,19 @@ Set-Location "C:\Users\user\Documents\RevMind-Trading"
 git status --short --branch
 git rev-parse HEAD
 git rev-parse origin/main
-git rev-parse "phase18-frozen^{}"
-git merge-base --is-ancestor "phase18-frozen^{}" HEAD
+git rev-parse "phase19-frozen^{}"
+git merge-base --is-ancestor "phase19-frozen^{}" HEAD
 .\.venv\Scripts\python.exe -m pytest -q --basetemp=.pytest_continuation_tmp
 .\.venv\Scripts\python.exe -m ruff check app tests
 .\.venv\Scripts\python.exe -m mypy app
 git diff --check
 ```
 
-`HEAD` and `origin/main` must match, the peeled Phase 18 tag must resolve to
-`78e109241a09fac9ea6eb24a86366a0eebd43330`, and the ancestry check must exit successfully. The
+`HEAD` and `origin/main` must match, the peeled Phase 19 tag must resolve to
+`66772c8a1ba479338699b7c97110523af8daf631`, and the ancestry check must exit successfully. The
 continuation-contract documentation may legitimately follow the frozen implementation tag.
 
-Phase 18 verification included 65 focused trend-regime tests and the full 663-test suite on both
+Phase 19 verification included 62 focused advisory desk tests and the full 725-test suite on both
 the feature branch and merge commit. Remote main and the peeled frozen tag were verified to the
 exact merge SHA before this documentation update. Test databases used a writable directory outside
 the repository.
@@ -91,6 +92,7 @@ These rules survive every future phase:
 | 16 | Point-in-time catalyst and news evidence | `phase16-frozen` |
 | 17 | Point-in-time insider transaction facts (not broader market flow) | `phase17-frozen` |
 | 18 | Deterministic single-series trend-regime evidence (not broad market regime) | `phase18-frozen` |
+| 19 | Four pure typed specialist advisory evidence boundaries | `phase19-frozen` |
 
 Phases 1–6 predate the frozen-tag convention. Their commits are immutable historical foundations
 and must not be rewritten.
@@ -140,11 +142,13 @@ with exact provenance, evaluation-time constraints, and available/warming/undefi
 See `PHASE18_DESIGN.md`. This is single-series trend evidence only: volatility, breadth, liquidity,
 cross-asset, and macro regimes remain deferred. No broad risk-on/risk-off, LLM, or portfolio authority.
 
-### Phase 19 — Specialist intelligence desk boundaries
+### Phase 19 — Specialist advisory evidence boundaries (completed)
 
-Add typed advisory outputs for catalyst, insider/flow, regime, and setup-hunter desks. Separate
-deterministic evidence from optional LLM interpretation, retain provenance, and prevent desks from
-granting risk or execution approval.
+Implemented typed catalyst, insider-fact, single-series trend, and complete setup-history reports.
+All retain explicit evaluation time and complete provenance. PRESENT/EMPTY describe record coverage,
+not actionability; malformed or missing input fails closed. Original analytical availability states
+remain unchanged. No LLM interpretation, broader flow/regime inference, cross-desk composition,
+risk approval, or execution authority. See `PHASE19_DESIGN.md`.
 
 ### Phase 20 — Deterministic portfolio-context snapshots
 
@@ -207,8 +211,9 @@ For Phase `N`, always:
 
 ## Exact next action
 
-Start Phase 19 with design only, based on current verified `main` with `phase18-frozen` ancestry.
-Define specialist advisory desk boundaries with explicit evidence provenance, PIT evaluation times,
-and unavailable states. Separate deterministic evidence from any future optional interpretation.
-Do not equate insider transactions with broader flow or single-series trend with broad market
-regime. Desks cannot grant risk approval, place orders, or weaken future Angelo OS control boundaries.
+Start Phase 20 with design only, based on current verified `main` with `phase19-frozen` ancestry.
+Define immutable deterministic portfolio-context snapshots with explicit account scope, currency,
+cash, positions, valuation/knowledge times, and pending paper-action semantics. Preserve missing
+valuation states and provider neutrality; do not silently introduce FX conversion, broker access,
+portfolio optimization, execution, or risk approval. Deterministic risk remains a later separate
+veto boundary, and future Angelo OS controls cannot weaken it.
