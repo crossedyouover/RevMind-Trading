@@ -7,16 +7,17 @@ this file and `README.md` before making changes.
 
 - Repository: `C:\Users\user\Documents\RevMind-Trading`
 - Canonical branch: `main` (`master` is the local tracking branch)
-- Frozen through: Phase 20 (single-currency paper portfolio context, no risk approval)
-- Frozen commit: `0fd80af25b2ffb69a1b3c38cca825aac91202939`
-- Frozen tag: `phase20-frozen` (peeled tag resolves to the frozen commit)
-- Last verified gate: 811 tests passed, Ruff clean, mypy strict clean, `git diff --check`
+- Frozen through: Phase 21 (bounded deterministic paper risk checks, no execution approval)
+- Frozen commit: `7f602b494007e15c3c6b77bb281ff6994ec3c60c`
+- Frozen tag: `phase21-frozen` (peeled tag resolves to the frozen commit)
+- Last verified gate: 929 tests passed, Ruff clean, mypy strict clean, `git diff --check`
   clean, tracked worktree clean
 - Current capability: deterministic, point-in-time-safe flow from canonical market observations
   through technical analysis, market evidence, setup composition, and multi-instrument scanning,
   plus provider-neutral point-in-time catalyst/news and insider transaction fact materialization,
   and deterministic single-series trend-regime evidence, exposed through four pure typed
-  specialist advisory evidence reports, plus PIT-safe single-currency paper portfolio context
+  specialist advisory evidence reports, PIT-safe single-currency paper portfolio context,
+  and an explicit-policy deterministic paper risk gate
 - Trading status: no broker execution, automatic trading, or real-money authority exists
 
 Verify the restart point before beginning work:
@@ -26,19 +27,19 @@ Set-Location "C:\Users\user\Documents\RevMind-Trading"
 git status --short --branch
 git rev-parse HEAD
 git rev-parse origin/main
-git rev-parse "phase20-frozen^{}"
-git merge-base --is-ancestor "phase20-frozen^{}" HEAD
+git rev-parse "phase21-frozen^{}"
+git merge-base --is-ancestor "phase21-frozen^{}" HEAD
 .\.venv\Scripts\python.exe -m pytest -q --basetemp=.pytest_continuation_tmp
 .\.venv\Scripts\python.exe -m ruff check app tests
 .\.venv\Scripts\python.exe -m mypy app
 git diff --check
 ```
 
-`HEAD` and `origin/main` must match, the peeled Phase 20 tag must resolve to
-`0fd80af25b2ffb69a1b3c38cca825aac91202939`, and the ancestry check must exit successfully. The
+`HEAD` and `origin/main` must match, the peeled Phase 21 tag must resolve to
+`7f602b494007e15c3c6b77bb281ff6994ec3c60c`, and the ancestry check must exit successfully. The
 continuation-contract documentation may legitimately follow the frozen implementation tag.
 
-Phase 20 verification included 86 focused portfolio tests and the full 811-test suite on both
+Phase 21 verification included 118 focused risk tests and the full 929-test suite on both
 the feature branch and merge commit. Remote main and the peeled frozen tag were verified to the
 exact merge SHA before this documentation update. Test databases used a writable directory outside
 the repository.
@@ -94,6 +95,7 @@ These rules survive every future phase:
 | 18 | Deterministic single-series trend-regime evidence (not broad market regime) | `phase18-frozen` |
 | 19 | Four pure typed specialist advisory evidence boundaries | `phase19-frozen` |
 | 20 | Deterministic single-currency equity/ETF paper portfolio context | `phase20-frozen` |
+| 21 | Explicit-policy deterministic paper risk gate with unconditional veto | `phase21-frozen` |
 
 Phases 1–6 predate the frozen-tag convention. Their commits are immutable historical foundations
 and must not be rewritten.
@@ -159,10 +161,13 @@ of gross position exposure. Missing marks invalidate aggregate valuation rather 
 Single-currency equities/ETFs only; pending actions are retained but not applied or reserved.
 No FX, buying power, margin, broker access, risk approval, or execution. See PHASE20_DESIGN.md.
 
-### Phase 21 — Deterministic risk engine
+### Phase 21 — Deterministic paper risk gate (completed)
 
-Implement explicit hard rules, reason codes, sizing ceilings, exposure/concentration checks,
-staleness checks, and fail-closed rejection. Risk is deterministic and has absolute veto supremacy.
+Implemented explicit-policy quantity/notional ceilings, cash floor, whole-account gross/instrument
+exposure, concentration, and short-position checks, with PIT/freshness/valuation prerequisites.
+Pending actions always veto this first version. Ordered reasons and complete hypothetical
+projections remain auditable; failures never pass. PASS_CHECKS is not execution approval or buying
+power. No default numerical thresholds, resizing, broker access, or override. See PHASE21_DESIGN.md.
 
 ### Phase 22 — Head-of-Desk decision composition
 
@@ -215,8 +220,9 @@ For Phase `N`, always:
 
 ## Exact next action
 
-Start Phase 21 with design only, based on current verified `main` with `phase20-frozen` ancestry.
-Define deterministic fail-closed risk inputs, explicit policy configuration, reason codes, freshness
-checks, sizing/exposure ceilings, and pending-action treatment. Portfolio context is not buying
-power or permission to trade. Do not select risk thresholds implicitly or allow LLM/desk/control
-output to override a veto. Preserve paper-only scope and provider neutrality; no execution.
+Start Phase 22 with design only, based on current verified `main` with `phase21-frozen` ancestry.
+Define Head-of-Desk composition with QUIET as the default, explicit evidence/proposal/account/time
+alignment, and policy requirements for WATCHLIST or ALERT. A risk veto, missing risk result, error,
+or incompatible/stale evidence must never be promoted. PASS_CHECKS alone is not an alert or trade.
+Retain provenance and paper-only boundaries; no delivery, broker execution, LLM override, or
+Angelo OS bypass. Cross-desk composition is new scope and needs a precise design before coding.
