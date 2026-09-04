@@ -2,7 +2,7 @@
 
 Provider-agnostic AI-assisted market intelligence and paper-trading research platform.
 
-> **Current status: Phase 19 — Specialist Advisory Evidence Boundaries. RevMind Trading DOES NOT execute trades.**
+> **Current status: Phase 20 — Deterministic Paper Portfolio Context. RevMind Trading DOES NOT execute trades.**
 
 ## Purpose
 
@@ -261,6 +261,17 @@ scheduler, LLM, portfolio/risk decision, alert, control-plane integration, or ex
 `PHASE18_DESIGN.md` for rules and limits.
 
 ## Future architecture
+
+Phase 20 adds immutable context for one explicitly sourced paper account, restricted to equity/ETF
+shares in one valuation currency. It retains account, mark, and pending-action receipt times and
+rejects future-known inputs. Independent marks may be newer than account state without backdating
+their knowledge. Missing marks make aggregate valuation incomplete rather than silently zero.
+
+The pure engine derives signed market values, gross exposure, descriptive equity, and fractions
+of gross exposure under a fixed Decimal context. Zero positions and zero gross exposure remain
+explicit. Pending paper proposals are retained but never applied as fills or buying-power
+reservations. There is no FX conversion, margin model, broker access, optimization, risk approval,
+or execution. See `PHASE20_DESIGN.md` for scope and authority limits.
 
 Phase 19 adds four pure typed desk adapters for catalyst facts, insider transactions, single-series
 trend evidence, and complete setup research histories. Reports retain all upstream provenance,
