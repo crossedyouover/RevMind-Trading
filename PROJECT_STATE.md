@@ -252,11 +252,16 @@ Phase 27 first-slice implementation is on `codex/phase27-live-shadow-design`, wi
 design in `PHASE27_DESIGN.md`. `app/capture` supplies a mock-only bounded capture-to-research
 coordinator, durable sealed PIT inputs and an offline CLI; see `CAPTURE_RUN_GUIDE.md`.
 This feature branch legitimately follows the canonical main baseline above. It is not a full
-Phase 27 freeze. PAPER_RESEARCH and live integration remain unimplemented; provider/entitlements,
+Phase 27 freeze. A separate PAPER_RESEARCH_V1 library now integrates explicit paper account,
+proposal and policies with frozen risk/desk engines and durable journaling; see
+`PAPER_RESEARCH_GUIDE.md`. Live integration remains unimplemented; provider/entitlements,
 operating settings and activation decisions are unset. No live access or deployment is authorized.
 First-slice verification: 28 focused tests and 1,031 total tests passed; Ruff clean, strict mypy
 clean (90 source files), and the offline CLI completed its three-bar example. All tests and the
 CLI use synthetic inputs. The frozen/main verification block above still describes Phase 26.
+Paper-slice verification: 10 paper tests (38 combined Phase 27 tests) and 1,041 total tests passed;
+Ruff clean and strict mypy clean (91 source files). All three desk dispositions and a risk-vetoed
+QUIET path were exercised with synthetic inputs, including journal-before-checkpoint recovery.
 
 The authorized Phase 23–26 offline/local implementation sequence is frozen and published.
 Use `SHADOW_RUN_GUIDE.md` to run and inspect the synthetic demonstration without credentials.

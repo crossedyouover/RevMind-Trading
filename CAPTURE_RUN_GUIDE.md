@@ -52,7 +52,8 @@ explicit observed-only coverage policy; it does not prove the provider had no da
 ## Remaining Phase 27 work
 
 This is the mock-only capture/research first slice, not completion of PHASE27_DESIGN.md's broader
-live-shadow design. PAPER_RESEARCH is rejected. Live transport resource limits and deadlines,
+live-shadow design. PAPER_RESEARCH is rejected by this capture CLI; a separate versioned library
+interface is described in `PAPER_RESEARCH_GUIDE.md`. Live transport resource limits and deadlines,
 provider/entitlement qualification, calendar acquisition, supervised scheduling, backup/restore
 operational qualification and sustained paper trials remain unimplemented. Phase 25 runtime and
 Phase 26 control contracts remain unchanged. No Phase 27 implementation freeze is implied.

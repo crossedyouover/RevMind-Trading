@@ -1,6 +1,6 @@
 # Phase 27 — Read-Only Live-Shadow Integration Design
 
-Status: broader design with a mock-only CAPTURE_RESEARCH first slice implemented on the feature
+Status: broader design with mock-only capture and explicit paper-research slices on the feature
 branch; not live-deployed or frozen as a complete phase. No live access is authorized by this
 document. Baseline main: `c2ecf96464309e6eec6a7cd40edb6a477c6fa132`; frozen Phase 26:
 `f487a1d82caf2bb2c79dd43318dd780f05e44e24`. The recorded baseline gate is 1,003 tests,
@@ -39,8 +39,13 @@ target design, not a claim that all Phase 27 work is finished.
   releases the lock but does not erase the durable acquisition claim. No expiring lease is used.
 - Range/count/page/byte caps bound finite local work. Hard wall-time/transport-memory deadlines
   are not implemented or claimed; live transport qualification is still a separate prerequisite.
-- PAPER_RESEARCH, paper-account integration, live adapters, background services and external
-  control remain unimplemented. Phase 27 must not be frozen as fully complete on this slice alone.
+- A subsequent slice adds a separate PAPER_RESEARCH_V1 request over immutable sealed capture
+  inputs/results, without extending or rewriting CAPTURE_V1. See `PAPER_RESEARCH_GUIDE.md`.
+  Explicit paper account/proposal/risk/desk inputs are persisted before processing; frozen
+  portfolio/risk/desk engines produce a journaled decision. Recovery after journal insertion
+  replays pure computation and content-idempotent journaling. No fills or delivery are enabled.
+- Live adapters, background services, optional catalyst/insider integration and external control
+  remain unimplemented. Phase 27 must not be frozen as fully complete on these slices alone.
 
 ## Frozen integration constraints
 
