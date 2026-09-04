@@ -2,7 +2,7 @@
 
 Provider-agnostic AI-assisted market intelligence and paper-trading research platform.
 
-> **Current status: Phase 21 — Deterministic Paper Risk Gate. RevMind Trading DOES NOT execute trades.**
+> **Current status: Phase 22 — Deterministic Head-of-Desk Composition. RevMind Trading DOES NOT execute trades.**
 
 ## Purpose
 
@@ -261,6 +261,17 @@ scheduler, LLM, portfolio/risk decision, alert, control-plane integration, or ex
 `PHASE18_DESIGN.md` for rules and limits.
 
 ## Future architecture
+
+Phase 22 adds deterministic research-disposition composition: QUIET by default, WATCHLIST only
+with an active configured setup and a matching passing paper-risk result, and ALERT only with
+supporting aligned trend evidence and explicit policy opt-in. These records are not delivered
+messages or orders. No confidence score, LLM judgment, or control input can override a risk veto.
+
+Risk proposal content and cutoff/evaluation boundaries must match exactly. Supplied desk reports
+must match instrument, scope, and PIT constraints; setup and trend retain identical bar-history
+provenance. Selection uses the final snapshot, never an earlier more favorable setup. Stale or
+incompatible supplied evidence blocks promotion. Optional catalyst and insider reports remain
+source context without inferred sentiment. See `PHASE22_DESIGN.md` for rules and limits.
 
 Phase 21 adds a deterministic gate for one hypothetical paper share change against complete
 portfolio context and an explicit, versioned caller policy. It returns VETO or PASS_CHECKS.

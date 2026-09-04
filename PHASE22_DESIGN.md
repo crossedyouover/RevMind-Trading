@@ -1,6 +1,6 @@
 # Phase 22 — Deterministic Head-of-Desk Composition
 
-Status: design only; no implementation or phase22-frozen tag.
+Status: implementation contract; freeze requires the full merge gate and remote verification.
 Base: `e3ac57ec42cb707b16b85fb4850e4dcbb2dd2858`.
 Frozen ancestor: `phase21-frozen`, `7f602b494007e15c3c6b77bb281ff6994ec3c60c`.
 
@@ -167,4 +167,7 @@ Test Python/JSON parity, strict types, exact Decimal/provenance preservation, fo
 direct-result promotions, immutability, no override field, upstream arithmetic errors, and forbidden
 dependencies/calls. No LLM or real providers in tests. Run focused/full tests, Ruff, strict mypy,
 diff checks, and severity/scope audit; repeat after merge before tagging, pushing, verifying, and
-updating PROJECT_STATE. A design document is not evidence that implementation or tests exist.
+updating PROJECT_STATE. Frozen model revalidation checks their existing derivation invariants;
+the composer does not invoke upstream risk or analytical engines or replace their supplied
+results. It preserves the exact caller policy rather than proving historical policy deployment.
+Verification and the frozen merge SHA are recorded in PROJECT_STATE after remote verification.
