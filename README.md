@@ -2,7 +2,7 @@
 
 Provider-agnostic AI-assisted market intelligence and paper-trading research platform.
 
-> **Current status: Phase 17 — Point-in-Time Insider Transaction Facts. RevMind Trading DOES NOT execute trades.**
+> **Current status: Phase 18 — Deterministic Trend-Regime Evidence. RevMind Trading DOES NOT execute trades.**
 
 ## Purpose
 
@@ -236,6 +236,29 @@ or implement withdrawals/tombstones. It performs no I/O, provider fetching, fili
 flow analysis, ranking, recommendation, LLM reasoning, risk approval, alerts, or execution. Existing
 frozen contracts are unchanged; future control-plane callers have no risk-veto bypass through this
 boundary. See `PHASE17_DESIGN.md` for the scope and verification requirements.
+
+## Deterministic trend-regime evidence
+
+Phase 18 adds the first descriptive regime component for a single explicitly sourced PIT bar
+history. The caller must provide close-SMA and arithmetic-return periods; no period or threshold
+is selected implicitly. The frozen Phase 7 engine calculates exactly those operands once, under
+its existing Decimal context. No indicators are reimplemented or silently substituted.
+
+With both operands available, close above SMA plus positive return is `UPWARD`; close below SMA
+plus negative return is `DOWNWARD`; equality plus zero return is `FLAT`; other combinations are
+`MIXED`. If either operand is warming, the result is `WARMING_UP`; otherwise an undefined operand
+produces `UNDEFINED`. Unavailable snapshots never receive a regime label or fabricated confidence.
+
+The result retains the full materialized history and exact observation/feature provenance for
+every bar. Both the source knowledge cutoff and bar event times must be at or before explicit
+evaluation time. Historical bar labels describe an as-of recomputation, not evidence claimed to
+have been available at each original event time. Late-correction views retain their later knowledge
+boundary and cannot mutate prior results.
+
+This is trend evidence, not a broad market-wide risk-on/risk-off assessment. Breadth, volatility,
+liquidity, and macro components remain separate designs. Phase 18 adds no network, storage, provider,
+scheduler, LLM, portfolio/risk decision, alert, control-plane integration, or execution. See
+`PHASE18_DESIGN.md` for rules and limits.
 
 ## Future architecture
 
