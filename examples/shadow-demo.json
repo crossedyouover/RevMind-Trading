@@ -1,0 +1,1671 @@
+{
+  "run_id": "00000000-0000-4000-8000-000000007000",
+  "account_id": "paper",
+  "requests": [
+    {
+      "proposal": {
+        "proposal_id": "00000000-0000-4000-8000-0000000007d0",
+        "account_id": "paper",
+        "instrument": {
+          "symbol": "TEST",
+          "asset_class": "EQUITY",
+          "exchange": "XNAS",
+          "currency": "USD"
+        },
+        "quantity_change": "1",
+        "effective_at": "2025-02-01T00:00:00Z",
+        "observed_at": "2025-02-01T00:00:00Z",
+        "reference_mark": {
+          "observation_id": "00000000-0000-4000-8000-000000000bb8",
+          "source": {
+            "name": "explicit"
+          },
+          "instrument": {
+            "symbol": "TEST",
+            "asset_class": "EQUITY",
+            "exchange": "XNAS",
+            "currency": "USD"
+          },
+          "price": "10",
+          "valued_at": "2025-02-01T00:00:00Z",
+          "observed_at": "2025-02-01T00:00:00Z"
+        }
+      },
+      "risk": {
+        "request": {
+          "context": {
+            "request": {
+              "account": {
+                "observation_id": "00000000-0000-4000-8000-0000000003e8",
+                "account_id": "paper",
+                "source": {
+                  "name": "explicit"
+                },
+                "currency": "USD",
+                "effective_at": "2025-02-01T00:00:00Z",
+                "observed_at": "2025-02-01T00:00:00Z",
+                "cash_balance": "1000",
+                "positions": [],
+                "pending_actions": []
+              },
+              "as_of": "2025-02-01T00:00:00Z",
+              "evaluation_at": "2025-02-01T00:00:00Z"
+            },
+            "schema_version": 1,
+            "valuations": [],
+            "valuation_status": "COMPLETE",
+            "concentration_status": "ZERO_GROSS_EXPOSURE",
+            "net_market_value": "0",
+            "gross_exposure": "0",
+            "equity_value": "1000"
+          },
+          "proposal": {
+            "proposal_id": "00000000-0000-4000-8000-0000000007d0",
+            "account_id": "paper",
+            "instrument": {
+              "symbol": "TEST",
+              "asset_class": "EQUITY",
+              "exchange": "XNAS",
+              "currency": "USD"
+            },
+            "quantity_change": "1",
+            "effective_at": "2025-02-01T00:00:00Z",
+            "observed_at": "2025-02-01T00:00:00Z",
+            "reference_mark": {
+              "observation_id": "00000000-0000-4000-8000-000000000bb8",
+              "source": {
+                "name": "explicit"
+              },
+              "instrument": {
+                "symbol": "TEST",
+                "asset_class": "EQUITY",
+                "exchange": "XNAS",
+                "currency": "USD"
+              },
+              "price": "10",
+              "valued_at": "2025-02-01T00:00:00Z",
+              "observed_at": "2025-02-01T00:00:00Z"
+            }
+          },
+          "policy": {
+            "policy_id": "risk",
+            "policy_version": "1",
+            "account_id": "paper",
+            "currency": "USD",
+            "max_abs_quantity_change": "100",
+            "max_proposal_notional": "1000",
+            "max_gross_exposure": "10000",
+            "max_instrument_exposure": "10000",
+            "max_gross_exposure_share": "1",
+            "allow_short_positions": true,
+            "min_equity_value": "1",
+            "min_cash_balance": "0",
+            "max_account_age_us": 1000000,
+            "max_mark_age_us": 1000000,
+            "max_proposal_age_us": 1000000
+          },
+          "as_of": "2025-02-01T00:00:00Z",
+          "evaluation_at": "2025-02-01T00:00:00Z"
+        },
+        "schema_version": 1,
+        "status": "PASS_CHECKS",
+        "reasons": [],
+        "projection": {
+          "positions": [
+            {
+              "position": {
+                "instrument": {
+                  "symbol": "TEST",
+                  "asset_class": "EQUITY",
+                  "exchange": "XNAS",
+                  "currency": "USD"
+                },
+                "quantity": "1",
+                "mark": {
+                  "observation_id": "00000000-0000-4000-8000-000000000bb8",
+                  "source": {
+                    "name": "explicit"
+                  },
+                  "instrument": {
+                    "symbol": "TEST",
+                    "asset_class": "EQUITY",
+                    "exchange": "XNAS",
+                    "currency": "USD"
+                  },
+                  "price": "10",
+                  "valued_at": "2025-02-01T00:00:00Z",
+                  "observed_at": "2025-02-01T00:00:00Z"
+                }
+              },
+              "market_value": "10",
+              "absolute_exposure": "10",
+              "gross_exposure_share": "1"
+            }
+          ],
+          "proposal_notional": "10",
+          "projected_cash": "990",
+          "gross_exposure": "10",
+          "concentration_status": "AVAILABLE"
+        }
+      },
+      "setup": {
+        "request": {
+          "evaluation_at": "2025-02-01T00:00:00Z",
+          "payload": {
+            "request": {
+              "history": {
+                "request": {
+                  "instrument": {
+                    "symbol": "TEST",
+                    "asset_class": "EQUITY",
+                    "exchange": "XNAS",
+                    "currency": "USD"
+                  },
+                  "timeframe": "ONE_MINUTE",
+                  "source": {
+                    "name": "explicit"
+                  },
+                  "as_of": "2025-02-01T00:00:00Z",
+                  "start": null,
+                  "end": null
+                },
+                "bars": [
+                  {
+                    "bar": {
+                      "instrument": {
+                        "symbol": "TEST",
+                        "asset_class": "EQUITY",
+                        "exchange": "XNAS",
+                        "currency": "USD"
+                      },
+                      "timeframe": "ONE_MINUTE",
+                      "timestamp": "2025-01-31T23:58:00Z",
+                      "open": "10",
+                      "high": "10",
+                      "low": "10",
+                      "close": "10",
+                      "volume": "100"
+                    },
+                    "observation_id": "00000000-0000-4000-8000-000000000001",
+                    "observed_at": "2025-02-01T00:00:00Z",
+                    "source": {
+                      "name": "explicit"
+                    },
+                    "source_record_id": null
+                  },
+                  {
+                    "bar": {
+                      "instrument": {
+                        "symbol": "TEST",
+                        "asset_class": "EQUITY",
+                        "exchange": "XNAS",
+                        "currency": "USD"
+                      },
+                      "timeframe": "ONE_MINUTE",
+                      "timestamp": "2025-01-31T23:59:00Z",
+                      "open": "11",
+                      "high": "11",
+                      "low": "11",
+                      "close": "11",
+                      "volume": "100"
+                    },
+                    "observation_id": "00000000-0000-4000-8000-000000000002",
+                    "observed_at": "2025-02-01T00:00:00Z",
+                    "source": {
+                      "name": "explicit"
+                    },
+                    "source_record_id": null
+                  },
+                  {
+                    "bar": {
+                      "instrument": {
+                        "symbol": "TEST",
+                        "asset_class": "EQUITY",
+                        "exchange": "XNAS",
+                        "currency": "USD"
+                      },
+                      "timeframe": "ONE_MINUTE",
+                      "timestamp": "2025-02-01T00:00:00Z",
+                      "open": "12",
+                      "high": "12",
+                      "low": "12",
+                      "close": "12",
+                      "volume": "100"
+                    },
+                    "observation_id": "00000000-0000-4000-8000-000000000003",
+                    "observed_at": "2025-02-01T00:00:00Z",
+                    "source": {
+                      "name": "explicit"
+                    },
+                    "source_record_id": null
+                  }
+                ],
+                "inspected_observation_count": 3,
+                "eligible_bar_candidate_count": 3
+              },
+              "technical_config": {
+                "sma_periods": [
+                  2
+                ],
+                "ema_periods": [
+                  2
+                ],
+                "rsi_periods": [
+                  2
+                ],
+                "atr_periods": [],
+                "rolling_high_periods": [
+                  2
+                ],
+                "rolling_low_periods": [
+                  2
+                ],
+                "return_periods": [
+                  1
+                ],
+                "volume_mean_periods": [
+                  2
+                ],
+                "volume_stddev_periods": [],
+                "volume_zscore_periods": [
+                  2
+                ]
+              },
+              "evidence_config": {
+                "price_sma_period": 2,
+                "trend_ema_period": 2,
+                "trend_sma_period": 2,
+                "return_period": 1,
+                "rsi_period": 2,
+                "breakout_high_period": 2,
+                "breakdown_low_period": 2,
+                "volume_mean_period": 2,
+                "volume_zscore_period": 2,
+                "rsi_overbought": "70",
+                "rsi_oversold": "30",
+                "volume_zscore_high": "2",
+                "volume_zscore_low": "-2"
+              }
+            },
+            "technical_snapshots": [
+              {
+                "instrument": {
+                  "symbol": "TEST",
+                  "asset_class": "EQUITY",
+                  "exchange": "XNAS",
+                  "currency": "USD"
+                },
+                "timeframe": "ONE_MINUTE",
+                "timestamp": "2025-01-31T23:58:00Z",
+                "features": [
+                  {
+                    "key": "SMA_CLOSE",
+                    "period": 2,
+                    "status": "WARMING_UP",
+                    "value": null
+                  },
+                  {
+                    "key": "EMA_CLOSE",
+                    "period": 2,
+                    "status": "WARMING_UP",
+                    "value": null
+                  },
+                  {
+                    "key": "RSI_CLOSE_WILDER",
+                    "period": 2,
+                    "status": "WARMING_UP",
+                    "value": null
+                  },
+                  {
+                    "key": "ROLLING_HIGHEST_HIGH",
+                    "period": 2,
+                    "status": "WARMING_UP",
+                    "value": null
+                  },
+                  {
+                    "key": "ROLLING_LOWEST_LOW",
+                    "period": 2,
+                    "status": "WARMING_UP",
+                    "value": null
+                  },
+                  {
+                    "key": "ARITHMETIC_RETURN",
+                    "period": 1,
+                    "status": "WARMING_UP",
+                    "value": null
+                  },
+                  {
+                    "key": "VOLUME_MEAN",
+                    "period": 2,
+                    "status": "WARMING_UP",
+                    "value": null
+                  },
+                  {
+                    "key": "VOLUME_ZSCORE",
+                    "period": 2,
+                    "status": "WARMING_UP",
+                    "value": null
+                  }
+                ]
+              },
+              {
+                "instrument": {
+                  "symbol": "TEST",
+                  "asset_class": "EQUITY",
+                  "exchange": "XNAS",
+                  "currency": "USD"
+                },
+                "timeframe": "ONE_MINUTE",
+                "timestamp": "2025-01-31T23:59:00Z",
+                "features": [
+                  {
+                    "key": "SMA_CLOSE",
+                    "period": 2,
+                    "status": "AVAILABLE",
+                    "value": "10.5"
+                  },
+                  {
+                    "key": "EMA_CLOSE",
+                    "period": 2,
+                    "status": "AVAILABLE",
+                    "value": "10.5"
+                  },
+                  {
+                    "key": "RSI_CLOSE_WILDER",
+                    "period": 2,
+                    "status": "WARMING_UP",
+                    "value": null
+                  },
+                  {
+                    "key": "ROLLING_HIGHEST_HIGH",
+                    "period": 2,
+                    "status": "AVAILABLE",
+                    "value": "11"
+                  },
+                  {
+                    "key": "ROLLING_LOWEST_LOW",
+                    "period": 2,
+                    "status": "AVAILABLE",
+                    "value": "10"
+                  },
+                  {
+                    "key": "ARITHMETIC_RETURN",
+                    "period": 1,
+                    "status": "AVAILABLE",
+                    "value": "0.1"
+                  },
+                  {
+                    "key": "VOLUME_MEAN",
+                    "period": 2,
+                    "status": "AVAILABLE",
+                    "value": "100"
+                  },
+                  {
+                    "key": "VOLUME_ZSCORE",
+                    "period": 2,
+                    "status": "UNDEFINED",
+                    "value": null
+                  }
+                ]
+              },
+              {
+                "instrument": {
+                  "symbol": "TEST",
+                  "asset_class": "EQUITY",
+                  "exchange": "XNAS",
+                  "currency": "USD"
+                },
+                "timeframe": "ONE_MINUTE",
+                "timestamp": "2025-02-01T00:00:00Z",
+                "features": [
+                  {
+                    "key": "SMA_CLOSE",
+                    "period": 2,
+                    "status": "AVAILABLE",
+                    "value": "11.5"
+                  },
+                  {
+                    "key": "EMA_CLOSE",
+                    "period": 2,
+                    "status": "AVAILABLE",
+                    "value": "11.500000000000000000000000000000000000000000000000"
+                  },
+                  {
+                    "key": "RSI_CLOSE_WILDER",
+                    "period": 2,
+                    "status": "AVAILABLE",
+                    "value": "100"
+                  },
+                  {
+                    "key": "ROLLING_HIGHEST_HIGH",
+                    "period": 2,
+                    "status": "AVAILABLE",
+                    "value": "12"
+                  },
+                  {
+                    "key": "ROLLING_LOWEST_LOW",
+                    "period": 2,
+                    "status": "AVAILABLE",
+                    "value": "11"
+                  },
+                  {
+                    "key": "ARITHMETIC_RETURN",
+                    "period": 1,
+                    "status": "AVAILABLE",
+                    "value": "0.0909090909090909090909090909090909090909090909091"
+                  },
+                  {
+                    "key": "VOLUME_MEAN",
+                    "period": 2,
+                    "status": "AVAILABLE",
+                    "value": "100"
+                  },
+                  {
+                    "key": "VOLUME_ZSCORE",
+                    "period": 2,
+                    "status": "UNDEFINED",
+                    "value": null
+                  }
+                ]
+              }
+            ],
+            "evidence_snapshots": [
+              {
+                "instrument": {
+                  "symbol": "TEST",
+                  "asset_class": "EQUITY",
+                  "exchange": "XNAS",
+                  "currency": "USD"
+                },
+                "timeframe": "ONE_MINUTE",
+                "timestamp": "2025-01-31T23:58:00Z",
+                "evidence": [
+                  {
+                    "key": "PRICE_ABOVE_SMA",
+                    "status": "WARMING_UP",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-01-31T23:58:00Z",
+                        "key": "SMA_CLOSE",
+                        "period": 2,
+                        "status": "WARMING_UP",
+                        "value": null
+                      }
+                    ],
+                    "measurements": [
+                      {
+                        "key": "CLOSE",
+                        "value": "10"
+                      }
+                    ]
+                  },
+                  {
+                    "key": "PRICE_BELOW_SMA",
+                    "status": "WARMING_UP",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-01-31T23:58:00Z",
+                        "key": "SMA_CLOSE",
+                        "period": 2,
+                        "status": "WARMING_UP",
+                        "value": null
+                      }
+                    ],
+                    "measurements": [
+                      {
+                        "key": "CLOSE",
+                        "value": "10"
+                      }
+                    ]
+                  },
+                  {
+                    "key": "EMA_ABOVE_SMA",
+                    "status": "WARMING_UP",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-01-31T23:58:00Z",
+                        "key": "SMA_CLOSE",
+                        "period": 2,
+                        "status": "WARMING_UP",
+                        "value": null
+                      },
+                      {
+                        "timestamp": "2025-01-31T23:58:00Z",
+                        "key": "EMA_CLOSE",
+                        "period": 2,
+                        "status": "WARMING_UP",
+                        "value": null
+                      }
+                    ],
+                    "measurements": []
+                  },
+                  {
+                    "key": "EMA_BELOW_SMA",
+                    "status": "WARMING_UP",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-01-31T23:58:00Z",
+                        "key": "SMA_CLOSE",
+                        "period": 2,
+                        "status": "WARMING_UP",
+                        "value": null
+                      },
+                      {
+                        "timestamp": "2025-01-31T23:58:00Z",
+                        "key": "EMA_CLOSE",
+                        "period": 2,
+                        "status": "WARMING_UP",
+                        "value": null
+                      }
+                    ],
+                    "measurements": []
+                  },
+                  {
+                    "key": "POSITIVE_RETURN",
+                    "status": "WARMING_UP",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-01-31T23:58:00Z",
+                        "key": "ARITHMETIC_RETURN",
+                        "period": 1,
+                        "status": "WARMING_UP",
+                        "value": null
+                      }
+                    ],
+                    "measurements": []
+                  },
+                  {
+                    "key": "NEGATIVE_RETURN",
+                    "status": "WARMING_UP",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-01-31T23:58:00Z",
+                        "key": "ARITHMETIC_RETURN",
+                        "period": 1,
+                        "status": "WARMING_UP",
+                        "value": null
+                      }
+                    ],
+                    "measurements": []
+                  },
+                  {
+                    "key": "RSI_OVERBOUGHT",
+                    "status": "WARMING_UP",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-01-31T23:58:00Z",
+                        "key": "RSI_CLOSE_WILDER",
+                        "period": 2,
+                        "status": "WARMING_UP",
+                        "value": null
+                      }
+                    ],
+                    "measurements": [
+                      {
+                        "key": "THRESHOLD",
+                        "value": "70"
+                      }
+                    ]
+                  },
+                  {
+                    "key": "RSI_OVERSOLD",
+                    "status": "WARMING_UP",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-01-31T23:58:00Z",
+                        "key": "RSI_CLOSE_WILDER",
+                        "period": 2,
+                        "status": "WARMING_UP",
+                        "value": null
+                      }
+                    ],
+                    "measurements": [
+                      {
+                        "key": "THRESHOLD",
+                        "value": "30"
+                      }
+                    ]
+                  },
+                  {
+                    "key": "RSI_MIDRANGE",
+                    "status": "WARMING_UP",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-01-31T23:58:00Z",
+                        "key": "RSI_CLOSE_WILDER",
+                        "period": 2,
+                        "status": "WARMING_UP",
+                        "value": null
+                      }
+                    ],
+                    "measurements": [
+                      {
+                        "key": "THRESHOLD",
+                        "value": [
+                          "30",
+                          "70"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "key": "CLOSE_BREAKOUT_ABOVE_PRIOR_HIGH",
+                    "status": "WARMING_UP",
+                    "feature_sources": [],
+                    "measurements": [
+                      {
+                        "key": "CLOSE",
+                        "value": "10"
+                      }
+                    ]
+                  },
+                  {
+                    "key": "CLOSE_BREAKDOWN_BELOW_PRIOR_LOW",
+                    "status": "WARMING_UP",
+                    "feature_sources": [],
+                    "measurements": [
+                      {
+                        "key": "CLOSE",
+                        "value": "10"
+                      }
+                    ]
+                  },
+                  {
+                    "key": "VOLUME_ABOVE_MEAN",
+                    "status": "WARMING_UP",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-01-31T23:58:00Z",
+                        "key": "VOLUME_MEAN",
+                        "period": 2,
+                        "status": "WARMING_UP",
+                        "value": null
+                      }
+                    ],
+                    "measurements": [
+                      {
+                        "key": "VOLUME",
+                        "value": "100"
+                      }
+                    ]
+                  },
+                  {
+                    "key": "VOLUME_ZSCORE_HIGH",
+                    "status": "WARMING_UP",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-01-31T23:58:00Z",
+                        "key": "VOLUME_ZSCORE",
+                        "period": 2,
+                        "status": "WARMING_UP",
+                        "value": null
+                      }
+                    ],
+                    "measurements": [
+                      {
+                        "key": "THRESHOLD",
+                        "value": "2"
+                      }
+                    ]
+                  },
+                  {
+                    "key": "VOLUME_ZSCORE_LOW",
+                    "status": "WARMING_UP",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-01-31T23:58:00Z",
+                        "key": "VOLUME_ZSCORE",
+                        "period": 2,
+                        "status": "WARMING_UP",
+                        "value": null
+                      }
+                    ],
+                    "measurements": [
+                      {
+                        "key": "THRESHOLD",
+                        "value": "-2"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "instrument": {
+                  "symbol": "TEST",
+                  "asset_class": "EQUITY",
+                  "exchange": "XNAS",
+                  "currency": "USD"
+                },
+                "timeframe": "ONE_MINUTE",
+                "timestamp": "2025-01-31T23:59:00Z",
+                "evidence": [
+                  {
+                    "key": "PRICE_ABOVE_SMA",
+                    "status": "ACTIVE",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-01-31T23:59:00Z",
+                        "key": "SMA_CLOSE",
+                        "period": 2,
+                        "status": "AVAILABLE",
+                        "value": "10.5"
+                      }
+                    ],
+                    "measurements": [
+                      {
+                        "key": "CLOSE",
+                        "value": "11"
+                      }
+                    ]
+                  },
+                  {
+                    "key": "PRICE_BELOW_SMA",
+                    "status": "INACTIVE",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-01-31T23:59:00Z",
+                        "key": "SMA_CLOSE",
+                        "period": 2,
+                        "status": "AVAILABLE",
+                        "value": "10.5"
+                      }
+                    ],
+                    "measurements": [
+                      {
+                        "key": "CLOSE",
+                        "value": "11"
+                      }
+                    ]
+                  },
+                  {
+                    "key": "EMA_ABOVE_SMA",
+                    "status": "INACTIVE",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-01-31T23:59:00Z",
+                        "key": "SMA_CLOSE",
+                        "period": 2,
+                        "status": "AVAILABLE",
+                        "value": "10.5"
+                      },
+                      {
+                        "timestamp": "2025-01-31T23:59:00Z",
+                        "key": "EMA_CLOSE",
+                        "period": 2,
+                        "status": "AVAILABLE",
+                        "value": "10.5"
+                      }
+                    ],
+                    "measurements": []
+                  },
+                  {
+                    "key": "EMA_BELOW_SMA",
+                    "status": "INACTIVE",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-01-31T23:59:00Z",
+                        "key": "SMA_CLOSE",
+                        "period": 2,
+                        "status": "AVAILABLE",
+                        "value": "10.5"
+                      },
+                      {
+                        "timestamp": "2025-01-31T23:59:00Z",
+                        "key": "EMA_CLOSE",
+                        "period": 2,
+                        "status": "AVAILABLE",
+                        "value": "10.5"
+                      }
+                    ],
+                    "measurements": []
+                  },
+                  {
+                    "key": "POSITIVE_RETURN",
+                    "status": "ACTIVE",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-01-31T23:59:00Z",
+                        "key": "ARITHMETIC_RETURN",
+                        "period": 1,
+                        "status": "AVAILABLE",
+                        "value": "0.1"
+                      }
+                    ],
+                    "measurements": []
+                  },
+                  {
+                    "key": "NEGATIVE_RETURN",
+                    "status": "INACTIVE",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-01-31T23:59:00Z",
+                        "key": "ARITHMETIC_RETURN",
+                        "period": 1,
+                        "status": "AVAILABLE",
+                        "value": "0.1"
+                      }
+                    ],
+                    "measurements": []
+                  },
+                  {
+                    "key": "RSI_OVERBOUGHT",
+                    "status": "WARMING_UP",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-01-31T23:59:00Z",
+                        "key": "RSI_CLOSE_WILDER",
+                        "period": 2,
+                        "status": "WARMING_UP",
+                        "value": null
+                      }
+                    ],
+                    "measurements": [
+                      {
+                        "key": "THRESHOLD",
+                        "value": "70"
+                      }
+                    ]
+                  },
+                  {
+                    "key": "RSI_OVERSOLD",
+                    "status": "WARMING_UP",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-01-31T23:59:00Z",
+                        "key": "RSI_CLOSE_WILDER",
+                        "period": 2,
+                        "status": "WARMING_UP",
+                        "value": null
+                      }
+                    ],
+                    "measurements": [
+                      {
+                        "key": "THRESHOLD",
+                        "value": "30"
+                      }
+                    ]
+                  },
+                  {
+                    "key": "RSI_MIDRANGE",
+                    "status": "WARMING_UP",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-01-31T23:59:00Z",
+                        "key": "RSI_CLOSE_WILDER",
+                        "period": 2,
+                        "status": "WARMING_UP",
+                        "value": null
+                      }
+                    ],
+                    "measurements": [
+                      {
+                        "key": "THRESHOLD",
+                        "value": [
+                          "30",
+                          "70"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "key": "CLOSE_BREAKOUT_ABOVE_PRIOR_HIGH",
+                    "status": "WARMING_UP",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-01-31T23:58:00Z",
+                        "key": "ROLLING_HIGHEST_HIGH",
+                        "period": 2,
+                        "status": "WARMING_UP",
+                        "value": null
+                      }
+                    ],
+                    "measurements": [
+                      {
+                        "key": "CLOSE",
+                        "value": "11"
+                      }
+                    ]
+                  },
+                  {
+                    "key": "CLOSE_BREAKDOWN_BELOW_PRIOR_LOW",
+                    "status": "WARMING_UP",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-01-31T23:58:00Z",
+                        "key": "ROLLING_LOWEST_LOW",
+                        "period": 2,
+                        "status": "WARMING_UP",
+                        "value": null
+                      }
+                    ],
+                    "measurements": [
+                      {
+                        "key": "CLOSE",
+                        "value": "11"
+                      }
+                    ]
+                  },
+                  {
+                    "key": "VOLUME_ABOVE_MEAN",
+                    "status": "INACTIVE",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-01-31T23:59:00Z",
+                        "key": "VOLUME_MEAN",
+                        "period": 2,
+                        "status": "AVAILABLE",
+                        "value": "100"
+                      }
+                    ],
+                    "measurements": [
+                      {
+                        "key": "VOLUME",
+                        "value": "100"
+                      }
+                    ]
+                  },
+                  {
+                    "key": "VOLUME_ZSCORE_HIGH",
+                    "status": "UNDEFINED",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-01-31T23:59:00Z",
+                        "key": "VOLUME_ZSCORE",
+                        "period": 2,
+                        "status": "UNDEFINED",
+                        "value": null
+                      }
+                    ],
+                    "measurements": [
+                      {
+                        "key": "THRESHOLD",
+                        "value": "2"
+                      }
+                    ]
+                  },
+                  {
+                    "key": "VOLUME_ZSCORE_LOW",
+                    "status": "UNDEFINED",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-01-31T23:59:00Z",
+                        "key": "VOLUME_ZSCORE",
+                        "period": 2,
+                        "status": "UNDEFINED",
+                        "value": null
+                      }
+                    ],
+                    "measurements": [
+                      {
+                        "key": "THRESHOLD",
+                        "value": "-2"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "instrument": {
+                  "symbol": "TEST",
+                  "asset_class": "EQUITY",
+                  "exchange": "XNAS",
+                  "currency": "USD"
+                },
+                "timeframe": "ONE_MINUTE",
+                "timestamp": "2025-02-01T00:00:00Z",
+                "evidence": [
+                  {
+                    "key": "PRICE_ABOVE_SMA",
+                    "status": "ACTIVE",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-02-01T00:00:00Z",
+                        "key": "SMA_CLOSE",
+                        "period": 2,
+                        "status": "AVAILABLE",
+                        "value": "11.5"
+                      }
+                    ],
+                    "measurements": [
+                      {
+                        "key": "CLOSE",
+                        "value": "12"
+                      }
+                    ]
+                  },
+                  {
+                    "key": "PRICE_BELOW_SMA",
+                    "status": "INACTIVE",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-02-01T00:00:00Z",
+                        "key": "SMA_CLOSE",
+                        "period": 2,
+                        "status": "AVAILABLE",
+                        "value": "11.5"
+                      }
+                    ],
+                    "measurements": [
+                      {
+                        "key": "CLOSE",
+                        "value": "12"
+                      }
+                    ]
+                  },
+                  {
+                    "key": "EMA_ABOVE_SMA",
+                    "status": "INACTIVE",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-02-01T00:00:00Z",
+                        "key": "SMA_CLOSE",
+                        "period": 2,
+                        "status": "AVAILABLE",
+                        "value": "11.5"
+                      },
+                      {
+                        "timestamp": "2025-02-01T00:00:00Z",
+                        "key": "EMA_CLOSE",
+                        "period": 2,
+                        "status": "AVAILABLE",
+                        "value": "11.500000000000000000000000000000000000000000000000"
+                      }
+                    ],
+                    "measurements": []
+                  },
+                  {
+                    "key": "EMA_BELOW_SMA",
+                    "status": "INACTIVE",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-02-01T00:00:00Z",
+                        "key": "SMA_CLOSE",
+                        "period": 2,
+                        "status": "AVAILABLE",
+                        "value": "11.5"
+                      },
+                      {
+                        "timestamp": "2025-02-01T00:00:00Z",
+                        "key": "EMA_CLOSE",
+                        "period": 2,
+                        "status": "AVAILABLE",
+                        "value": "11.500000000000000000000000000000000000000000000000"
+                      }
+                    ],
+                    "measurements": []
+                  },
+                  {
+                    "key": "POSITIVE_RETURN",
+                    "status": "ACTIVE",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-02-01T00:00:00Z",
+                        "key": "ARITHMETIC_RETURN",
+                        "period": 1,
+                        "status": "AVAILABLE",
+                        "value": "0.0909090909090909090909090909090909090909090909091"
+                      }
+                    ],
+                    "measurements": []
+                  },
+                  {
+                    "key": "NEGATIVE_RETURN",
+                    "status": "INACTIVE",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-02-01T00:00:00Z",
+                        "key": "ARITHMETIC_RETURN",
+                        "period": 1,
+                        "status": "AVAILABLE",
+                        "value": "0.0909090909090909090909090909090909090909090909091"
+                      }
+                    ],
+                    "measurements": []
+                  },
+                  {
+                    "key": "RSI_OVERBOUGHT",
+                    "status": "ACTIVE",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-02-01T00:00:00Z",
+                        "key": "RSI_CLOSE_WILDER",
+                        "period": 2,
+                        "status": "AVAILABLE",
+                        "value": "100"
+                      }
+                    ],
+                    "measurements": [
+                      {
+                        "key": "THRESHOLD",
+                        "value": "70"
+                      }
+                    ]
+                  },
+                  {
+                    "key": "RSI_OVERSOLD",
+                    "status": "INACTIVE",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-02-01T00:00:00Z",
+                        "key": "RSI_CLOSE_WILDER",
+                        "period": 2,
+                        "status": "AVAILABLE",
+                        "value": "100"
+                      }
+                    ],
+                    "measurements": [
+                      {
+                        "key": "THRESHOLD",
+                        "value": "30"
+                      }
+                    ]
+                  },
+                  {
+                    "key": "RSI_MIDRANGE",
+                    "status": "INACTIVE",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-02-01T00:00:00Z",
+                        "key": "RSI_CLOSE_WILDER",
+                        "period": 2,
+                        "status": "AVAILABLE",
+                        "value": "100"
+                      }
+                    ],
+                    "measurements": [
+                      {
+                        "key": "THRESHOLD",
+                        "value": [
+                          "30",
+                          "70"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "key": "CLOSE_BREAKOUT_ABOVE_PRIOR_HIGH",
+                    "status": "ACTIVE",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-01-31T23:59:00Z",
+                        "key": "ROLLING_HIGHEST_HIGH",
+                        "period": 2,
+                        "status": "AVAILABLE",
+                        "value": "11"
+                      }
+                    ],
+                    "measurements": [
+                      {
+                        "key": "CLOSE",
+                        "value": "12"
+                      }
+                    ]
+                  },
+                  {
+                    "key": "CLOSE_BREAKDOWN_BELOW_PRIOR_LOW",
+                    "status": "INACTIVE",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-01-31T23:59:00Z",
+                        "key": "ROLLING_LOWEST_LOW",
+                        "period": 2,
+                        "status": "AVAILABLE",
+                        "value": "10"
+                      }
+                    ],
+                    "measurements": [
+                      {
+                        "key": "CLOSE",
+                        "value": "12"
+                      }
+                    ]
+                  },
+                  {
+                    "key": "VOLUME_ABOVE_MEAN",
+                    "status": "INACTIVE",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-02-01T00:00:00Z",
+                        "key": "VOLUME_MEAN",
+                        "period": 2,
+                        "status": "AVAILABLE",
+                        "value": "100"
+                      }
+                    ],
+                    "measurements": [
+                      {
+                        "key": "VOLUME",
+                        "value": "100"
+                      }
+                    ]
+                  },
+                  {
+                    "key": "VOLUME_ZSCORE_HIGH",
+                    "status": "UNDEFINED",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-02-01T00:00:00Z",
+                        "key": "VOLUME_ZSCORE",
+                        "period": 2,
+                        "status": "UNDEFINED",
+                        "value": null
+                      }
+                    ],
+                    "measurements": [
+                      {
+                        "key": "THRESHOLD",
+                        "value": "2"
+                      }
+                    ]
+                  },
+                  {
+                    "key": "VOLUME_ZSCORE_LOW",
+                    "status": "UNDEFINED",
+                    "feature_sources": [
+                      {
+                        "timestamp": "2025-02-01T00:00:00Z",
+                        "key": "VOLUME_ZSCORE",
+                        "period": 2,
+                        "status": "UNDEFINED",
+                        "value": null
+                      }
+                    ],
+                    "measurements": [
+                      {
+                        "key": "THRESHOLD",
+                        "value": "-2"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "setup_snapshots": [
+              {
+                "instrument": {
+                  "symbol": "TEST",
+                  "asset_class": "EQUITY",
+                  "exchange": "XNAS",
+                  "currency": "USD"
+                },
+                "timeframe": "ONE_MINUTE",
+                "timestamp": "2025-01-31T23:58:00Z",
+                "setups": [
+                  {
+                    "key": "UPSIDE_BREAKOUT_ABOVE_SMA",
+                    "status": "WARMING_UP",
+                    "evidence_references": [
+                      {
+                        "timestamp": "2025-01-31T23:58:00Z",
+                        "key": "PRICE_ABOVE_SMA",
+                        "status": "WARMING_UP"
+                      },
+                      {
+                        "timestamp": "2025-01-31T23:58:00Z",
+                        "key": "CLOSE_BREAKOUT_ABOVE_PRIOR_HIGH",
+                        "status": "WARMING_UP"
+                      }
+                    ]
+                  },
+                  {
+                    "key": "DOWNSIDE_BREAKDOWN_BELOW_SMA",
+                    "status": "WARMING_UP",
+                    "evidence_references": [
+                      {
+                        "timestamp": "2025-01-31T23:58:00Z",
+                        "key": "PRICE_BELOW_SMA",
+                        "status": "WARMING_UP"
+                      },
+                      {
+                        "timestamp": "2025-01-31T23:58:00Z",
+                        "key": "CLOSE_BREAKDOWN_BELOW_PRIOR_LOW",
+                        "status": "WARMING_UP"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "instrument": {
+                  "symbol": "TEST",
+                  "asset_class": "EQUITY",
+                  "exchange": "XNAS",
+                  "currency": "USD"
+                },
+                "timeframe": "ONE_MINUTE",
+                "timestamp": "2025-01-31T23:59:00Z",
+                "setups": [
+                  {
+                    "key": "UPSIDE_BREAKOUT_ABOVE_SMA",
+                    "status": "WARMING_UP",
+                    "evidence_references": [
+                      {
+                        "timestamp": "2025-01-31T23:59:00Z",
+                        "key": "PRICE_ABOVE_SMA",
+                        "status": "ACTIVE"
+                      },
+                      {
+                        "timestamp": "2025-01-31T23:59:00Z",
+                        "key": "CLOSE_BREAKOUT_ABOVE_PRIOR_HIGH",
+                        "status": "WARMING_UP"
+                      }
+                    ]
+                  },
+                  {
+                    "key": "DOWNSIDE_BREAKDOWN_BELOW_SMA",
+                    "status": "WARMING_UP",
+                    "evidence_references": [
+                      {
+                        "timestamp": "2025-01-31T23:59:00Z",
+                        "key": "PRICE_BELOW_SMA",
+                        "status": "INACTIVE"
+                      },
+                      {
+                        "timestamp": "2025-01-31T23:59:00Z",
+                        "key": "CLOSE_BREAKDOWN_BELOW_PRIOR_LOW",
+                        "status": "WARMING_UP"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "instrument": {
+                  "symbol": "TEST",
+                  "asset_class": "EQUITY",
+                  "exchange": "XNAS",
+                  "currency": "USD"
+                },
+                "timeframe": "ONE_MINUTE",
+                "timestamp": "2025-02-01T00:00:00Z",
+                "setups": [
+                  {
+                    "key": "UPSIDE_BREAKOUT_ABOVE_SMA",
+                    "status": "ACTIVE",
+                    "evidence_references": [
+                      {
+                        "timestamp": "2025-02-01T00:00:00Z",
+                        "key": "PRICE_ABOVE_SMA",
+                        "status": "ACTIVE"
+                      },
+                      {
+                        "timestamp": "2025-02-01T00:00:00Z",
+                        "key": "CLOSE_BREAKOUT_ABOVE_PRIOR_HIGH",
+                        "status": "ACTIVE"
+                      }
+                    ]
+                  },
+                  {
+                    "key": "DOWNSIDE_BREAKDOWN_BELOW_SMA",
+                    "status": "INACTIVE",
+                    "evidence_references": [
+                      {
+                        "timestamp": "2025-02-01T00:00:00Z",
+                        "key": "PRICE_BELOW_SMA",
+                        "status": "INACTIVE"
+                      },
+                      {
+                        "timestamp": "2025-02-01T00:00:00Z",
+                        "key": "CLOSE_BREAKDOWN_BELOW_PRIOR_LOW",
+                        "status": "INACTIVE"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "kind": "SETUP_EVIDENCE"
+        },
+        "schema_version": 1,
+        "coverage": "PRESENT",
+        "kind": "SETUP_EVIDENCE"
+      },
+      "trend": {
+        "request": {
+          "evaluation_at": "2025-02-01T00:00:00Z",
+          "payload": {
+            "request": {
+              "history": {
+                "request": {
+                  "instrument": {
+                    "symbol": "TEST",
+                    "asset_class": "EQUITY",
+                    "exchange": "XNAS",
+                    "currency": "USD"
+                  },
+                  "timeframe": "ONE_MINUTE",
+                  "source": {
+                    "name": "explicit"
+                  },
+                  "as_of": "2025-02-01T00:00:00Z",
+                  "start": null,
+                  "end": null
+                },
+                "bars": [
+                  {
+                    "bar": {
+                      "instrument": {
+                        "symbol": "TEST",
+                        "asset_class": "EQUITY",
+                        "exchange": "XNAS",
+                        "currency": "USD"
+                      },
+                      "timeframe": "ONE_MINUTE",
+                      "timestamp": "2025-01-31T23:58:00Z",
+                      "open": "10",
+                      "high": "10",
+                      "low": "10",
+                      "close": "10",
+                      "volume": "100"
+                    },
+                    "observation_id": "00000000-0000-4000-8000-000000000001",
+                    "observed_at": "2025-02-01T00:00:00Z",
+                    "source": {
+                      "name": "explicit"
+                    },
+                    "source_record_id": null
+                  },
+                  {
+                    "bar": {
+                      "instrument": {
+                        "symbol": "TEST",
+                        "asset_class": "EQUITY",
+                        "exchange": "XNAS",
+                        "currency": "USD"
+                      },
+                      "timeframe": "ONE_MINUTE",
+                      "timestamp": "2025-01-31T23:59:00Z",
+                      "open": "11",
+                      "high": "11",
+                      "low": "11",
+                      "close": "11",
+                      "volume": "100"
+                    },
+                    "observation_id": "00000000-0000-4000-8000-000000000002",
+                    "observed_at": "2025-02-01T00:00:00Z",
+                    "source": {
+                      "name": "explicit"
+                    },
+                    "source_record_id": null
+                  },
+                  {
+                    "bar": {
+                      "instrument": {
+                        "symbol": "TEST",
+                        "asset_class": "EQUITY",
+                        "exchange": "XNAS",
+                        "currency": "USD"
+                      },
+                      "timeframe": "ONE_MINUTE",
+                      "timestamp": "2025-02-01T00:00:00Z",
+                      "open": "12",
+                      "high": "12",
+                      "low": "12",
+                      "close": "12",
+                      "volume": "100"
+                    },
+                    "observation_id": "00000000-0000-4000-8000-000000000003",
+                    "observed_at": "2025-02-01T00:00:00Z",
+                    "source": {
+                      "name": "explicit"
+                    },
+                    "source_record_id": null
+                  }
+                ],
+                "inspected_observation_count": 3,
+                "eligible_bar_candidate_count": 3
+              },
+              "config": {
+                "sma_period": 2,
+                "return_period": 1
+              },
+              "evaluation_at": "2025-02-01T00:00:00Z"
+            },
+            "snapshots": [
+              {
+                "observation": {
+                  "bar": {
+                    "instrument": {
+                      "symbol": "TEST",
+                      "asset_class": "EQUITY",
+                      "exchange": "XNAS",
+                      "currency": "USD"
+                    },
+                    "timeframe": "ONE_MINUTE",
+                    "timestamp": "2025-01-31T23:58:00Z",
+                    "open": "10",
+                    "high": "10",
+                    "low": "10",
+                    "close": "10",
+                    "volume": "100"
+                  },
+                  "observation_id": "00000000-0000-4000-8000-000000000001",
+                  "observed_at": "2025-02-01T00:00:00Z",
+                  "source": {
+                    "name": "explicit"
+                  },
+                  "source_record_id": null
+                },
+                "sma": {
+                  "key": "SMA_CLOSE",
+                  "period": 2,
+                  "status": "WARMING_UP",
+                  "value": null
+                },
+                "arithmetic_return": {
+                  "key": "ARITHMETIC_RETURN",
+                  "period": 1,
+                  "status": "WARMING_UP",
+                  "value": null
+                },
+                "status": "WARMING_UP",
+                "regime": null
+              },
+              {
+                "observation": {
+                  "bar": {
+                    "instrument": {
+                      "symbol": "TEST",
+                      "asset_class": "EQUITY",
+                      "exchange": "XNAS",
+                      "currency": "USD"
+                    },
+                    "timeframe": "ONE_MINUTE",
+                    "timestamp": "2025-01-31T23:59:00Z",
+                    "open": "11",
+                    "high": "11",
+                    "low": "11",
+                    "close": "11",
+                    "volume": "100"
+                  },
+                  "observation_id": "00000000-0000-4000-8000-000000000002",
+                  "observed_at": "2025-02-01T00:00:00Z",
+                  "source": {
+                    "name": "explicit"
+                  },
+                  "source_record_id": null
+                },
+                "sma": {
+                  "key": "SMA_CLOSE",
+                  "period": 2,
+                  "status": "AVAILABLE",
+                  "value": "10.5"
+                },
+                "arithmetic_return": {
+                  "key": "ARITHMETIC_RETURN",
+                  "period": 1,
+                  "status": "AVAILABLE",
+                  "value": "0.1"
+                },
+                "status": "AVAILABLE",
+                "regime": "UPWARD"
+              },
+              {
+                "observation": {
+                  "bar": {
+                    "instrument": {
+                      "symbol": "TEST",
+                      "asset_class": "EQUITY",
+                      "exchange": "XNAS",
+                      "currency": "USD"
+                    },
+                    "timeframe": "ONE_MINUTE",
+                    "timestamp": "2025-02-01T00:00:00Z",
+                    "open": "12",
+                    "high": "12",
+                    "low": "12",
+                    "close": "12",
+                    "volume": "100"
+                  },
+                  "observation_id": "00000000-0000-4000-8000-000000000003",
+                  "observed_at": "2025-02-01T00:00:00Z",
+                  "source": {
+                    "name": "explicit"
+                  },
+                  "source_record_id": null
+                },
+                "sma": {
+                  "key": "SMA_CLOSE",
+                  "period": 2,
+                  "status": "AVAILABLE",
+                  "value": "11.5"
+                },
+                "arithmetic_return": {
+                  "key": "ARITHMETIC_RETURN",
+                  "period": 1,
+                  "status": "AVAILABLE",
+                  "value": "0.0909090909090909090909090909090909090909090909091"
+                },
+                "status": "AVAILABLE",
+                "regime": "UPWARD"
+              }
+            ]
+          },
+          "kind": "TREND_EVIDENCE"
+        },
+        "schema_version": 1,
+        "coverage": "PRESENT",
+        "kind": "TREND_EVIDENCE"
+      },
+      "catalyst": null,
+      "insider": null,
+      "policy": {
+        "policy_id": "head",
+        "policy_version": "1",
+        "account_id": "paper",
+        "expected_risk_policy_id": "risk",
+        "expected_risk_policy_version": "1",
+        "setup_key": "UPSIDE_BREAKOUT_ABOVE_SMA",
+        "enable_watchlist": true,
+        "enable_alert": true,
+        "max_bar_age_us": 0
+      },
+      "as_of": "2025-02-01T00:00:00Z",
+      "evaluation_at": "2025-02-01T00:00:00Z"
+    }
+  ],
+  "destination": "local-demo-only",
+  "deliver_alerts": false,
+  "alert_ttl_us": 60000000
+}
