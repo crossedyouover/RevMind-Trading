@@ -1,6 +1,6 @@
 # Phase 19 — Specialist Advisory Evidence Boundaries
 
-Status: design only; no Phase 19 implementation or frozen implementation tag.
+Status: implementation contract; freeze requires the complete merge gate and remote verification.
 Base: `ff8b256afadeda31015474ce1b7ef1851fb7ca49`.
 Frozen ancestor: `phase18-frozen`, `78e109241a09fac9ea6eb24a86366a0eebd43330`.
 
@@ -148,4 +148,8 @@ recomputations; discarding warming/undefined states; and treating source prose a
 Deferred: broader flow/regime evidence, interpretation, cross-desk composition, freshness policy,
 portfolio/risk decisions, alerts, persistent audit transport, and Angelo OS integration.
 
-This document is an implementation specification, not evidence that Phase 19 tests or code exist.
+Implementation retains the frozen producers unchanged. The desk JSON boundary adapts legacy
+technical-configuration period arrays to tuples because Phase 7 requires tuples even in JSON mode;
+scalar validation and all calculations remain owned by the frozen models and engines. Python
+mutable collections remain rejected. Verification and frozen SHA are recorded in PROJECT_STATE.md
+only after the full implementation lifecycle succeeds.
