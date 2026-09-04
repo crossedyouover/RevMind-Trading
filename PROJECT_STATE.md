@@ -248,6 +248,15 @@ For Phase `N`, always:
 
 ## Exact next action
 
+The local offline dashboard is available via `Start-RevMind.cmd` and `DASHBOARD_GUIDE.md`.
+It reads the existing PowerShell demo and runs isolated synthetic captures, with chart/evidence,
+history, audit and JSON export. It binds only to loopback with local-session request checks.
+This separate user-facing utility does not change frozen engines or enable live-market access,
+paper-account UI controls, external alerts, broker execution or Angelo OS integration.
+Dashboard verification: six focused tests and 1,047 total tests passed; Ruff clean and strict mypy
+clean (94 source files). Browser checks verified the existing demo, new run action, chart, evidence
+and audit display. No frozen domain source was changed for this UI.
+
 Phase 27 first-slice implementation is on `codex/phase27-live-shadow-design`, with the broader
 design in `PHASE27_DESIGN.md`. `app/capture` supplies a mock-only bounded capture-to-research
 coordinator, durable sealed PIT inputs and an offline CLI; see `CAPTURE_RUN_GUIDE.md`.

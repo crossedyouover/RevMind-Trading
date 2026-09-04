@@ -2,6 +2,12 @@
 
 Provider-agnostic AI-assisted market intelligence and paper-trading research platform.
 
+## Open the local dashboard
+
+Double-click **Start-RevMind.cmd** to open the offline research dashboard in your browser.
+Run the synthetic demo, inspect your stored results and export evidence without typing commands.
+See [DASHBOARD_GUIDE.md](DASHBOARD_GUIDE.md). Live data and trading remain disabled.
+
 > **Current status: Phases 23–26 — Local Delivery, Evaluation, Offline Shadow Runtime, and Control Contracts. RevMind Trading DOES NOT execute trades.**
 
 ## Purpose
@@ -342,5 +348,6 @@ Market Data
 ```
 
 No strategy engine, full backtesting engine, LLM intelligence, portfolio optimizer, execution
-integration, REST/WebSocket control server, web UI, or live Angelo OS connection is implemented.
+integration, general-purpose REST/WebSocket control server, or live Angelo OS connection is implemented.
+The local dashboard exposes only a fixed offline demo and its stored research; it is not a live desk.
 The local control contract is an integration seam, not a deployed authenticated network service.
