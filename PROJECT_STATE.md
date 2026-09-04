@@ -7,16 +7,16 @@ this file and `README.md` before making changes.
 
 - Repository: `C:\Users\user\Documents\RevMind-Trading`
 - Canonical branch: `main` (`master` is the local tracking branch)
-- Frozen through: Phase 19 (advisory evidence boundaries, no LLM or decision authority)
-- Frozen commit: `66772c8a1ba479338699b7c97110523af8daf631`
-- Frozen tag: `phase19-frozen` (peeled tag resolves to the frozen commit)
-- Last verified gate: 725 tests passed, Ruff clean, mypy strict clean, `git diff --check`
+- Frozen through: Phase 20 (single-currency paper portfolio context, no risk approval)
+- Frozen commit: `0fd80af25b2ffb69a1b3c38cca825aac91202939`
+- Frozen tag: `phase20-frozen` (peeled tag resolves to the frozen commit)
+- Last verified gate: 811 tests passed, Ruff clean, mypy strict clean, `git diff --check`
   clean, tracked worktree clean
 - Current capability: deterministic, point-in-time-safe flow from canonical market observations
   through technical analysis, market evidence, setup composition, and multi-instrument scanning,
   plus provider-neutral point-in-time catalyst/news and insider transaction fact materialization,
   and deterministic single-series trend-regime evidence, exposed through four pure typed
-  specialist advisory evidence reports
+  specialist advisory evidence reports, plus PIT-safe single-currency paper portfolio context
 - Trading status: no broker execution, automatic trading, or real-money authority exists
 
 Verify the restart point before beginning work:
@@ -26,19 +26,19 @@ Set-Location "C:\Users\user\Documents\RevMind-Trading"
 git status --short --branch
 git rev-parse HEAD
 git rev-parse origin/main
-git rev-parse "phase19-frozen^{}"
-git merge-base --is-ancestor "phase19-frozen^{}" HEAD
+git rev-parse "phase20-frozen^{}"
+git merge-base --is-ancestor "phase20-frozen^{}" HEAD
 .\.venv\Scripts\python.exe -m pytest -q --basetemp=.pytest_continuation_tmp
 .\.venv\Scripts\python.exe -m ruff check app tests
 .\.venv\Scripts\python.exe -m mypy app
 git diff --check
 ```
 
-`HEAD` and `origin/main` must match, the peeled Phase 19 tag must resolve to
-`66772c8a1ba479338699b7c97110523af8daf631`, and the ancestry check must exit successfully. The
+`HEAD` and `origin/main` must match, the peeled Phase 20 tag must resolve to
+`0fd80af25b2ffb69a1b3c38cca825aac91202939`, and the ancestry check must exit successfully. The
 continuation-contract documentation may legitimately follow the frozen implementation tag.
 
-Phase 19 verification included 62 focused advisory desk tests and the full 725-test suite on both
+Phase 20 verification included 86 focused portfolio tests and the full 811-test suite on both
 the feature branch and merge commit. Remote main and the peeled frozen tag were verified to the
 exact merge SHA before this documentation update. Test databases used a writable directory outside
 the repository.
@@ -93,6 +93,7 @@ These rules survive every future phase:
 | 17 | Point-in-time insider transaction facts (not broader market flow) | `phase17-frozen` |
 | 18 | Deterministic single-series trend-regime evidence (not broad market regime) | `phase18-frozen` |
 | 19 | Four pure typed specialist advisory evidence boundaries | `phase19-frozen` |
+| 20 | Deterministic single-currency equity/ETF paper portfolio context | `phase20-frozen` |
 
 Phases 1–6 predate the frozen-tag convention. Their commits are immutable historical foundations
 and must not be rewritten.
@@ -150,10 +151,13 @@ not actionability; malformed or missing input fails closed. Original analytical 
 remain unchanged. No LLM interpretation, broader flow/regime inference, cross-desk composition,
 risk approval, or execution authority. See `PHASE19_DESIGN.md`.
 
-### Phase 20 — Deterministic portfolio-context snapshots
+### Phase 20 — Deterministic paper portfolio-context snapshots (completed)
 
-Represent cash, positions, exposure, concentration, pending paper actions, and valuation time as
-immutable PIT context. Broker/provider adapters remain outside the domain boundary.
+Implemented explicit paper-account and mark receipts, signed cash/share positions, pending paper
+proposals, fixed-context Decimal valuations, gross/net exposure, descriptive equity, and fractions
+of gross position exposure. Missing marks invalidate aggregate valuation rather than becoming zero.
+Single-currency equities/ETFs only; pending actions are retained but not applied or reserved.
+No FX, buying power, margin, broker access, risk approval, or execution. See PHASE20_DESIGN.md.
 
 ### Phase 21 — Deterministic risk engine
 
@@ -211,9 +215,8 @@ For Phase `N`, always:
 
 ## Exact next action
 
-Start Phase 20 with design only, based on current verified `main` with `phase19-frozen` ancestry.
-Define immutable deterministic portfolio-context snapshots with explicit account scope, currency,
-cash, positions, valuation/knowledge times, and pending paper-action semantics. Preserve missing
-valuation states and provider neutrality; do not silently introduce FX conversion, broker access,
-portfolio optimization, execution, or risk approval. Deterministic risk remains a later separate
-veto boundary, and future Angelo OS controls cannot weaken it.
+Start Phase 21 with design only, based on current verified `main` with `phase20-frozen` ancestry.
+Define deterministic fail-closed risk inputs, explicit policy configuration, reason codes, freshness
+checks, sizing/exposure ceilings, and pending-action treatment. Portfolio context is not buying
+power or permission to trade. Do not select risk thresholds implicitly or allow LLM/desk/control
+output to override a veto. Preserve paper-only scope and provider neutrality; no execution.
