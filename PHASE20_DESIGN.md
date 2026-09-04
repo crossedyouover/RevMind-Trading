@@ -1,6 +1,6 @@
 # Phase 20 — Deterministic Paper Portfolio Context
 
-Status: design only. No implementation, risk rules, or Phase 20 frozen tag yet.
+Status: implementation contract; freezing requires the full merge gate and remote verification.
 Base: `7fcd1e7945642521f59db0ada9d74f2fe3310e1c`.
 Frozen ancestor: `phase19-frozen`, `66772c8a1ba479338699b7c97110523af8daf631`.
 
@@ -187,4 +187,8 @@ Resolved hazards: mixed-currency totals, unsupported contract multipliers, false
 missing marks treated as zero, ambiguous concentration denominator, hidden current-time use,
 pending proposals treated as fills, and descriptive equity mistaken for buying power.
 Deferred capabilities are explicit and must not be advertised as implemented.
-This file is the specification, not evidence that Phase 20 code or tests exist.
+The implementation fixes Decimal exponent bounds at Emin=-999999 and Emax=999999, capitals=1,
+clamp=0, empty flags, and explicit InvalidOperation/DivisionByZero/Overflow/Underflow traps.
+Inexact underflow fails rather than silently becoming zero exposure. Existing model instances
+are revalidated as well as constructor inputs. No frozen upstream contract is modified.
+The verified gate and frozen merge SHA are recorded in PROJECT_STATE.md after remote verification.
