@@ -33,3 +33,22 @@ FAILED or uncertain delivery states need inspection; the runner will not auto-re
 The synthetic 1,440-step replay test validates software scheduling/recovery, not a live trading
 record. Live data integration, real delivery, extended operational trials, and real-money execution
 require separate deployment decisions and are not enabled by these commands.
+
+## Local control contract
+
+After the demo above, inspect it through the versioned, grant-scoped interface:
+
+```powershell
+.\.venv\Scripts\python.exe -m app.control --directory .shadow-demo --grants examples/control-grants.json --command examples/control-status.json
+```
+
+Expected outcome: COMPLETED with run status COMPLETE. The example grants only STATUS, HEALTH,
+and AUDIT, not mutations. Replaying the same command returns its saved response, not a fresh
+observation; use a new command UUID for a new observation. Changed content under the same command
+UUID is rejected. Unresolved command claims never auto-execute again.
+
+Embedding hosts may grant REGISTER/START/PAUSE/TICK for an exact run/manifest. REGISTER is the
+configuration operation: new immutable plans, never editing policies in a running plan.
+The host must own the grant file and authenticate principal identity before exposing this facade
+over any IPC/network interface. The CLI is for trusted local use, not remote authentication.
+No Angelo OS service connection, network listener, or automatic background scheduler is installed.
