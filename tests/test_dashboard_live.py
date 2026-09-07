@@ -1,7 +1,7 @@
 """On-demand dashboard market data stays read-only, bounded, and receipt-aware."""
 
 import json
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import httpx
@@ -83,6 +83,61 @@ async def test_probe_uses_frozen_adapter_and_persists_receipt_aware_snapshots(
     assert "distinct-key" not in public and "distinct-secret" not in public
     service.invalidate()
     assert service.state().status == "NOT_TESTED"
+    for client in clients:
+        await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_market_research_uses_historical_bars_and_frozen_engines(tmp_path: Path) -> None:
+    requests: list[httpx.Request] = []
+    clients: list[httpx.AsyncClient] = []
+
+    def factory(
+        settings: AlpacaMarketDataSettings,
+        bindings: tuple[AlpacaInstrumentBinding, ...],
+    ) -> AlpacaMarketDataProvider:
+        def respond(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            symbol = request.url.path.split("/")[-2]
+            first = datetime(2026, 9, 7, 9, 0, tzinfo=UTC)
+            bars = [
+                {
+                    "t": (first + timedelta(minutes=index)).isoformat().replace("+00:00", "Z"),
+                    "o": 100 + index,
+                    "h": 101 + index,
+                    "l": 99 + index,
+                    "c": 101 + index,
+                    "v": 1_000 + index,
+                }
+                for index in range(25)
+            ]
+            return httpx.Response(
+                200, json={"bars": bars, "symbol": symbol, "next_page_token": None}
+            )
+
+        client = httpx.AsyncClient(
+            base_url="https://data.alpaca.markets",
+            follow_redirects=False,
+            transport=httpx.MockTransport(respond),
+        )
+        clients.append(client)
+        return AlpacaMarketDataProvider(settings, bindings, client=client)
+
+    store = configured_store(tmp_path)
+    report = await DashboardLiveData(
+        store, clock=FixedClock(), provider_factory=factory
+    ).research()
+    assert report.status == "COMPLETE_READ_ONLY"
+    assert tuple(row.symbol for row in report.rows) == ("AAPL", "MSFT", "SPY")
+    assert all(row.bar_count == 25 for row in report.rows)
+    assert all(row.latest_close == "125" for row in report.rows)
+    assert all(row.trend == "UPWARD" for row in report.rows)
+    assert all(row.action == "REVIEW" for row in report.rows)
+    assert all(row.active_setups == ("UPSIDE_BREAKOUT_ABOVE_SMA",) for row in report.rows)
+    assert all(request.url.params["feed"] == "iex" for request in requests)
+    assert all(request.url.params["adjustment"] == "raw" for request in requests)
+    assert "distinct" not in report.model_dump_json()
+    assert (store.directory / "market-observations.db").is_file()
     for client in clients:
         await client.aclose()
 

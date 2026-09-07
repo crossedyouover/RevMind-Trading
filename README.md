@@ -4,9 +4,10 @@ Provider-agnostic AI-assisted market intelligence and paper-trading research pla
 
 ## Open the local dashboard
 
-Double-click **Start-RevMind.cmd** to open the offline research dashboard in your browser.
-Run the synthetic demo, inspect your stored results and export evidence without typing commands.
-See [DASHBOARD_GUIDE.md](DASHBOARD_GUIDE.md). Live data and trading remain disabled.
+Double-click **Start-RevMind.cmd** to open the local research dashboard in your browser.
+It can run bounded, on-demand Alpaca historical-bar research over the saved watchlist or the
+separate synthetic verification demo. See [DASHBOARD_GUIDE.md](DASHBOARD_GUIDE.md). Continuous
+monitoring, account access and trading remain disabled.
 
 > **Current status: Phases 23–26 — Local Delivery, Evaluation, Offline Shadow Runtime, and Control Contracts. RevMind Trading DOES NOT execute trades.**
 

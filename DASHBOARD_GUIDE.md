@@ -10,10 +10,20 @@ Alternatively, from the repository in PowerShell:
 .\.venv\Scripts\python.exe -m app.dashboard --open-browser
 ```
 
-The dashboard displays your existing `.capture-demo` result automatically. Click **Run offline
-demo** for a new isolated synthetic run. Select a run in **Run history** to inspect price bars,
-setup availability, trend evidence and the audit trail. **Export JSON** downloads the selected
-result through your browser. **Refresh** reloads stored history. The list shows at most 50 runs.
+The main action is **Analyze my watchlist**. It retrieves a bounded window of completed historical
+bars from the selected Alpaca feed and passes each symbol through RevMind's receipt-aware ingestion,
+point-in-time materialization, technical evidence, setup and trend engines. The result cards show
+the latest close, trend, active setup, number of analyzed bars and a recent chart.
+
+Use the card labels as a review queue:
+
+- **REVIEW**: a frozen descriptive setup is active. Inspect it and apply separate risk judgment;
+  this is not an instruction to buy or sell.
+- **WAIT**: the latest completed bar has no active frozen setup.
+- **NO DATA**: Alpaca returned no completed bars in the bounded window.
+
+The separate **Run synthetic demo** action remains an engineering verification tool. Its run
+history, audit trail and exported JSON are synthetic and must not be confused with Alpaca research.
 
 ## Data settings
 
@@ -30,15 +40,14 @@ folder: this local file is not encrypted or managed by a secret vault. An Alpaca
 more account authority than this read-only application uses, so configure provider-side permissions
 appropriately and never paste credentials into chat or commit them.
 
-`CONFIGURED NOT ACTIVE` means selections and credentials are saved but no live request will occur.
+`CONFIGURED NOT ACTIVE` means selections and credentials are saved; a request occurs only when you
+explicitly test the connection or analyze the watchlist.
 `CREDENTIALS REQUIRED` means Alpaca was selected without both credentials. `OFFLINE DEMO` means
 only synthetic captures are enabled. Feed entitlement and credential validity are not asserted
 until a later explicit connection/health-check phase.
 
-The status strip reports dashboard readiness, the selected source, whether credentials are
-locally present (not whether Alpaca has accepted them), and the hard-disabled state of live
-data and broker execution. It performs no network authentication and never presents a saved
-selection as an active connection.
+The status strip reports dashboard readiness, the selected source, credential/test state, and the
+hard-disabled state of continuous streaming and broker execution.
 
 The header mirrors the selected source but keeps `LIVE DISABLED` visible for Alpaca until an
 explicit provider-activation phase succeeds. Sidebar highlighting follows the section selected
@@ -52,20 +61,25 @@ actual UTC receipt boundary to the batch, and appends the canonical observations
 receipt time; credentials and provider response bodies are never displayed or persisted there.
 Every settings save resets the connection claim to `NOT TESTED` until another explicit test.
 
-This is on-demand snapshot acquisition only. It does not enable WebSockets, polling, scheduling,
-historical-bar research, broker-account access, order endpoints, or execution. A successful test
-means the selected credentials/feed supplied the requested snapshots at that moment; it is not a
-completeness, latency, uptime, or future-access guarantee.
+**Analyze my watchlist** performs separate bounded historical-bar requests. To avoid incomplete
+bars and delayed-feed entitlement ambiguity, the end boundary is at least 20 minutes behind the
+current UTC clock and aligned to the selected timeframe. The lookback is bounded by timeframe:
+7 days for one-minute, 14 days for five-minute, 30 days for fifteen-minute, 90 days for hourly,
+and 365 days for daily bars. Provider-returned sessions are analyzed as received; the saved session
+preference is not yet an enforced exchange-calendar filter.
+
+There are no WebSockets, background polling, scheduling, broker-account reads, order endpoints, or
+execution. A completed result is research evidence, not a completeness guarantee or trading signal.
 
 New demo records are saved in `.dashboard-runs/<UUID>/`. They are not deleted automatically.
 Each run has its own observation/capture databases so repeated demos do not exhaust a shared
 history limit. Your existing PowerShell demo is read only; it is not modified by the viewer.
 Digests are checked when displaying completed records; invalid records are marked unreadable.
 
-This is a completed offline viewer/demo workflow, not a live trading application. All displayed
-prices are synthetic. WARMING_UP is expected for calculations requiring more than three bars.
-The dashboard does not invoke paper-risk evaluation, connect live data, send alerts or place orders.
-Paper-risk integration remains available through the separately documented library interface.
+The watchlist cards use real historical Alpaca data when Alpaca is selected; the lower offline-demo
+section remains synthetic. The dashboard does not yet invoke paper-risk evaluation, read an account,
+send alerts or place orders. Paper-risk integration remains available through the separately
+documented library interface.
 
 The server binds only to 127.0.0.1 and checks Host, Origin, fetch-site and a per-launch API token.
 It permits only fixed static files, run reads and the fixed synthetic demo action, not arbitrary

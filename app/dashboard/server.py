@@ -219,7 +219,8 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                 self.reply(403, b"Local session required", "text/plain")
                 return
             if (
-                self.path not in {"/api/demo", "/api/settings", "/api/alpaca/test"}
+                self.path
+                not in {"/api/demo", "/api/settings", "/api/alpaca/test", "/api/alpaca/research"}
                 or self.headers.get("Content-Type") != "application/json"
             ):
                 self.reply(400, b"Invalid request", "text/plain")
@@ -241,6 +242,10 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                     if payload != b"{}":
                         raise ValueError("empty request required")
                     value = asyncio.run(app.live.probe()).model_dump(mode="json")
+                elif self.path == "/api/alpaca/research":
+                    if payload != b"{}":
+                        raise ValueError("empty request required")
+                    value = asyncio.run(app.live.research()).model_dump(mode="json")
                 else:
                     body = json.loads(payload)
                     if not isinstance(body, dict) or set(body) != {

@@ -118,7 +118,9 @@ def test_local_session_routes(app):
         assert b'data-section="providers"' in html
         assert b'src="/revmind-logo-lockup.png"' in html
         assert b'id="source-badge"' in html
-        assert b"continuous market-data streaming" in html
+        assert b'id="run-market"' in html
+        assert b'id="research-results"' in html
+        assert b"continuous monitoring" in html
         assert "frame-ancestors 'none'" in csp
         status, logo, _ = call("/revmind-logo-lockup.png")
         assert status == 200 and logo.startswith(b"\x89PNG\r\n\x1a\n")
@@ -160,6 +162,7 @@ def test_local_session_routes(app):
         assert json.loads(saved)["integration_status"] == "CONFIGURED_NOT_ACTIVE"
         assert call("/api/settings", "POST", headers, '{"settings":{}}')[0] == 400
         assert call("/api/alpaca/test", "POST", headers, '{"symbols":["AAPL"]}')[0] == 400
+        assert call("/api/alpaca/research", "POST", headers, '{"days":30}')[0] == 400
     finally:
         server.shutdown()
         server.server_close()
