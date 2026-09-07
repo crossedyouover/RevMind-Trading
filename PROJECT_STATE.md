@@ -253,9 +253,12 @@ It reads the existing PowerShell demo and runs isolated synthetic captures, with
 history, audit and JSON export. It binds only to loopback with local-session request checks.
 This separate user-facing utility does not change frozen engines or enable live-market access,
 paper-account UI controls, external alerts, broker execution or Angelo OS integration.
-Dashboard verification: six focused tests and 1,047 total tests passed; Ruff clean and strict mypy
-clean (94 source files). Browser checks verified the existing demo, new run action, chart, evidence
-and audit display. No frozen domain source was changed for this UI.
+The dashboard now exposes validated local choices for offline/Alpaca, IEX/SIP, exact watchlist
+instrument identities, timeframe, session policy and optional locally stored credentials.
+Selections are configuration only: live requests and provider authentication checks remain disabled.
+Dashboard verification: 11 focused tests and 1,052 total tests passed; Ruff clean and strict mypy
+clean (95 source files). Browser checks verified the existing demo, new run action, chart, evidence,
+audit display and selectable local data settings. No frozen domain source was changed for this UI.
 
 Phase 27 first-slice implementation is on `codex/phase27-live-shadow-design`, with the broader
 design in `PHASE27_DESIGN.md`. `app/capture` supplies a mock-only bounded capture-to-research

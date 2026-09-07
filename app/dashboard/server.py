@@ -17,6 +17,7 @@ from uuid import UUID, uuid4
 from app.capture.__main__ import SimulatedClock
 from app.capture.coordinator import OfflineCaptureCoordinator
 from app.capture.models import CycleRequest, CycleResult, SealedInputs, digest
+from app.dashboard.settings import DashboardSettings, SettingsStore
 
 POLICY = "2bfebfe92eb5b76469b6da94b8f49714147cf85bc0cb12bbacaf77b66edbbeae"
 STATIC = Path(__file__).parent / "static"
@@ -26,6 +27,7 @@ class Dashboard:
     def __init__(self, root: Path) -> None:
         self.root = root.resolve()
         self.runs = self.root / ".dashboard-runs"
+        self.settings = SettingsStore(self.root / ".revmind")
 
     def directory(self, key: str) -> Path:
         if key == "existing":
@@ -88,6 +90,26 @@ class Dashboard:
             except (ValueError, OSError, sqlite3.Error):
                 rows.append({"key": key, "state": "UNREADABLE", "bars": 0, "events": []})
         return rows
+
+    def health(self) -> dict[str, Any]:
+        settings = self.settings.public()
+        runs = self.list_runs()
+        return {
+            "schema_version": 1,
+            "dashboard": "READY",
+            "settings": "READABLE",
+            "selected_source": settings["data_mode"],
+            "credentials": (
+                "CONFIGURED_NOT_VALIDATED"
+                if settings["credentials_configured"]
+                else "NOT_CONFIGURED"
+            ),
+            "integration": settings["integration_status"],
+            "live_data": "DISABLED",
+            "broker_execution": "DISABLED",
+            "stored_runs": len(runs),
+            "unreadable_runs": sum(row["state"] == "UNREADABLE" for row in runs),
+        }
 
     def run_demo(self) -> dict[str, Any]:
         request = CycleRequest.model_validate_json(
@@ -153,10 +175,14 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                 if path == "/api/runs":
                     body = json.dumps(app.list_runs()).encode()
                     self.reply(200, body, "application/json")
+                elif path == "/api/settings":
+                    self.reply(200, json.dumps(app.settings.public()).encode(), "application/json")
+                elif path == "/api/health":
+                    self.reply(200, json.dumps(app.health()).encode(), "application/json")
                 elif path.startswith("/api/runs/"):
                     body = json.dumps(app.read(path.removeprefix("/api/runs/"))).encode()
                     self.reply(200, body, "application/json")
-                elif path in {"/", "/app.js", "/style.css"}:
+                elif path in {"/", "/app.js", "/style.css", "/settings.css"}:
                     name = "index.html" if path == "/" else path[1:]
                     content = (STATIC / name).read_bytes()
                     if name == "index.html":
@@ -165,6 +191,7 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                         "index.html": "text/html; charset=utf-8",
                         "app.js": "text/javascript",
                         "style.css": "text/css",
+                        "settings.css": "text/css",
                     }[name]
                     self.reply(200, content, mime)
                 else:
@@ -178,18 +205,47 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
             if not self.allowed(True):
                 self.reply(403, b"Local session required", "text/plain")
                 return
-            if self.path != "/api/demo" or self.headers.get("Content-Type") != "application/json":
+            if (
+                self.path not in {"/api/demo", "/api/settings"}
+                or self.headers.get("Content-Type") != "application/json"
+            ):
                 self.reply(400, b"Invalid request", "text/plain")
                 return
-            if self.headers.get("Content-Length") != "2" or self.rfile.read(2) != b"{}":
-                self.reply(400, b"Empty request object required", "text/plain")
-                return
             try:
-                self.reply(200, json.dumps(app.run_demo()).encode(), "application/json")
+                length = int(self.headers.get("Content-Length", "-1"))
+            except ValueError:
+                length = -1
+            if not 0 <= length <= 32_768:
+                self.reply(400, b"Invalid request size", "text/plain")
+                return
+            payload = self.rfile.read(length)
+            try:
+                if self.path == "/api/demo":
+                    if payload != b"{}":
+                        raise ValueError("empty request required")
+                    value = app.run_demo()
+                else:
+                    body = json.loads(payload)
+                    if not isinstance(body, dict) or set(body) != {
+                        "settings",
+                        "api_key_id",
+                        "api_secret_key",
+                        "clear_credentials",
+                    }:
+                        raise ValueError("invalid settings envelope")
+                    value = app.settings.save(
+                        DashboardSettings.model_validate(body["settings"]),
+                        body["api_key_id"],
+                        body["api_secret_key"],
+                        body["clear_credentials"],
+                    )
+                self.reply(200, json.dumps(value).encode(), "application/json")
+            except (ValueError, TypeError, json.JSONDecodeError):
+                self.reply(400, b'{"error":"Invalid settings or request."}', "application/json")
             except Exception:
                 self.reply(
                     500,
-                    b'{"error":"Demo failed. Retained evidence is available in run history."}',
+                    b'{"error":"Local operation failed; no live request was sent."}',
                     "application/json",
                 )
 

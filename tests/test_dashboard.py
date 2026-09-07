@@ -11,6 +11,7 @@ from threading import Thread
 import pytest
 
 from app.dashboard.server import Dashboard, handler
+from app.dashboard.settings import DashboardSettings, SettingsStore
 
 
 @pytest.fixture
@@ -40,6 +41,60 @@ def test_paths_are_not_user_selectable(app, key):
         app.directory(key)
 
 
+def test_settings_and_credentials_are_local_validated_and_never_returned(tmp_path):
+    from app.dashboard.settings import DEFAULT_SETTINGS
+
+    store = SettingsStore(tmp_path / ".revmind")
+    settings = DEFAULT_SETTINGS
+    saved = store.save(
+        settings.model_copy(update={"data_mode": "ALPACA", "alpaca_feed": "SIP"}),
+        "test-id",
+        "test-secret",
+        False,
+    )
+    assert saved["credentials_configured"] is True
+    assert saved["integration_status"] == "CONFIGURED_NOT_ACTIVE"
+    assert "test-id" not in json.dumps(saved) and "test-secret" not in json.dumps(saved)
+    assert "test-secret" in store.secret_path.read_text(encoding="utf-8")
+    assert store.settings_path.is_file()
+    store.save(settings, None, None, True)
+    assert store.credentials_configured() is False
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"schema_version": "1"},
+        {"watchlist": ()},
+        {
+            "watchlist": (
+                {
+                    "symbol": "bad symbol",
+                    "exchange": "XNAS",
+                    "asset_class": "EQUITY",
+                    "currency": "USD",
+                },
+            )
+        },
+        {
+            "watchlist": (
+                {
+                    "symbol": "AAPL",
+                    "exchange": "NASDAQ",
+                    "asset_class": "EQUITY",
+                    "currency": "USD",
+                },
+            )
+        },
+    ],
+)
+def test_settings_reject_implicit_or_malformed_instruments(changes):
+    from app.dashboard.settings import DEFAULT_SETTINGS
+
+    with pytest.raises(ValueError):
+        DashboardSettings.model_validate(DEFAULT_SETTINGS.model_copy(update=changes))
+
+
 def test_local_session_routes(app):
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler(app, "test-session"))
     thread = Thread(target=server.serve_forever, daemon=True)
@@ -64,6 +119,14 @@ def test_local_session_routes(app):
         assert call("/api/runs")[0] == 403
         token = {"X-RevMind-Token": "test-session"}
         assert json.loads(call("/api/runs", headers=token)[1]) == []
+        settings = json.loads(call("/api/settings", headers=token)[1])
+        assert settings["data_mode"] == "OFFLINE"
+        assert "api_secret" not in json.dumps(settings)
+        health = json.loads(call("/api/health", headers=token)[1])
+        assert health["dashboard"] == "READY"
+        assert health["live_data"] == "DISABLED"
+        assert health["broker_execution"] == "DISABLED"
+        assert health["credentials"] == "NOT_CONFIGURED"
         assert call("/", headers={"Host": "attacker.example"})[0] == 403
         assert call("/", headers={"Sec-Fetch-Site": "cross-site"})[0] == 403
         assert call("/api/runs", headers={**token, "Origin": "https://attacker.example"})[0] == 403
@@ -74,6 +137,21 @@ def test_local_session_routes(app):
         status, result, _ = call("/api/demo", "POST", headers, "{}")
         assert status == 200 and json.loads(result)["state"] == "COMPLETE"
         assert len(json.loads(call("/api/runs", headers=token)[1])) == 1
+        settings["data_mode"] = "ALPACA"
+        envelope = {
+            "settings": {
+                k: v
+                for k, v in settings.items()
+                if k not in {"credentials_configured", "integration_status"}
+            },
+            "api_key_id": "route-id",
+            "api_secret_key": "route-secret",
+            "clear_credentials": False,
+        }
+        status, saved, _ = call("/api/settings", "POST", headers, json.dumps(envelope))
+        assert status == 200 and b"route-secret" not in saved
+        assert json.loads(saved)["integration_status"] == "CONFIGURED_NOT_ACTIVE"
+        assert call("/api/settings", "POST", headers, '{"settings":{}}')[0] == 400
     finally:
         server.shutdown()
         server.server_close()

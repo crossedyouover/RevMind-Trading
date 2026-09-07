@@ -2,8 +2,8 @@
 const $ = id => document.getElementById(id);
 const token = document.querySelector('meta[name="session"]').content;
 let selected = null;
-async function api(path, method="GET") {
-  const r = await fetch(path, {method, headers:{"X-RevMind-Token":token, ...(method==="POST"?{"Content-Type":"application/json"}:{})}, ...(method==="POST"?{body:"{}"}:{})});
+async function api(path, method="GET", body=null) {
+  const r = await fetch(path, {method, headers:{"X-RevMind-Token":token, ...(method==="POST"?{"Content-Type":"application/json"}:{})}, ...(method==="POST"?{body:JSON.stringify(body??{})}:{})});
   if (!r.ok) throw new Error("The local service could not validate this request. Check that the launcher is still running, then refresh.");
   return r.json();
 }
@@ -33,8 +33,15 @@ async function select(key){
     notice(r?"Completed offline research. These synthetic observations are not current market prices.":"This run is incomplete or blocked. No successful result is being claimed.");
   }catch(e){notice(e.message);}
 }
-async function refresh(preferred){try{const rows=await api("/api/runs");$("runs").replaceChildren();for(const row of rows){const b=node("button","","run-item");b.dataset.key=row.key;b.append(node("span",row.key==="existing"?"Your PowerShell demo":row.key.slice(0,8)+" · Offline demo"),node("span",row.state+" · "+row.bars+" bars"));b.onclick=()=>select(row.key);$("runs").append(b);}if(rows.length)await select(preferred||rows[0].key);else notice("Ready. Click Run offline demo to create your first research result.");}catch(e){notice(e.message);}}
+async function refresh(preferred){try{const rows=await api("/api/runs");$("runs").replaceChildren();for(const row of rows){const b=node("button","","run-item");b.dataset.key=row.key;b.append(node("span",row.key==="existing"?"Your PowerShell demo":row.key.slice(0,8)+" · Offline demo"),node("span",row.state+" · "+row.bars+" bars"));b.onclick=()=>select(row.key);$("runs").append(b);}if(rows.length)await select(preferred||rows[0].key);else notice("Ready. Click Run offline demo to create your first research result.");await loadHealth();}catch(e){notice(e.message);}}
 $("run").onclick=async()=>{$("run").disabled=true;notice("Running the synthetic capture and research pipeline…");try{const result=await api("/api/demo","POST");await refresh(result.key);}catch(e){notice(e.message);}finally{$("run").disabled=false;}};
 $("refresh").onclick=()=>refresh(selected?.key);
 $("download").onclick=()=>{if(!selected?.result)return;const url=URL.createObjectURL(new Blob([JSON.stringify(selected,null,2)],{type:"application/json"}));const a=node("a","");a.href=url;a.download="revmind-"+selected.cycle_id+".json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 refresh();
+function watchlistText(items){return items.map(i=>i.symbol+":"+i.exchange+(i.asset_class==="ETF"?":ETF":"")).join(", ");}
+function parseWatchlist(text){return text.split(",").map(raw=>{const p=raw.trim().toUpperCase().split(":");if(p.length<2||p.length>3)throw new Error("Use SYMBOL:MIC or SYMBOL:MIC:ETF for every watchlist item.");return {symbol:p[0],exchange:p[1],asset_class:p[2]==="ETF"?"ETF":"EQUITY",currency:"USD"};});}
+async function loadSettings(){try{const s=await api("/api/settings");$("data-mode").value=s.data_mode;$("feed").value=s.alpaca_feed;$("timeframe").value=s.timeframe;$("session-rule").value=s.session_rule;$("watchlist").value=watchlistText(s.watchlist);$("credentials-state").textContent=s.credentials_configured?"Credentials stored locally":"Credentials not configured";$("provider-status").textContent=s.integration_status.replaceAll("_"," ");}catch(e){notice(e.message);}}
+async function loadHealth(){try{const h=await api("/api/health");$("health-dashboard").textContent=h.dashboard;$("health-source").textContent=h.selected_source.replaceAll("_"," ");$("health-credentials").textContent=h.credentials.replaceAll("_"," ");$("health-live").textContent=h.live_data;$("health-execution").textContent=h.broker_execution;}catch(e){$("health-dashboard").textContent="UNAVAILABLE";}}
+$("settings-form").onsubmit=async e=>{e.preventDefault();$("save-settings").disabled=true;try{const settings={schema_version:1,data_mode:$("data-mode").value,alpaca_feed:$("feed").value,watchlist:parseWatchlist($("watchlist").value),timeframe:$("timeframe").value,session_rule:$("session-rule").value};const saved=await api("/api/settings","POST",{settings,api_key_id:$("api-key").value||null,api_secret_key:$("api-secret").value||null,clear_credentials:$("clear-creds").checked});$("api-key").value="";$("api-secret").value="";$("clear-creds").checked=false;await loadSettings();await loadHealth();notice(saved.data_mode==="ALPACA"?"Alpaca settings saved locally. Live acquisition is still disabled until adapter qualification is complete.":"Offline demonstration settings saved.");}catch(e){notice(e.message);}finally{$("save-settings").disabled=false;}};
+loadSettings();
+loadHealth();
