@@ -73,6 +73,7 @@ class AlpacaMarketDataProvider(MarketDataProvider):
                 headers = {
                     "APCA-API-KEY-ID": self._settings.api_key_id.get_secret_value(),
                     "APCA-API-SECRET-KEY": self._settings.api_secret_key.get_secret_value(),
+                    "Accept-Encoding": "identity",
                 }
             client = httpx.AsyncClient(
                 base_url=_BASE_URL,
@@ -121,9 +122,7 @@ class AlpacaMarketDataProvider(MarketDataProvider):
             }
             if page_token is not None:
                 parameters["page_token"] = page_token
-            response = await self._request(
-                f"/v2/stocks/{quote(symbol, safe='')}/bars", parameters
-            )
+            response = await self._request(f"/v2/stocks/{quote(symbol, safe='')}/bars", parameters)
             payload = self._decode_json(response)
             try:
                 wire = AlpacaBarsResponseWire.model_validate(payload)
@@ -163,9 +162,7 @@ class AlpacaMarketDataProvider(MarketDataProvider):
     async def get_snapshot(self, instrument: Instrument) -> MarketSnapshot:
         return (await self.get_batch_snapshots([instrument]))[0]
 
-    async def get_batch_snapshots(
-        self, instruments: list[Instrument]
-    ) -> list[MarketSnapshot]:
+    async def get_batch_snapshots(self, instruments: list[Instrument]) -> list[MarketSnapshot]:
         if not isinstance(instruments, list):
             raise InvalidMarketDataRequestError("snapshot instruments must be a list")
         if not instruments:
@@ -216,25 +213,21 @@ class AlpacaMarketDataProvider(MarketDataProvider):
         except (KeyError, TypeError) as exc:
             raise InvalidMarketDataRequestError("unsupported Alpaca timeframe") from exc
 
-    async def _request(
-        self, path: str, parameters: dict[str, str | int]
-    ) -> httpx.Response:
+    async def _request(self, path: str, parameters: dict[str, str | int]) -> httpx.Response:
         self._require_available()
         assert self._settings.api_key_id is not None
         assert self._settings.api_secret_key is not None
         headers = {
             "APCA-API-KEY-ID": self._settings.api_key_id.get_secret_value(),
             "APCA-API-SECRET-KEY": self._settings.api_secret_key.get_secret_value(),
+            "Accept-Encoding": "identity",
         }
         for attempt in range(_MAX_ATTEMPTS):
             try:
                 async with self._client.stream(
                     "GET", path, params=parameters, headers=headers
                 ) as response:
-                    if (
-                        response.status_code in _RETRY_STATUSES
-                        and attempt + 1 < _MAX_ATTEMPTS
-                    ):
+                    if response.status_code in _RETRY_STATUSES and attempt + 1 < _MAX_ATTEMPTS:
                         continue
                     self._raise_for_status(response.status_code)
                     content = await self._read_bounded_response(response)
@@ -250,6 +243,8 @@ class AlpacaMarketDataProvider(MarketDataProvider):
                 continue
             except httpx.TransportError as exc:
                 raise MarketDataUnavailableError("Alpaca request failed") from exc
+            except httpx.DecodingError as exc:
+                raise MarketDataUnavailableError("Alpaca response decoding failed") from exc
         raise MarketDataUnavailableError("Alpaca request failed")
 
     @staticmethod
@@ -295,7 +290,8 @@ class AlpacaMarketDataProvider(MarketDataProvider):
 
         try:
             return json.loads(
-                response.content.decode("utf-8"), parse_float=Decimal,
+                response.content.decode("utf-8"),
+                parse_float=Decimal,
                 parse_constant=reject_constant,
                 object_pairs_hook=reject_duplicate_keys,
             )

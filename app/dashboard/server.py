@@ -17,6 +17,7 @@ from uuid import UUID, uuid4
 from app.capture.__main__ import SimulatedClock
 from app.capture.coordinator import OfflineCaptureCoordinator
 from app.capture.models import CycleRequest, CycleResult, SealedInputs, digest
+from app.dashboard.live import DashboardLiveData, LiveProbeError
 from app.dashboard.settings import DashboardSettings, SettingsStore
 
 POLICY = "2bfebfe92eb5b76469b6da94b8f49714147cf85bc0cb12bbacaf77b66edbbeae"
@@ -28,6 +29,7 @@ class Dashboard:
         self.root = root.resolve()
         self.runs = self.root / ".dashboard-runs"
         self.settings = SettingsStore(self.root / ".revmind")
+        self.live = DashboardLiveData(self.settings)
 
     def directory(self, key: str) -> Path:
         if key == "existing":
@@ -94,18 +96,22 @@ class Dashboard:
     def health(self) -> dict[str, Any]:
         settings = self.settings.public()
         runs = self.list_runs()
+        live_state = self.live.state().model_dump(mode="json")
         return {
             "schema_version": 1,
             "dashboard": "READY",
             "settings": "READABLE",
             "selected_source": settings["data_mode"],
             "credentials": (
-                "CONFIGURED_NOT_VALIDATED"
+                "VALIDATED_AT_LAST_TEST"
+                if live_state["status"] == "CONNECTED_READ_ONLY"
+                else "CONFIGURED_NOT_VALIDATED"
                 if settings["credentials_configured"]
                 else "NOT_CONFIGURED"
             ),
             "integration": settings["integration_status"],
             "live_data": "DISABLED",
+            "live_probe": live_state,
             "broker_execution": "DISABLED",
             "stored_runs": len(runs),
             "unreadable_runs": sum(row["state"] == "UNREADABLE" for row in runs),
@@ -206,7 +212,7 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                 self.reply(403, b"Local session required", "text/plain")
                 return
             if (
-                self.path not in {"/api/demo", "/api/settings"}
+                self.path not in {"/api/demo", "/api/settings", "/api/alpaca/test"}
                 or self.headers.get("Content-Type") != "application/json"
             ):
                 self.reply(400, b"Invalid request", "text/plain")
@@ -224,6 +230,10 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                     if payload != b"{}":
                         raise ValueError("empty request required")
                     value = app.run_demo()
+                elif self.path == "/api/alpaca/test":
+                    if payload != b"{}":
+                        raise ValueError("empty request required")
+                    value = asyncio.run(app.live.probe()).model_dump(mode="json")
                 else:
                     body = json.loads(payload)
                     if not isinstance(body, dict) or set(body) != {
@@ -239,7 +249,10 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                         body["api_secret_key"],
                         body["clear_credentials"],
                     )
+                    app.live.invalidate()
                 self.reply(200, json.dumps(value).encode(), "application/json")
+            except LiveProbeError as exc:
+                self.reply(502, json.dumps({"error": str(exc)}).encode(), "application/json")
             except (ValueError, TypeError, json.JSONDecodeError):
                 self.reply(400, b'{"error":"Invalid settings or request."}', "application/json")
             except Exception:

@@ -44,6 +44,19 @@ The header mirrors the selected source but keeps `LIVE DISABLED` visible for Alp
 explicit provider-activation phase succeeds. Sidebar highlighting follows the section selected
 through its navigation links.
 
+After saving Alpaca settings, **Test read-only connection** performs one bounded HTTPS snapshot
+request for each configured watchlist identity through the fixed market-data origin
+`data.alpaca.markets`. RevMind maps the response through its frozen Alpaca adapter, assigns one
+actual UTC receipt boundary to the batch, and appends the canonical observations to
+`.revmind/market-observations.db`. The dashboard shows prices, provider event times, and the batch
+receipt time; credentials and provider response bodies are never displayed or persisted there.
+Every settings save resets the connection claim to `NOT TESTED` until another explicit test.
+
+This is on-demand snapshot acquisition only. It does not enable WebSockets, polling, scheduling,
+historical-bar research, broker-account access, order endpoints, or execution. A successful test
+means the selected credentials/feed supplied the requested snapshots at that moment; it is not a
+completeness, latency, uptime, or future-access guarantee.
+
 New demo records are saved in `.dashboard-runs/<UUID>/`. They are not deleted automatically.
 Each run has its own observation/capture databases so repeated demos do not exhaust a shared
 history limit. Your existing PowerShell demo is read only; it is not modified by the viewer.

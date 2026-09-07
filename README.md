@@ -281,6 +281,10 @@ capture-to-research demo with durable sealed PIT inputs. This does not make the 
 live-capable and does not complete Phase 27's broader live-shadow integration design.
 The separate [PAPER_RESEARCH_GUIDE.md](PAPER_RESEARCH_GUIDE.md) describes explicit paper inputs,
 frozen risk/desk composition and crash-safe decision journaling over sealed capture evidence.
+The local dashboard can perform an explicit bounded read-only Alpaca snapshot test for its saved
+watchlist. Results cross the frozen adapter and ingestion boundaries and are appended with their
+actual receipt time; see [DASHBOARD_GUIDE.md](DASHBOARD_GUIDE.md). This is not continuous ingestion,
+historical-bar research, account access, order placement, or a live-shadow deployment.
 The 1,440-step synthetic replay is software verification, not a sustained live-market trial.
 Live ingestion orchestration, external alert adapters, real Angelo transport/authentication,
 extended operational trials, and real-money execution are not enabled by these foundations.

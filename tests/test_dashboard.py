@@ -117,6 +117,7 @@ def test_local_session_routes(app):
         assert status == 200 and b"test-session" in html
         assert b'data-section="providers"' in html
         assert b'id="source-badge"' in html
+        assert b"continuous market-data streaming" in html
         assert "frame-ancestors 'none'" in csp
         assert call("/api/runs")[0] == 403
         token = {"X-RevMind-Token": "test-session"}
@@ -129,6 +130,7 @@ def test_local_session_routes(app):
         assert health["live_data"] == "DISABLED"
         assert health["broker_execution"] == "DISABLED"
         assert health["credentials"] == "NOT_CONFIGURED"
+        assert health["live_probe"]["status"] == "NOT_TESTED"
         assert call("/", headers={"Host": "attacker.example"})[0] == 403
         assert call("/", headers={"Sec-Fetch-Site": "cross-site"})[0] == 403
         assert call("/api/runs", headers={**token, "Origin": "https://attacker.example"})[0] == 403
@@ -154,6 +156,7 @@ def test_local_session_routes(app):
         assert status == 200 and b"route-secret" not in saved
         assert json.loads(saved)["integration_status"] == "CONFIGURED_NOT_ACTIVE"
         assert call("/api/settings", "POST", headers, '{"settings":{}}')[0] == 400
+        assert call("/api/alpaca/test", "POST", headers, '{"symbols":["AAPL"]}')[0] == 400
     finally:
         server.shutdown()
         server.server_close()

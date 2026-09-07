@@ -71,8 +71,13 @@ def _bars_response(
 def _snapshot(timestamp: str = "2025-01-02T14:30:00.987654321Z") -> dict[str, object]:
     return {
         "latestTrade": {
-            "t": timestamp, "p": 101.123456789, "s": 10, "x": "V",
-            "c": ["@"], "i": 123, "z": "C",
+            "t": timestamp,
+            "p": 101.123456789,
+            "s": 10,
+            "x": "V",
+            "c": ["@"],
+            "i": 123,
+            "z": "C",
         },
         "dailyBar": {"t": "2025-01-02T05:00:00Z", "v": 999999},
     }
@@ -80,7 +85,8 @@ def _snapshot(timestamp: str = "2025-01-02T14:30:00.987654321Z") -> dict[str, ob
 
 def _client(handler: httpx.MockTransport) -> httpx.AsyncClient:
     return httpx.AsyncClient(
-        base_url="https://data.alpaca.markets", transport=handler,
+        base_url="https://data.alpaca.markets",
+        transport=handler,
         follow_redirects=False,
     )
 
@@ -95,9 +101,7 @@ async def _get_bars(
     provider: AlpacaMarketDataProvider,
     timeframe: Timeframe = Timeframe.ONE_MINUTE,
 ) -> list[MarketBar]:
-    return await provider.get_bars(
-        _INSTRUMENT, _START, _START + timedelta(hours=1), timeframe
-    )
+    return await provider.get_bars(_INSTRUMENT, _START, _START + timedelta(hours=1), timeframe)
 
 
 def test_configuration_absent_present_partial_feed_and_secret_safety() -> None:
@@ -114,9 +118,7 @@ def test_configuration_absent_present_partial_feed_and_secret_safety() -> None:
         }
     )
     assert sip.data_feed is AlpacaDataFeed.SIP
-    for partial in (
-        {"api_key_id": "distinct-key"}, {"api_secret_key": "distinct-secret"}
-    ):
+    for partial in ({"api_key_id": "distinct-key"}, {"api_secret_key": "distinct-secret"}):
         with pytest.raises(ValidationError):
             AlpacaMarketDataSettings.model_validate(partial)
     rendered = repr(present) + present.model_dump_json()
@@ -133,9 +135,7 @@ def test_blank_credentials_are_absent_and_validation_hides_raw_input() -> None:
         assert settings.api_key_id is None and settings.api_secret_key is None
     distinctive = "DISTINCTIVE-RAW-CREDENTIAL-DO-NOT-LEAK"
     with pytest.raises(ValidationError) as partial:
-        AlpacaMarketDataSettings.model_validate(
-            {"api_key_id": distinctive, "api_secret_key": None}
-        )
+        AlpacaMarketDataSettings.model_validate({"api_key_id": distinctive, "api_secret_key": None})
     assert distinctive not in str(partial.value)
     assert "DISTINCTIVE" not in str(partial.value)
     with pytest.raises(ValidationError) as whitespace:
@@ -193,9 +193,11 @@ def test_binding_never_collapses_complete_identity() -> None:
 )
 async def test_exact_timeframe_mapping(timeframe: Timeframe, wire: str) -> None:
     seen: list[str] = []
+
     def handler(request: httpx.Request) -> httpx.Response:
         seen.append(request.url.params["timeframe"])
         return httpx.Response(200, json=_bars_response([]))
+
     client = _client(httpx.MockTransport(handler))
     provider = _provider(client)
     await _get_bars(provider, timeframe)
@@ -206,9 +208,11 @@ async def test_exact_timeframe_mapping(timeframe: Timeframe, wire: str) -> None:
 @pytest.mark.asyncio
 async def test_single_page_decimal_integer_volume_time_and_request_semantics() -> None:
     requests: list[httpx.Request] = []
+
     def handler(request: httpx.Request) -> httpx.Response:
         requests.append(request)
         return httpx.Response(200, content=json.dumps(_bars_response([_bar()])).encode())
+
     client = _client(httpx.MockTransport(handler))
     provider = _provider(client)
     original = _BINDING.model_dump_json()
@@ -222,6 +226,7 @@ async def test_single_page_decimal_integer_volume_time_and_request_semantics() -
     assert params["feed"] == "iex" and params["start"].endswith("Z")
     assert requests[0].headers["APCA-API-KEY-ID"] == "distinct-key"
     assert requests[0].headers["APCA-API-SECRET-KEY"] == "distinct-secret"
+    assert requests[0].headers["Accept-Encoding"] == "identity"
     assert "distinct-key" not in str(requests[0].url)
     assert "distinct-secret" not in str(requests[0].url)
     assert _BINDING.model_dump_json() == original
@@ -231,15 +236,15 @@ async def test_single_page_decimal_integer_volume_time_and_request_semantics() -
 @pytest.mark.asyncio
 async def test_multiple_pages_and_empty_response() -> None:
     calls = 0
+
     def handler(request: httpx.Request) -> httpx.Response:
         nonlocal calls
         calls += 1
         if calls == 1:
             return httpx.Response(200, json=_bars_response([_bar()], token="NEXT"))
         assert request.url.params["page_token"] == "NEXT"
-        return httpx.Response(
-            200, json=_bars_response([_bar("2025-01-02T14:31:00Z")])
-        )
+        return httpx.Response(200, json=_bars_response([_bar("2025-01-02T14:31:00Z")]))
+
     client = _client(httpx.MockTransport(handler))
     assert len(await _get_bars(_provider(client))) == 2
     await client.aclose()
@@ -272,9 +277,7 @@ async def test_invalid_bar_payloads_fail_closed(payload: object) -> None:
 async def test_boolean_optional_wire_integer_is_rejected() -> None:
     client = _client(
         httpx.MockTransport(
-            lambda _request: httpx.Response(
-                200, json=_bars_response([_bar(n=True)])
-            )
+            lambda _request: httpx.Response(200, json=_bars_response([_bar(n=True)]))
         )
     )
     with pytest.raises(MarketDataUnavailableError):
@@ -286,15 +289,19 @@ async def test_boolean_optional_wire_integer_is_rejected() -> None:
 @pytest.mark.parametrize("constant", ("NaN", "Infinity", "-Infinity"))
 async def test_nonfinite_and_malformed_json_fail_without_retry(constant: str) -> None:
     calls = 0
+
     def handler(_request: httpx.Request) -> httpx.Response:
         nonlocal calls
         calls += 1
         return httpx.Response(
             200,
-            content=(f'{{"bars":[{{"t":"2025-01-02T14:30:00Z","o":{constant},'
-                     '"h":2,"l":1,"c":1,"v":1}],"symbol":"AAPL",'
-                     '"next_page_token":null}').encode(),
+            content=(
+                f'{{"bars":[{{"t":"2025-01-02T14:30:00Z","o":{constant},'
+                '"h":2,"l":1,"c":1,"v":1}],"symbol":"AAPL",'
+                '"next_page_token":null}'
+            ).encode(),
         )
+
     client = _client(httpx.MockTransport(handler))
     with pytest.raises(MarketDataUnavailableError):
         await _get_bars(_provider(client))
@@ -322,28 +329,26 @@ async def test_pagination_token_page_record_and_response_bounds(
 ) -> None:
     for token in ("BAD TOKEN", "REPEAT"):
         calls = 0
+
         def handler(_request: httpx.Request, token: str = token) -> httpx.Response:
             nonlocal calls
             calls += 1
             return httpx.Response(200, json=_bars_response([], token=token))
+
         client = _client(httpx.MockTransport(handler))
         with pytest.raises(MarketDataUnavailableError):
             await _get_bars(_provider(client))
         await client.aclose()
     monkeypatch.setattr(provider_module, "_MAX_RECORDS", 0)
     client = _client(
-        httpx.MockTransport(
-            lambda _r: httpx.Response(200, json=_bars_response([_bar()]))
-        )
+        httpx.MockTransport(lambda _r: httpx.Response(200, json=_bars_response([_bar()])))
     )
     with pytest.raises(MarketDataUnavailableError, match="record"):
         await _get_bars(_provider(client))
     await client.aclose()
     oversized = _client(
         httpx.MockTransport(
-            lambda _r: httpx.Response(
-                200, headers={"content-length": "5000001"}, content=b"{}"
-            )
+            lambda _r: httpx.Response(200, headers={"content-length": "5000001"}, content=b"{}")
         )
     )
     with pytest.raises(MarketDataUnavailableError, match="size"):
@@ -357,10 +362,12 @@ async def test_unique_tokens_cannot_exceed_page_limit(
 ) -> None:
     monkeypatch.setattr(provider_module, "_MAX_PAGES", 2)
     calls = 0
+
     def handler(_request: httpx.Request) -> httpx.Response:
         nonlocal calls
         calls += 1
         return httpx.Response(200, json=_bars_response([], token=f"TOKEN{calls}"))
+
     client = _client(httpx.MockTransport(handler))
     with pytest.raises(MarketDataUnavailableError, match="page limit"):
         await _get_bars(_provider(client))
@@ -371,10 +378,12 @@ async def test_unique_tokens_cannot_exceed_page_limit(
 @pytest.mark.asyncio
 async def test_malformed_json_syntax_is_not_retried() -> None:
     calls = 0
+
     def handler(_request: httpx.Request) -> httpx.Response:
         nonlocal calls
         calls += 1
         return httpx.Response(200, content=b'{"bars":')
+
     client = _client(httpx.MockTransport(handler))
     with pytest.raises(MarketDataUnavailableError, match="JSON"):
         await _get_bars(_provider(client))
@@ -388,9 +397,7 @@ async def test_duplicate_json_object_keys_fail_closed() -> None:
         b'{"AAPL":{"latestTrade":{"t":"2025-01-02T14:30:00Z","p":1}},'
         b'"AAPL":{"latestTrade":{"t":"2025-01-02T14:31:00Z","p":2}}}'
     )
-    client = _client(
-        httpx.MockTransport(lambda _request: httpx.Response(200, content=duplicate))
-    )
+    client = _client(httpx.MockTransport(lambda _request: httpx.Response(200, content=duplicate)))
     with pytest.raises(MarketDataUnavailableError, match="JSON"):
         await _provider(client).get_snapshot(_INSTRUMENT)
     await client.aclose()
@@ -404,17 +411,24 @@ def test_unsupported_runtime_timeframe_is_rejected_without_approximation() -> No
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("status", "error"),
-    ((400, InvalidMarketDataRequestError), (401, MarketDataUnavailableError),
-     (403, MarketDataUnavailableError), (404, InstrumentNotFoundError),
-     (422, InvalidMarketDataRequestError), (429, ProviderRateLimitError),
-     (500, MarketDataUnavailableError)),
+    (
+        (400, InvalidMarketDataRequestError),
+        (401, MarketDataUnavailableError),
+        (403, MarketDataUnavailableError),
+        (404, InstrumentNotFoundError),
+        (422, InvalidMarketDataRequestError),
+        (429, ProviderRateLimitError),
+        (500, MarketDataUnavailableError),
+    ),
 )
 async def test_http_error_mapping_has_no_retry(status: int, error: type[Exception]) -> None:
     calls = 0
+
     def handler(_request: httpx.Request) -> httpx.Response:
         nonlocal calls
         calls += 1
         return httpx.Response(status, text="distinct-secret distinct-key")
+
     client = _client(httpx.MockTransport(handler))
     with pytest.raises(error) as captured:
         await _get_bars(_provider(client))
@@ -428,10 +442,12 @@ async def test_http_error_mapping_has_no_retry(status: int, error: type[Exceptio
 @pytest.mark.parametrize("status", (502, 503, 504))
 async def test_retryable_statuses_retry_at_most_twice(status: int) -> None:
     calls = 0
+
     def handler(_request: httpx.Request) -> httpx.Response:
         nonlocal calls
         calls += 1
         return httpx.Response(status)
+
     client = _client(httpx.MockTransport(handler))
     with pytest.raises(MarketDataUnavailableError):
         await _get_bars(_provider(client))
@@ -443,12 +459,14 @@ async def test_retryable_statuses_retry_at_most_twice(status: int) -> None:
 @pytest.mark.parametrize("failure", ("connect", "timeout"))
 async def test_transport_failures_retry_at_most_twice(failure: str) -> None:
     calls = 0
+
     def handler(request: httpx.Request) -> httpx.Response:
         nonlocal calls
         calls += 1
         if failure == "connect":
             raise httpx.ConnectError("private failure", request=request)
         raise httpx.ReadTimeout("private failure", request=request)
+
     client = _client(httpx.MockTransport(handler))
     with pytest.raises(MarketDataUnavailableError):
         await _get_bars(_provider(client))
@@ -459,10 +477,12 @@ async def test_transport_failures_retry_at_most_twice(failure: str) -> None:
 @pytest.mark.asyncio
 async def test_other_httpx_transport_errors_do_not_escape_neutral_taxonomy() -> None:
     calls = 0
+
     def handler(request: httpx.Request) -> httpx.Response:
         nonlocal calls
         calls += 1
         raise httpx.RemoteProtocolError("malformed transport", request=request)
+
     client = _client(httpx.MockTransport(handler))
     with pytest.raises(MarketDataUnavailableError):
         await _get_bars(_provider(client))
@@ -471,11 +491,25 @@ async def test_other_httpx_transport_errors_do_not_escape_neutral_taxonomy() -> 
 
 
 @pytest.mark.asyncio
-async def test_snapshot_uses_only_latest_trade_and_truncates_nanoseconds() -> None:
+async def test_response_decoding_errors_do_not_escape_neutral_taxonomy() -> None:
     client = _client(
         httpx.MockTransport(
-            lambda _r: httpx.Response(200, json={"AAPL": _snapshot()})
+            lambda _request: httpx.Response(
+                200,
+                headers={"content-encoding": "gzip"},
+                content=b"not-a-gzip-stream",
+            )
         )
+    )
+    with pytest.raises(MarketDataUnavailableError, match="decoding"):
+        await _get_bars(_provider(client))
+    await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_snapshot_uses_only_latest_trade_and_truncates_nanoseconds() -> None:
+    client = _client(
+        httpx.MockTransport(lambda _r: httpx.Response(200, json={"AAPL": _snapshot()}))
     )
     result = await _provider(client).get_snapshot(_INSTRUMENT)
     assert result.instrument == _INSTRUMENT
@@ -493,9 +527,7 @@ async def test_snapshot_missing_or_malformed_trade_fails() -> None:
     )
     for value in values:
         client = _client(
-            httpx.MockTransport(
-                lambda _r, v=value: httpx.Response(200, json={"AAPL": v})
-            )
+            httpx.MockTransport(lambda _r, v=value: httpx.Response(200, json={"AAPL": v}))
         )
         with pytest.raises(MarketDataUnavailableError):
             await _provider(client).get_snapshot(_INSTRUMENT)
@@ -507,9 +539,11 @@ async def test_batch_preserves_order_duplicates_and_requires_complete_response()
     msft = Instrument(symbol="MSFT", asset_class=AssetClass.EQUITY, exchange="XNAS", currency="USD")
     binding = AlpacaInstrumentBinding(instrument=msft, provider_symbol="MSFT")
     requests: list[httpx.Request] = []
+
     def handler(request: httpx.Request) -> httpx.Response:
         requests.append(request)
         return httpx.Response(200, json={"AAPL": _snapshot(), "MSFT": _snapshot()})
+
     client = _client(httpx.MockTransport(handler))
     result = await _provider(client, _BINDING, binding).get_batch_snapshots(
         [msft, _INSTRUMENT, msft]
@@ -518,9 +552,7 @@ async def test_batch_preserves_order_duplicates_and_requires_complete_response()
     assert requests[0].url.params["symbols"] == "MSFT,AAPL"
     await client.aclose()
     missing = _client(
-        httpx.MockTransport(
-            lambda _r: httpx.Response(200, json={"AAPL": _snapshot()})
-        )
+        httpx.MockTransport(lambda _r: httpx.Response(200, json={"AAPL": _snapshot()}))
     )
     with pytest.raises(InstrumentNotFoundError):
         await _provider(missing, _BINDING, binding).get_batch_snapshots([_INSTRUMENT, msft])
@@ -530,8 +562,10 @@ async def test_batch_preserves_order_duplicates_and_requires_complete_response()
 @pytest.mark.asyncio
 async def test_unbound_complete_identity_is_not_symbol_match() -> None:
     other = Instrument(
-        symbol="AAPL", asset_class=AssetClass.EQUITY,
-        exchange="XNYS", currency="USD",
+        symbol="AAPL",
+        asset_class=AssetClass.EQUITY,
+        exchange="XNYS",
+        currency="USD",
     )
     client = _client(httpx.MockTransport(lambda _r: pytest.fail("network used")))
     with pytest.raises(InstrumentNotFoundError):
@@ -559,9 +593,7 @@ def test_injected_client_cannot_change_origin_or_enable_redirects() -> None:
     wrong_origin = httpx.AsyncClient(base_url="https://example.com")
     with pytest.raises(InvalidMarketDataRequestError, match="security-safe"):
         AlpacaMarketDataProvider(_settings(), (_BINDING,), client=wrong_origin)
-    redirects = httpx.AsyncClient(
-        base_url="https://data.alpaca.markets", follow_redirects=True
-    )
+    redirects = httpx.AsyncClient(base_url="https://data.alpaca.markets", follow_redirects=True)
     with pytest.raises(InvalidMarketDataRequestError, match="security-safe"):
         AlpacaMarketDataProvider(_settings(), (_BINDING,), client=redirects)
 
@@ -591,10 +623,27 @@ def test_timestamp_offsets_naive_and_exact_truncation() -> None:
 def test_no_forbidden_architecture_or_clock_surface() -> None:
     source = inspect.getsource(provider_module)
     forbidden = (
-        "ObservedMarketData", "observed_at", "datetime.now", "utcnow", "time.time",
-        "monotonic", "perf_counter", "sqlite", "replay", "app.technical",
-        "app.evidence", "app.setups", "app.scanner", "app.desks", "websocket",
-        "openai", "anthropic", "fincept", "alpaca-py", "order", "execution",
+        "ObservedMarketData",
+        "observed_at",
+        "datetime.now",
+        "utcnow",
+        "time.time",
+        "monotonic",
+        "perf_counter",
+        "sqlite",
+        "replay",
+        "app.technical",
+        "app.evidence",
+        "app.setups",
+        "app.scanner",
+        "app.desks",
+        "websocket",
+        "openai",
+        "anthropic",
+        "fincept",
+        "alpaca-py",
+        "order",
+        "execution",
     )
     assert not any(term.lower() in source.lower() for term in forbidden)
 

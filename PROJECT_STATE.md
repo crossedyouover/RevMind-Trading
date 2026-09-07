@@ -251,14 +251,17 @@ For Phase `N`, always:
 The local offline dashboard is available via `Start-RevMind.cmd` and `DASHBOARD_GUIDE.md`.
 It reads the existing PowerShell demo and runs isolated synthetic captures, with chart/evidence,
 history, audit and JSON export. It binds only to loopback with local-session request checks.
-This separate user-facing utility does not change frozen engines or enable live-market access,
-paper-account UI controls, external alerts, broker execution or Angelo OS integration.
+This separate user-facing utility does not change frozen engines or enable continuous live-market
+operation, paper-account UI controls, external alerts, broker execution or Angelo OS integration.
 The dashboard now exposes validated local choices for offline/Alpaca, IEX/SIP, exact watchlist
 instrument identities, timeframe, session policy and optional locally stored credentials.
-Selections are configuration only: live requests and provider authentication checks remain disabled.
-Dashboard verification: 11 focused tests and 1,052 total tests passed; Ruff clean and strict mypy
-clean (95 source files). Browser checks verified the existing demo, new run action, chart, evidence,
-audit display and selectable local data settings. No frozen domain source was changed for this UI.
+An explicit on-demand connection test can now request one read-only snapshot per configured identity
+from the fixed Alpaca market-data origin. It maps through the frozen provider-neutral boundaries,
+persists canonical observations with their actual receipt time, and exposes only redacted health
+state. It does not enable streaming, scheduling, historical-bar research, account access or orders.
+Dashboard/live verification: 14 focused dashboard tests, 68 combined Alpaca/dashboard tests and
+1,056 total tests passed; Ruff clean and strict mypy clean (96 source files). A real bounded
+IEX test returned three snapshots as `CONNECTED_READ_ONLY`; no credential values were printed.
 
 Phase 27 first-slice implementation is on `codex/phase27-live-shadow-design`, with the broader
 design in `PHASE27_DESIGN.md`. `app/capture` supplies a mock-only bounded capture-to-research
@@ -266,8 +269,9 @@ coordinator, durable sealed PIT inputs and an offline CLI; see `CAPTURE_RUN_GUID
 This feature branch legitimately follows the canonical main baseline above. It is not a full
 Phase 27 freeze. A separate PAPER_RESEARCH_V1 library now integrates explicit paper account,
 proposal and policies with frozen risk/desk engines and durable journaling; see
-`PAPER_RESEARCH_GUIDE.md`. Live integration remains unimplemented; provider/entitlements,
-operating settings and activation decisions are unset. No live access or deployment is authorized.
+`PAPER_RESEARCH_GUIDE.md`. Continuous live integration remains unimplemented; historical-bar
+operating policies and deployment activation decisions remain unset. The on-demand dashboard probe
+is not a live-shadow deployment and grants no external side-effect authority.
 First-slice verification: 28 focused tests and 1,031 total tests passed; Ruff clean, strict mypy
 clean (90 source files), and the offline CLI completed its three-bar example. All tests and the
 CLI use synthetic inputs. The frozen/main verification block above still describes Phase 26.

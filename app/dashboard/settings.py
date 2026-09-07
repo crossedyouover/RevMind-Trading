@@ -9,7 +9,8 @@ from uuid import uuid4
 
 from pydantic import ConfigDict, Field, field_validator, model_validator
 
-from app.core.schemas import CanonicalModel, Timeframe
+from app.core.schemas import AssetClass, CanonicalModel, Instrument, Timeframe
+from app.data.providers.alpaca.config import AlpacaDataFeed, AlpacaMarketDataSettings
 
 
 class DataMode(StrEnum):
@@ -32,6 +33,14 @@ class WatchInstrument(CanonicalModel):
     exchange: Annotated[str, Field(strict=True, pattern=r"^[A-Z]{4}$")]
     asset_class: Literal["EQUITY", "ETF"]
     currency: Literal["USD"]
+
+    def to_instrument(self) -> Instrument:
+        return Instrument(
+            symbol=self.symbol,
+            exchange=self.exchange,
+            asset_class=AssetClass(self.asset_class),
+            currency=self.currency,
+        )
 
 
 class DashboardSettings(CanonicalModel):
@@ -94,6 +103,17 @@ class SettingsStore:
             return False
         values = self._read_secrets()
         return bool(values.get("ALPACA_API_KEY_ID") and values.get("ALPACA_API_SECRET_KEY"))
+
+    def alpaca_provider_settings(self) -> AlpacaMarketDataSettings:
+        settings = self.load()
+        values = self._read_secrets() if self.secret_path.exists() else {}
+        return AlpacaMarketDataSettings.model_validate(
+            {
+                "api_key_id": values.get("ALPACA_API_KEY_ID"),
+                "api_secret_key": values.get("ALPACA_API_SECRET_KEY"),
+                "data_feed": AlpacaDataFeed(settings.alpaca_feed.value.lower()),
+            }
+        )
 
     def public(self) -> dict[str, object]:
         settings = self.load()
