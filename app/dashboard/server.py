@@ -17,7 +17,7 @@ from uuid import UUID, uuid4
 from app.capture.__main__ import SimulatedClock
 from app.capture.coordinator import OfflineCaptureCoordinator
 from app.capture.models import CycleRequest, CycleResult, SealedInputs, digest
-from app.dashboard.live import DashboardLiveData, LiveProbeError
+from app.dashboard.live import DashboardLiveData, LiveProbeError, PaperPlanInput
 from app.dashboard.settings import DashboardSettings, SettingsStore
 
 POLICY = "2bfebfe92eb5b76469b6da94b8f49714147cf85bc0cb12bbacaf77b66edbbeae"
@@ -220,7 +220,13 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                 return
             if (
                 self.path
-                not in {"/api/demo", "/api/settings", "/api/alpaca/test", "/api/alpaca/research"}
+                not in {
+                    "/api/demo",
+                    "/api/settings",
+                    "/api/alpaca/test",
+                    "/api/alpaca/research",
+                    "/api/paper-plan",
+                }
                 or self.headers.get("Content-Type") != "application/json"
             ):
                 self.reply(400, b"Invalid request", "text/plain")
@@ -246,6 +252,10 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                     if payload != b"{}":
                         raise ValueError("empty request required")
                     value = asyncio.run(app.live.research()).model_dump(mode="json")
+                elif self.path == "/api/paper-plan":
+                    value = app.live.paper_plan(
+                        PaperPlanInput.model_validate_json(payload)
+                    ).model_dump(mode="json")
                 else:
                     body = json.loads(payload)
                     if not isinstance(body, dict) or set(body) != {
@@ -289,7 +299,7 @@ def main() -> None:
     url = f"http://127.0.0.1:{server.server_port}"
     print(
         f"RevMind dashboard: {url}\n"
-        "Offline research only. Close this window or press Ctrl+C to stop."
+        "Read-only research and paper planning only. Close this window or press Ctrl+C to stop."
     )
     if args.open_browser:
         webbrowser.open(url)

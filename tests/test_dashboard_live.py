@@ -7,7 +7,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from app.dashboard.live import DashboardLiveData, LiveProbeError
+from app.dashboard.live import DashboardLiveData, LiveProbeError, PaperPlanInput
 from app.dashboard.settings import DEFAULT_SETTINGS, DataMode, SettingsStore
 from app.data.providers.alpaca import (
     AlpacaInstrumentBinding,
@@ -124,9 +124,8 @@ async def test_market_research_uses_historical_bars_and_frozen_engines(tmp_path:
         return AlpacaMarketDataProvider(settings, bindings, client=client)
 
     store = configured_store(tmp_path)
-    report = await DashboardLiveData(
-        store, clock=FixedClock(), provider_factory=factory
-    ).research()
+    service = DashboardLiveData(store, clock=FixedClock(), provider_factory=factory)
+    report = await service.research()
     assert report.status == "COMPLETE_READ_ONLY"
     assert tuple(row.symbol for row in report.rows) == ("AAPL", "MSFT", "SPY")
     assert all(row.bar_count == 25 for row in report.rows)
@@ -138,6 +137,47 @@ async def test_market_research_uses_historical_bars_and_frozen_engines(tmp_path:
     assert all(request.url.params["adjustment"] == "raw" for request in requests)
     assert "distinct" not in report.model_dump_json()
     assert (store.directory / "market-observations.db").is_file()
+    plan = service.paper_plan(
+        PaperPlanInput.model_validate(
+            {
+                "assessment_id": report.rows[0].assessment_id,
+                "side": "BUY",
+                "quantity": "1",
+                "cash_balance": "10000",
+                "max_trade_notional": "1000",
+                "max_gross_exposure": "10000",
+                "max_instrument_exposure": "2500",
+                "max_concentration_share": "1",
+                "min_cash_balance": "0",
+                "stop_price": "120",
+                "max_loss_budget": "10",
+            }
+        )
+    )
+    assert plan.status == "ELIGIBLE_FOR_PAPER_REVIEW"
+    assert plan.risk_status == "PASS_CHECKS"
+    assert plan.desk_disposition == "ALERT"
+    assert plan.projected_cash == "9875"
+    assert plan.estimated_loss_at_stop == "5"
+    veto = service.paper_plan(
+        PaperPlanInput.model_validate(
+            {
+                "assessment_id": report.rows[0].assessment_id,
+                "side": "BUY",
+                "quantity": "1",
+                "cash_balance": "10000",
+                "max_trade_notional": "1000",
+                "max_gross_exposure": "10000",
+                "max_instrument_exposure": "2500",
+                "max_concentration_share": "1",
+                "min_cash_balance": "0",
+                "stop_price": "100",
+                "max_loss_budget": "10",
+            }
+        )
+    )
+    assert veto.status == "VETOED"
+    assert "LOSS_BUDGET_EXCEEDED" in veto.risk_reasons
     for client in clients:
         await client.aclose()
 
