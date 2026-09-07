@@ -17,7 +17,12 @@ from uuid import UUID, uuid4
 from app.capture.__main__ import SimulatedClock
 from app.capture.coordinator import OfflineCaptureCoordinator
 from app.capture.models import CycleRequest, CycleResult, SealedInputs, digest
-from app.dashboard.live import DashboardLiveData, LiveProbeError, PaperPlanInput
+from app.dashboard.live import (
+    DashboardLiveData,
+    LiveProbeError,
+    PaperApprovalInput,
+    PaperPlanInput,
+)
 from app.dashboard.settings import DashboardSettings, SettingsStore
 
 POLICY = "2bfebfe92eb5b76469b6da94b8f49714147cf85bc0cb12bbacaf77b66edbbeae"
@@ -112,7 +117,7 @@ class Dashboard:
             "integration": settings["integration_status"],
             "live_data": "DISABLED",
             "live_probe": live_state,
-            "broker_execution": "DISABLED",
+            "broker_execution": "PAPER_ONLY_CONFIRMATION_REQUIRED",
             "stored_runs": len(runs),
             "unreadable_runs": sum(row["state"] == "UNREADABLE" for row in runs),
         }
@@ -185,6 +190,9 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                     self.reply(200, json.dumps(app.settings.public()).encode(), "application/json")
                 elif path == "/api/health":
                     self.reply(200, json.dumps(app.health()).encode(), "application/json")
+                elif path == "/api/paper-orders":
+                    body = json.dumps(app.live.paper_order_history()).encode()
+                    self.reply(200, body, "application/json")
                 elif path.startswith("/api/runs/"):
                     body = json.dumps(app.read(path.removeprefix("/api/runs/"))).encode()
                     self.reply(200, body, "application/json")
@@ -225,7 +233,9 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                     "/api/settings",
                     "/api/alpaca/test",
                     "/api/alpaca/research",
+                    "/api/alpaca/paper-account",
                     "/api/paper-plan",
+                    "/api/paper-order",
                 }
                 or self.headers.get("Content-Type") != "application/json"
             ):
@@ -252,9 +262,17 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                     if payload != b"{}":
                         raise ValueError("empty request required")
                     value = asyncio.run(app.live.research()).model_dump(mode="json")
+                elif self.path == "/api/alpaca/paper-account":
+                    if payload != b"{}":
+                        raise ValueError("empty request required")
+                    value = asyncio.run(app.live.paper_account()).model_dump(mode="json")
                 elif self.path == "/api/paper-plan":
                     value = app.live.paper_plan(
                         PaperPlanInput.model_validate_json(payload)
+                    ).model_dump(mode="json")
+                elif self.path == "/api/paper-order":
+                    value = asyncio.run(
+                        app.live.place_paper_order(PaperApprovalInput.model_validate_json(payload))
                     ).model_dump(mode="json")
                 else:
                     body = json.loads(payload)

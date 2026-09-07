@@ -5,11 +5,12 @@ Provider-agnostic AI-assisted market intelligence and paper-trading research pla
 ## Open the local dashboard
 
 Double-click **Start-RevMind.cmd** to open the local research dashboard in your browser.
-It can run bounded, on-demand Alpaca historical-bar research over the saved watchlist or the
-separate synthetic verification demo. See [DASHBOARD_GUIDE.md](DASHBOARD_GUIDE.md). Continuous
-monitoring, account access and trading remain disabled.
+It can check Alpaca historical bars, read an Alpaca Paper Trading account, build deterministic
+risk-vetted plans, and submit an explicitly approved paper bracket order. See
+[DASHBOARD_GUIDE.md](DASHBOARD_GUIDE.md). Continuous monitoring and real-money trading remain
+disabled.
 
-> **Current status: Phases 23–26 — Local Delivery, Evaluation, Offline Shadow Runtime, and Control Contracts. RevMind Trading DOES NOT execute trades.**
+> **Current status: local Alpaca research and explicitly approved paper orders are available. Automatic and real-money execution do not exist.**
 
 ## Purpose
 
@@ -27,7 +28,10 @@ RevMind Trading is intended to become an AI-assisted market-intelligence, tradin
 
 ## Market-data and knowledge-time foundation
 
-External market data must be adapted into canonical `Instrument`, `MarketSnapshot`, and `MarketBar` models before downstream use. The current fake provider is deterministic and offline; no live market provider or broker is connected.
+External market data must be adapted into canonical `Instrument`, `MarketSnapshot`, and `MarketBar`
+models before downstream use. Synthetic verification remains deterministic and offline. The local
+dashboard also has a strict Alpaca market-data adapter and an independently bounded Alpaca Paper
+Trading adapter; the latter has no configurable or live-money base URL.
 
 RevMind Trading distinguishes **event time** from **observation time**. Event time (`payload.timestamp`) records when the market/source event occurred. `ObservedMarketData.observed_at` records when RevMind Trading received or became aware of that information.
 
@@ -282,10 +286,11 @@ capture-to-research demo with durable sealed PIT inputs. This does not make the 
 live-capable and does not complete Phase 27's broader live-shadow integration design.
 The separate [PAPER_RESEARCH_GUIDE.md](PAPER_RESEARCH_GUIDE.md) describes explicit paper inputs,
 frozen risk/desk composition and crash-safe decision journaling over sealed capture evidence.
-The local dashboard can perform an explicit bounded read-only Alpaca snapshot test for its saved
-watchlist. Results cross the frozen adapter and ingestion boundaries and are appended with their
-actual receipt time; see [DASHBOARD_GUIDE.md](DASHBOARD_GUIDE.md). This is not continuous ingestion,
-historical-bar research, account access, order placement, or a live-shadow deployment.
+The local dashboard performs explicit bounded Alpaca snapshot and historical-bar requests for its
+saved watchlist. Results cross the frozen adapter and ingestion boundaries and retain their actual
+receipt time. It can separately read an Alpaca paper account and submit only an eligible, one-time,
+explicitly confirmed paper bracket order through the fixed paper host; see
+[DASHBOARD_GUIDE.md](DASHBOARD_GUIDE.md). This is not continuous ingestion or live-money execution.
 The 1,440-step synthetic replay is software verification, not a sustained live-market trial.
 Live ingestion orchestration, external alert adapters, real Angelo transport/authentication,
 extended operational trials, and real-money execution are not enabled by these foundations.

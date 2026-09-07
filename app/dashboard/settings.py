@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Annotated, Literal, Self
 from uuid import uuid4
 
-from pydantic import ConfigDict, Field, field_validator, model_validator
+from pydantic import ConfigDict, Field, SecretStr, field_validator, model_validator
 
 from app.core.schemas import AssetClass, CanonicalModel, Instrument, Timeframe
 from app.data.providers.alpaca.config import AlpacaDataFeed, AlpacaMarketDataSettings
@@ -114,6 +114,14 @@ class SettingsStore:
                 "data_feed": AlpacaDataFeed(settings.alpaca_feed.value.lower()),
             }
         )
+
+    def alpaca_credentials(self) -> tuple[SecretStr, SecretStr]:
+        values = self._read_secrets() if self.secret_path.exists() else {}
+        key = values.get("ALPACA_API_KEY_ID")
+        secret = values.get("ALPACA_API_SECRET_KEY")
+        if not key or not secret:
+            raise ValueError("Alpaca credentials are not configured")
+        return SecretStr(key), SecretStr(secret)
 
     def public(self) -> dict[str, object]:
         settings = self.load()

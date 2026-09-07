@@ -1,14 +1,18 @@
 """Bounded on-demand read-only market-data activation for the local dashboard."""
 
 import os
+import sqlite3
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Literal
 from uuid import uuid4
 
-from pydantic import ValidationError
+from pydantic import SecretStr, ValidationError
 
+from app.broker.alpaca import AlpacaPaperBroker, PaperBrokerError
+from app.broker.models import PaperAccount, PaperOrderReceipt, PaperOrderRequest
+from app.broker.protocol import PaperBroker
 from app.core.schemas import CanonicalModel, Instrument, MarketSnapshot, Timeframe, UtcDatetime
 from app.dashboard.settings import AlpacaFeed, DataMode, SettingsStore
 from app.data.ingestion import Clock, MarketDataIngestionCoordinator, SystemUtcClock
@@ -43,7 +47,7 @@ from app.research.models import SingleSeriesResearchRequest, SingleSeriesResearc
 from app.risk.engine import DeterministicPaperRiskEngine
 from app.risk.models import PaperRiskPolicy, PaperRiskProposal, PaperRiskRequest
 from app.setups.models import SetupKey, SetupStatus
-from app.technical.models import TechnicalAnalysisConfig
+from app.technical.models import TechnicalAnalysisConfig, TechnicalFeatureKey
 
 
 class LiveProbeError(Exception):
@@ -97,6 +101,10 @@ class MarketResearchRow(CanonicalModel):
     active_setups: tuple[str, ...]
     action: Literal["REVIEW", "WAIT", "NO_DATA"]
     explanation: str
+    trend_comment: str
+    opportunity_comment: str
+    price_location: str
+    next_step: str
     chart: tuple[ResearchPoint, ...]
 
 
@@ -133,6 +141,7 @@ class PaperPlanResult(CanonicalModel):
     quantity: str
     reference_price: str
     stop_price: str
+    target_price: str
     estimated_loss_at_stop: str
     risk_status: str
     risk_reasons: tuple[str, ...]
@@ -140,7 +149,13 @@ class PaperPlanResult(CanonicalModel):
     desk_reasons: tuple[str, ...]
     projected_cash: str | None
     projected_gross_exposure: str | None
+    approval_id: str | None
     explanation: str
+
+
+class PaperApprovalInput(CanonicalModel):
+    approval_id: str
+    confirmation: Literal["PLACE PAPER ORDER"]
 
 
 class _ResearchArtifact:
@@ -161,6 +176,7 @@ ProviderFactory = Callable[
     [AlpacaMarketDataSettings, tuple[AlpacaInstrumentBinding, ...]],
     AlpacaMarketDataProvider,
 ]
+PaperBrokerFactory = Callable[[SecretStr, SecretStr], PaperBroker]
 
 
 class DashboardLiveData:
@@ -172,13 +188,106 @@ class DashboardLiveData:
         *,
         clock: Clock | None = None,
         provider_factory: ProviderFactory = AlpacaMarketDataProvider,
+        paper_broker_factory: PaperBrokerFactory = AlpacaPaperBroker,
     ) -> None:
         self._settings = settings
         self._clock = clock or SystemUtcClock()
         self._provider_factory = provider_factory
+        self._paper_broker_factory = paper_broker_factory
         self._status_path = settings.directory / "alpaca-status.json"
         self._observations_path = settings.directory / "market-observations.db"
+        self._paper_orders_path = settings.directory / "paper-orders.db"
         self._research_artifacts: dict[str, _ResearchArtifact] = {}
+        self._approved_plans: dict[str, PaperOrderRequest] = {}
+
+    async def paper_account(self) -> PaperAccount:
+        selected = self._settings.load()
+        if selected.data_mode is not DataMode.ALPACA:
+            raise LiveProbeError("Select Alpaca and save settings first.")
+        try:
+            key, secret = self._settings.alpaca_credentials()
+            broker = self._paper_broker_factory(key, secret)
+            try:
+                return await broker.account()
+            finally:
+                await broker.aclose()
+        except (PaperBrokerError, ValidationError, ValueError, TypeError) as exc:
+            raise LiveProbeError(
+                "The Alpaca paper account could not be read. Confirm these are Paper Trading keys."
+            ) from exc
+
+    async def place_paper_order(self, value: PaperApprovalInput) -> PaperOrderReceipt:
+        approval = PaperApprovalInput.model_validate(value)
+        order = self._approved_plans.pop(approval.approval_id, None)
+        if order is None:
+            raise LiveProbeError("That eligible paper plan expired. Analyze and check it again.")
+        self._record_order(order, None, "PENDING")
+        try:
+            key, secret = self._settings.alpaca_credentials()
+            broker = self._paper_broker_factory(key, secret)
+            try:
+                receipt = await broker.place_bracket_order(order)
+                self._record_order(order, receipt, "ACCEPTED")
+                return receipt
+            finally:
+                await broker.aclose()
+        except (PaperBrokerError, ValidationError, ValueError, TypeError) as exc:
+            self._record_order(order, None, "REJECTED_OR_UNKNOWN")
+            raise LiveProbeError(
+                "Alpaca rejected the paper order. No live order was attempted."
+            ) from exc
+
+    def paper_order_history(self) -> tuple[dict[str, str | None], ...]:
+        if not self._paper_orders_path.exists():
+            return ()
+        with sqlite3.connect(self._paper_orders_path) as db:
+            rows = db.execute(
+                "SELECT client_order_id,symbol,side,quantity,status,provider_order_id,"
+                "submitted_at FROM paper_orders ORDER BY created_at DESC LIMIT 50"
+            ).fetchall()
+        return tuple(
+            {
+                "client_order_id": row[0], "symbol": row[1], "side": row[2],
+                "quantity": row[3], "status": row[4], "provider_order_id": row[5],
+                "submitted_at": row[6],
+            }
+            for row in rows
+        )
+
+    def _record_order(
+        self, order: PaperOrderRequest, receipt: PaperOrderReceipt | None, status: str
+    ) -> None:
+        self._settings.directory.mkdir(parents=True, exist_ok=True)
+        with sqlite3.connect(self._paper_orders_path) as db:
+            db.execute("PRAGMA synchronous=FULL")
+            db.execute(
+                """CREATE TABLE IF NOT EXISTS paper_orders (
+                client_order_id TEXT PRIMARY KEY, symbol TEXT NOT NULL, side TEXT NOT NULL,
+                quantity TEXT NOT NULL, request TEXT NOT NULL, status TEXT NOT NULL,
+                provider_order_id TEXT, submitted_at TEXT, receipt TEXT, created_at TEXT NOT NULL
+                )"""
+            )
+            existing = db.execute(
+                "SELECT request FROM paper_orders WHERE client_order_id=?",
+                (order.client_order_id,),
+            ).fetchone()
+            encoded = order.model_dump_json()
+            if existing is not None and existing[0] != encoded:
+                raise LiveProbeError("Paper-order journal identity conflict.")
+            if existing is None:
+                db.execute(
+                    "INSERT INTO paper_orders VALUES (?,?,?,?,?,?,?,?,?,?)",
+                    (order.client_order_id, order.symbol, order.side, str(order.quantity),
+                     encoded, status, None, None, None, self._receipt_time().isoformat()),
+                )
+            else:
+                db.execute(
+                    "UPDATE paper_orders SET status=?,provider_order_id=?,submitted_at=?,receipt=? "
+                    "WHERE client_order_id=?",
+                    (status, receipt.provider_order_id if receipt else None,
+                     receipt.submitted_at.isoformat() if receipt else None,
+                     receipt.model_dump_json() if receipt else None, order.client_order_id),
+                )
 
     def state(self) -> ProbeState:
         if not self._status_path.exists():
@@ -408,6 +517,9 @@ class DashboardLiveData:
         latest_bar = history.bars[-1].bar if history.bars else None
         latest_trend = trend.snapshots[-1] if trend.snapshots else None
         latest_setup = research.setup_snapshots[-1] if research.setup_snapshots else None
+        latest_technical = (
+            research.technical_snapshots[-1] if research.technical_snapshots else None
+        )
         active = (
             tuple(
                 item.key.value for item in latest_setup.setups if item.status is SetupStatus.ACTIVE
@@ -425,6 +537,49 @@ class DashboardLiveData:
             if active
             else "No active frozen setup is present on the latest completed bar."
         )
+        values = {
+            item.key: item.value
+            for item in latest_technical.features
+            if item.value is not None and item.period == 20
+        } if latest_technical is not None else {}
+        sma = values.get(TechnicalFeatureKey.SMA_CLOSE)
+        prior_high = values.get(TechnicalFeatureKey.ROLLING_HIGHEST_HIGH)
+        prior_low = values.get(TechnicalFeatureKey.ROLLING_LOWEST_LOW)
+        trend_name = (
+            latest_trend.regime.value.lower()
+            if latest_trend and latest_trend.regime
+            else None
+        )
+        trend_comment = (
+            f"The 20-bar trend model is {trend_name}."
+            if trend_name is not None
+            else "There is not enough usable trend evidence yet."
+        )
+        opportunity_comment = (
+            "The close is above its 20-bar average and broke above the prior 20-bar high."
+            if SetupKey.UPSIDE_BREAKOUT_ABOVE_SMA.value in active
+            else "The close is below its 20-bar average and broke below the prior 20-bar low."
+            if SetupKey.DOWNSIDE_BREAKDOWN_BELOW_SMA.value in active
+            else "No entry yet: neither the upside breakout pair nor the downside breakdown pair "
+            "is simultaneously active."
+        )
+        prior_range = (
+            f"${prior_low}–${prior_high}"
+            if prior_low is not None and prior_high is not None
+            else "unavailable"
+        )
+        price_location = (
+            f"Latest close ${latest_bar.close}; 20-bar average "
+            f"{f'${sma}' if sma is not None else 'unavailable'}; prior range "
+            f"{prior_range}."
+            if latest_bar is not None
+            else "No completed price location is available."
+        )
+        next_step = (
+            "Open the trade planner, choose a stop and loss budget, then let risk decide."
+            if active
+            else "Wait. Check again after another completed bar; do not force a trade."
+        )
         assessment_id = str(uuid4()) if latest_bar is not None else None
         row = MarketResearchRow(
             assessment_id=assessment_id,
@@ -440,6 +595,10 @@ class DashboardLiveData:
             active_setups=active,
             action=action,
             explanation=explanation,
+            trend_comment=trend_comment,
+            opportunity_comment=opportunity_comment,
+            price_location=price_location,
+            next_step=next_step,
             chart=tuple(
                 ResearchPoint(event_at=item.bar.timestamp, close=str(item.bar.close))
                 for item in history.bars[-120:]
@@ -576,6 +735,12 @@ class DashboardLiveData:
             else "NOT_ACTIONABLE"
         )
         projection = risk.projection
+        risk_per_share = abs(latest.close - request.stop_price)
+        target_price = (
+            latest.close + risk_per_share * Decimal("2")
+            if request.side == "BUY"
+            else latest.close - risk_per_share * Decimal("2")
+        )
         reasons = tuple(reason.value for reason in risk.reasons) + (
             ("STOP_DIRECTION_INVALID",)
             if stop_direction_invalid
@@ -592,6 +757,20 @@ class DashboardLiveData:
             else "Risk checks passed, but the selected setup and trend do not currently "
             "support this direction. Wait and re-analyze later."
         )
+        approval_id = None
+        if eligible:
+            approval_id = str(uuid4())
+            self._approved_plans[approval_id] = PaperOrderRequest(
+                client_order_id=f"revmind-{uuid4()}",
+                symbol=artifact.instrument.symbol,
+                side="buy" if request.side == "BUY" else "sell",
+                quantity=request.quantity,
+                entry_limit=latest.close,
+                stop_price=request.stop_price,
+                target_price=target_price,
+            )
+            while len(self._approved_plans) > 50:
+                self._approved_plans.pop(next(iter(self._approved_plans)))
         return PaperPlanResult(
             status=status,
             symbol=artifact.instrument.symbol,
@@ -599,6 +778,7 @@ class DashboardLiveData:
             quantity=str(request.quantity),
             reference_price=str(latest.close),
             stop_price=str(request.stop_price),
+            target_price=str(target_price),
             estimated_loss_at_stop=str(estimated_loss),
             risk_status=risk.status.value,
             risk_reasons=reasons,
@@ -606,6 +786,7 @@ class DashboardLiveData:
             desk_reasons=tuple(reason.value for reason in decision.reasons),
             projected_cash=str(projection.projected_cash) if projection else None,
             projected_gross_exposure=str(projection.gross_exposure) if projection else None,
+            approval_id=approval_id,
             explanation=explanation,
         )
 

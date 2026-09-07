@@ -128,13 +128,14 @@ def test_local_session_routes(app):
         assert call("/api/runs")[0] == 403
         token = {"X-RevMind-Token": "test-session"}
         assert json.loads(call("/api/runs", headers=token)[1]) == []
+        assert json.loads(call("/api/paper-orders", headers=token)[1]) == []
         settings = json.loads(call("/api/settings", headers=token)[1])
         assert settings["data_mode"] == "OFFLINE"
         assert "api_secret" not in json.dumps(settings)
         health = json.loads(call("/api/health", headers=token)[1])
         assert health["dashboard"] == "READY"
         assert health["live_data"] == "DISABLED"
-        assert health["broker_execution"] == "DISABLED"
+        assert health["broker_execution"] == "PAPER_ONLY_CONFIRMATION_REQUIRED"
         assert health["credentials"] == "NOT_CONFIGURED"
         assert health["live_probe"]["status"] == "NOT_TESTED"
         assert call("/", headers={"Host": "attacker.example"})[0] == 403
@@ -164,7 +165,9 @@ def test_local_session_routes(app):
         assert call("/api/settings", "POST", headers, '{"settings":{}}')[0] == 400
         assert call("/api/alpaca/test", "POST", headers, '{"symbols":["AAPL"]}')[0] == 400
         assert call("/api/alpaca/research", "POST", headers, '{"days":30}')[0] == 400
-        assert call("/api/paper-plan", "POST", headers, '{}')[0] == 400
+        assert call("/api/alpaca/paper-account", "POST", headers, '{"live":true}')[0] == 400
+        assert call("/api/paper-plan", "POST", headers, "{}")[0] == 400
+        assert call("/api/paper-order", "POST", headers, "{}")[0] == 400
     finally:
         server.shutdown()
         server.server_close()

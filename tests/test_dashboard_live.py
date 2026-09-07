@@ -7,7 +7,13 @@ from pathlib import Path
 import httpx
 import pytest
 
-from app.dashboard.live import DashboardLiveData, LiveProbeError, PaperPlanInput
+from app.broker.models import PaperAccount, PaperOrderReceipt, PaperOrderRequest
+from app.dashboard.live import (
+    DashboardLiveData,
+    LiveProbeError,
+    PaperApprovalInput,
+    PaperPlanInput,
+)
 from app.dashboard.settings import DEFAULT_SETTINGS, DataMode, SettingsStore
 from app.data.providers.alpaca import (
     AlpacaInstrumentBinding,
@@ -133,6 +139,12 @@ async def test_market_research_uses_historical_bars_and_frozen_engines(tmp_path:
     assert all(row.trend == "UPWARD" for row in report.rows)
     assert all(row.action == "REVIEW" for row in report.rows)
     assert all(row.active_setups == ("UPSIDE_BREAKOUT_ABOVE_SMA",) for row in report.rows)
+    assert all("trend model is upward" in row.trend_comment for row in report.rows)
+    assert all(
+        "broke above the prior 20-bar high" in row.opportunity_comment for row in report.rows
+    )
+    assert all("Latest close $125" in row.price_location for row in report.rows)
+    assert all("Open the trade planner" in row.next_step for row in report.rows)
     assert all(request.url.params["feed"] == "iex" for request in requests)
     assert all(request.url.params["adjustment"] == "raw" for request in requests)
     assert "distinct" not in report.model_dump_json()
@@ -159,6 +171,8 @@ async def test_market_research_uses_historical_bars_and_frozen_engines(tmp_path:
     assert plan.desk_disposition == "ALERT"
     assert plan.projected_cash == "9875"
     assert plan.estimated_loss_at_stop == "5"
+    assert plan.target_price == "135"
+    assert plan.approval_id is not None
     veto = service.paper_plan(
         PaperPlanInput.model_validate(
             {
@@ -180,6 +194,56 @@ async def test_market_research_uses_historical_bars_and_frozen_engines(tmp_path:
     assert "LOSS_BUDGET_EXCEEDED" in veto.risk_reasons
     for client in clients:
         await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_eligible_plan_requires_one_time_exact_paper_approval(tmp_path: Path) -> None:
+    placed: list[PaperOrderRequest] = []
+
+    class FakeBroker:
+        async def account(self) -> PaperAccount:
+            raise AssertionError("not used")
+
+        async def place_bracket_order(self, request: PaperOrderRequest) -> PaperOrderReceipt:
+            placed.append(request)
+            return PaperOrderReceipt(
+                provider_order_id="paper-order",
+                client_order_id=request.client_order_id,
+                symbol=request.symbol,
+                side=request.side,
+                quantity=request.quantity,
+                status="accepted",
+                submitted_at=FixedClock().now(),
+            )
+
+        async def aclose(self) -> None:
+            pass
+
+    service = DashboardLiveData(
+        configured_store(tmp_path),
+        clock=FixedClock(),
+        paper_broker_factory=lambda _key, _secret: FakeBroker(),
+    )
+    service._approved_plans["eligible"] = PaperOrderRequest(  # type: ignore[attr-defined]
+        client_order_id="revmind-00000000-0000-4000-8000-000000000001",
+        symbol="AAPL",
+        side="buy",
+        quantity="1",
+        entry_limit="100",
+        stop_price="98",
+        target_price="104",
+    )
+    receipt = await service.place_paper_order(
+        PaperApprovalInput(approval_id="eligible", confirmation="PLACE PAPER ORDER")
+    )
+    assert receipt.provider_order_id == "paper-order"
+    assert len(placed) == 1
+    assert service.paper_order_history()[0]["status"] == "ACCEPTED"
+    assert (tmp_path / ".revmind" / "paper-orders.db").is_file()
+    with pytest.raises(LiveProbeError, match="expired"):
+        await service.place_paper_order(
+            PaperApprovalInput(approval_id="eligible", confirmation="PLACE PAPER ORDER")
+        )
 
 
 @pytest.mark.asyncio
