@@ -115,6 +115,8 @@ def test_local_session_routes(app):
     try:
         status, html, csp = call("/")
         assert status == 200 and b"test-session" in html
+        assert b'data-section="providers"' in html
+        assert b'id="source-badge"' in html
         assert "frame-ancestors 'none'" in csp
         assert call("/api/runs")[0] == 403
         token = {"X-RevMind-Token": "test-session"}

@@ -40,6 +40,10 @@ locally present (not whether Alpaca has accepted them), and the hard-disabled st
 data and broker execution. It performs no network authentication and never presents a saved
 selection as an active connection.
 
+The header mirrors the selected source but keeps `LIVE DISABLED` visible for Alpaca until an
+explicit provider-activation phase succeeds. Sidebar highlighting follows the section selected
+through its navigation links.
+
 New demo records are saved in `.dashboard-runs/<UUID>/`. They are not deleted automatically.
 Each run has its own observation/capture databases so repeated demos do not exhaust a shared
 history limit. Your existing PowerShell demo is read only; it is not modified by the viewer.

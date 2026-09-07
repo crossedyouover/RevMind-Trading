@@ -4,8 +4,9 @@ const token = document.querySelector('meta[name="session"]').content;
 let selected = null;
 async function api(path, method="GET", body=null) {
   const r = await fetch(path, {method, headers:{"X-RevMind-Token":token, ...(method==="POST"?{"Content-Type":"application/json"}:{})}, ...(method==="POST"?{body:JSON.stringify(body??{})}:{})});
-  if (!r.ok) throw new Error("The local service could not validate this request. Check that the launcher is still running, then refresh.");
-  return r.json();
+  let payload=null;try{payload=await r.json();}catch{payload=null;}
+  if (!r.ok) throw new Error(payload?.error||"The local service could not validate this request. Check that the launcher is still running, then refresh.");
+  return payload;
 }
 function node(tag, text, cls) {const n=document.createElement(tag); n.textContent=text; if(cls)n.className=cls; return n;}
 function notice(text){$("notice").textContent=text;}
@@ -40,8 +41,13 @@ $("download").onclick=()=>{if(!selected?.result)return;const url=URL.createObjec
 refresh();
 function watchlistText(items){return items.map(i=>i.symbol+":"+i.exchange+(i.asset_class==="ETF"?":ETF":"")).join(", ");}
 function parseWatchlist(text){return text.split(",").map(raw=>{const p=raw.trim().toUpperCase().split(":");if(p.length<2||p.length>3)throw new Error("Use SYMBOL:MIC or SYMBOL:MIC:ETF for every watchlist item.");return {symbol:p[0],exchange:p[1],asset_class:p[2]==="ETF"?"ETF":"EQUITY",currency:"USD"};});}
-async function loadSettings(){try{const s=await api("/api/settings");$("data-mode").value=s.data_mode;$("feed").value=s.alpaca_feed;$("timeframe").value=s.timeframe;$("session-rule").value=s.session_rule;$("watchlist").value=watchlistText(s.watchlist);$("credentials-state").textContent=s.credentials_configured?"Credentials stored locally":"Credentials not configured";$("provider-status").textContent=s.integration_status.replaceAll("_"," ");}catch(e){notice(e.message);}}
+async function loadSettings(){try{const s=await api("/api/settings");$("data-mode").value=s.data_mode;$("feed").value=s.alpaca_feed;$("timeframe").value=s.timeframe;$("session-rule").value=s.session_rule;$("watchlist").value=watchlistText(s.watchlist);$("credentials-state").textContent=s.credentials_configured?"Credentials stored locally":"Credentials not configured";$("provider-status").textContent=s.integration_status.replaceAll("_"," ");$("source-badge").textContent=s.data_mode==="ALPACA"?"ALPACA SELECTED · LIVE DISABLED":"OFFLINE · SYNTHETIC DATA";}catch(e){notice(e.message);}}
 async function loadHealth(){try{const h=await api("/api/health");$("health-dashboard").textContent=h.dashboard;$("health-source").textContent=h.selected_source.replaceAll("_"," ");$("health-credentials").textContent=h.credentials.replaceAll("_"," ");$("health-live").textContent=h.live_data;$("health-execution").textContent=h.broker_execution;}catch(e){$("health-dashboard").textContent="UNAVAILABLE";}}
 $("settings-form").onsubmit=async e=>{e.preventDefault();$("save-settings").disabled=true;try{const settings={schema_version:1,data_mode:$("data-mode").value,alpaca_feed:$("feed").value,watchlist:parseWatchlist($("watchlist").value),timeframe:$("timeframe").value,session_rule:$("session-rule").value};const saved=await api("/api/settings","POST",{settings,api_key_id:$("api-key").value||null,api_secret_key:$("api-secret").value||null,clear_credentials:$("clear-creds").checked});$("api-key").value="";$("api-secret").value="";$("clear-creds").checked=false;await loadSettings();await loadHealth();notice(saved.data_mode==="ALPACA"?"Alpaca settings saved locally. Live acquisition is still disabled until adapter qualification is complete.":"Offline demonstration settings saved.");}catch(e){notice(e.message);}finally{$("save-settings").disabled=false;}};
 loadSettings();
 loadHealth();
+const navLinks=[...document.querySelectorAll("aside a[data-section]")];
+function highlightNav(section=(location.hash||"#desk").slice(1)){for(const link of navLinks)link.classList.toggle("active",link.dataset.section===section);}
+for(const link of navLinks)link.addEventListener("click",()=>highlightNav(link.dataset.section));
+window.addEventListener("hashchange",()=>highlightNav());
+highlightNav();
