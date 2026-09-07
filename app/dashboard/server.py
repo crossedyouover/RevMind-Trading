@@ -193,7 +193,7 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                     "/app.js",
                     "/style.css",
                     "/settings.css",
-                    "/revmind-logo.png",
+                    "/revmind-logo-lockup.png",
                 }:
                     name = "index.html" if path == "/" else path[1:]
                     content = (STATIC / name).read_bytes()
@@ -204,7 +204,7 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                         "app.js": "text/javascript",
                         "style.css": "text/css",
                         "settings.css": "text/css",
-                        "revmind-logo.png": "image/png",
+                        "revmind-logo-lockup.png": "image/png",
                     }[name]
                     self.reply(200, content, mime)
                 else:
