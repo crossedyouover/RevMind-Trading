@@ -116,9 +116,12 @@ def test_local_session_routes(app):
         status, html, csp = call("/")
         assert status == 200 and b"test-session" in html
         assert b'data-section="providers"' in html
+        assert b'src="/revmind-logo.png"' in html
         assert b'id="source-badge"' in html
         assert b"continuous market-data streaming" in html
         assert "frame-ancestors 'none'" in csp
+        status, logo, _ = call("/revmind-logo.png")
+        assert status == 200 and logo.startswith(b"\x89PNG\r\n\x1a\n")
         assert call("/api/runs")[0] == 403
         token = {"X-RevMind-Token": "test-session"}
         assert json.loads(call("/api/runs", headers=token)[1]) == []

@@ -188,7 +188,13 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                 elif path.startswith("/api/runs/"):
                     body = json.dumps(app.read(path.removeprefix("/api/runs/"))).encode()
                     self.reply(200, body, "application/json")
-                elif path in {"/", "/app.js", "/style.css", "/settings.css"}:
+                elif path in {
+                    "/",
+                    "/app.js",
+                    "/style.css",
+                    "/settings.css",
+                    "/revmind-logo.png",
+                }:
                     name = "index.html" if path == "/" else path[1:]
                     content = (STATIC / name).read_bytes()
                     if name == "index.html":
@@ -198,6 +204,7 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                         "app.js": "text/javascript",
                         "style.css": "text/css",
                         "settings.css": "text/css",
+                        "revmind-logo.png": "image/png",
                     }[name]
                     self.reply(200, content, mime)
                 else:
