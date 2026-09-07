@@ -16,10 +16,10 @@ function chart(bars){
   const svg=document.createElementNS("http://www.w3.org/2000/svg","svg"); svg.setAttribute("viewBox","0 0 600 180");svg.setAttribute("role","img");svg.setAttribute("aria-label","Synthetic closing prices over the captured bar history");
   const values=bars.map(b=>Number(b.bar.close)), low=Math.min(...values)-.5, high=Math.max(...values)+.5;
   function shape(tag, attrs, text){const e=document.createElementNS(svg.namespaceURI,tag);for(const[k,v]of Object.entries(attrs))e.setAttribute(k,v);if(text)e.textContent=text;svg.append(e);return e;}
-  for(let i=0;i<4;i++){const y=15+i*43;shape("line",{x1:40,x2:550,y1:y,y2:y,stroke:"#293a3e"});shape("text",{x:559,y:y+4},(high-(high-low)*i/3).toFixed(2));}
+  for(let i=0;i<4;i++){const y=15+i*43;shape("line",{x1:40,x2:550,y1:y,y2:y,stroke:"#17345a"});shape("text",{x:559,y:y+4},(high-(high-low)*i/3).toFixed(2));}
   const points=values.map((v,i)=>[40+i*510/Math.max(1,values.length-1),15+(high-v)/(high-low)*129]);
-  shape("polyline",{points:points.map(p=>p.join(",")).join(" "),fill:"none",stroke:"#b5ebcb","stroke-width":2.5});
-  points.forEach(([x,y],i)=>{shape("circle",{cx:x,cy:y,r:4,fill:"#b5ebcb"});shape("text",{x,y:173,"text-anchor":"middle"},bars[i].bar.timestamp.slice(11,16));});
+  shape("polyline",{points:points.map(p=>p.join(",")).join(" "),fill:"none",stroke:"#31dcff","stroke-width":2.5});
+  points.forEach(([x,y],i)=>{shape("circle",{cx:x,cy:y,r:4,fill:"#8060ff"});shape("text",{x,y:173,"text-anchor":"middle"},bars[i].bar.timestamp.slice(11,16));});
   $("chart").append(svg);
 }
 async function select(key){
