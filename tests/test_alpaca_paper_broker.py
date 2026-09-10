@@ -52,8 +52,12 @@ async def test_account_and_bracket_order_use_only_paper_host() -> None:
                     {
                         "symbol": "MSFT",
                         "qty": "1",
+                        "avg_entry_price": "240",
+                        "cost_basis": "240",
                         "market_value": "250",
                         "current_price": "250",
+                        "unrealized_pl": "10",
+                        "unrealized_plpc": "0.0416667",
                     }
                 ],
             )
@@ -86,6 +90,8 @@ async def test_account_and_bracket_order_use_only_paper_host() -> None:
     status = await broker.order_status("provider-order")
     assert account.cash == Decimal("10000.00")
     assert account.positions[0].symbol == "MSFT"
+    assert account.positions[0].average_entry_price == Decimal("240")
+    assert account.positions[0].unrealized_profit_loss == Decimal("10")
     assert receipt.status == "accepted"
     assert status.status == "filled"
     assert status.filled_average_price == Decimal("100.25")

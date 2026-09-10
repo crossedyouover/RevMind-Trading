@@ -76,8 +76,12 @@ class AlpacaPaperBroker:
                         PaperPositionSummary(
                             symbol=self._text(item, "symbol"),
                             quantity=self._decimal(item, "qty"),
+                            average_entry_price=self._decimal(item, "avg_entry_price"),
+                            cost_basis=self._decimal(item, "cost_basis"),
                             market_value=self._decimal(item, "market_value"),
                             current_price=self._decimal(item, "current_price"),
+                            unrealized_profit_loss=self._decimal(item, "unrealized_pl"),
+                            unrealized_profit_loss_percent=self._decimal(item, "unrealized_plpc"),
                         )
                         for item in positions_value
                     ),

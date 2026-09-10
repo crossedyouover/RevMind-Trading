@@ -11,8 +11,12 @@ from app.core.schemas import CanonicalModel, UtcDatetime
 class PaperPositionSummary(CanonicalModel):
     symbol: str
     quantity: Decimal
+    average_entry_price: Decimal
+    cost_basis: Decimal
     market_value: Decimal
     current_price: Decimal
+    unrealized_profit_loss: Decimal
+    unrealized_profit_loss_percent: Decimal
 
 
 class PaperAccount(CanonicalModel):
