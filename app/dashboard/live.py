@@ -29,6 +29,7 @@ from app.data.providers.alpaca import AlpacaInstrumentBinding, AlpacaMarketDataP
 from app.data.providers.alpaca.config import AlpacaMarketDataSettings
 from app.desks.engine import DeterministicAdvisoryDeskEngine
 from app.desks.models import SetupDeskRequest, TrendDeskRequest
+from app.evaluation.backtest import BacktestSummary, evaluate_frozen_setups
 from app.evidence.models import MarketEvidenceConfig
 from app.materialization.engine import DeterministicBarMaterializationEngine
 from app.materialization.models import BarSeriesRequest
@@ -106,6 +107,7 @@ class MarketResearchRow(CanonicalModel):
     price_location: str
     next_step: str
     chart: tuple[ResearchPoint, ...]
+    backtest: BacktestSummary
 
 
 class MarketResearchReport(CanonicalModel):
@@ -717,6 +719,7 @@ class DashboardLiveData:
                 ResearchPoint(event_at=item.bar.timestamp, close=str(item.bar.close))
                 for item in history.bars[-120:]
             ),
+            backtest=evaluate_frozen_setups(research),
         )
         return row, _ResearchArtifact(instrument, observed_at, research, trend)
 

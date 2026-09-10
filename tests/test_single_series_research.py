@@ -13,6 +13,7 @@ import app.research.engine as engine_module
 import app.research.models as models_module
 from app.core.schemas import AssetClass, Instrument, MarketBar, Timeframe
 from app.data.observations import SourceIdentity
+from app.evaluation.backtest import evaluate_frozen_setups
 from app.evidence import (
     AlignedTechnicalHistory,
     DeterministicMarketEvidenceEngine,
@@ -118,6 +119,18 @@ def test_identical_request_produces_identical_immutable_result() -> None:
     first = engine.analyze(request)
     second = engine.analyze(request)
     assert first == second
+
+
+def test_walk_forward_setup_evaluation_is_deterministic_and_does_not_invent_trades() -> None:
+    research = DeterministicSingleSeriesResearchEngine().analyze(_request(26))
+    first = evaluate_frozen_setups(research)
+    second = evaluate_frozen_setups(research)
+    assert first == second
+    assert first.bars == 26
+    assert first.results[0].trades == 0
+    assert first.results[1].trades == 0
+    assert first.round_trip_cost_percent == Decimal("0.10")
+    assert "not a prediction" in first.warning
     assert first.model_dump_json() == second.model_dump_json()
     with pytest.raises(ValidationError, match="frozen"):
         first.setup_snapshots = ()

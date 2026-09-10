@@ -2,6 +2,7 @@
 
 import json
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from pathlib import Path
 
 import httpx
@@ -151,6 +152,12 @@ async def test_market_research_uses_historical_bars_and_frozen_engines(tmp_path:
     )
     assert all("Latest close $125" in row.price_location for row in report.rows)
     assert all("Open the trade planner" in row.next_step for row in report.rows)
+    assert all(row.backtest.bars == 25 for row in report.rows)
+    assert all(row.backtest.stop_percent == Decimal("2") for row in report.rows)
+    assert all(row.backtest.target_percent == Decimal("4") for row in report.rows)
+    assert all(len(row.backtest.results) == 2 for row in report.rows)
+    assert all(row.backtest.results[0].trades >= 1 for row in report.rows)
+    assert all("not a prediction" in row.backtest.warning for row in report.rows)
     assert all(request.url.params["feed"] == "iex" for request in requests)
     assert all(request.url.params["adjustment"] == "raw" for request in requests)
     assert "distinct" not in report.model_dump_json()
