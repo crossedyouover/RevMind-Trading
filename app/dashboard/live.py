@@ -254,17 +254,33 @@ class DashboardLiveData:
         with sqlite3.connect(self._paper_orders_path) as db:
             rows = db.execute(
                 "SELECT client_order_id,symbol,side,quantity,status,provider_order_id,"
-                "submitted_at FROM paper_orders ORDER BY created_at DESC LIMIT 50"
+                "submitted_at,request FROM paper_orders ORDER BY created_at DESC LIMIT 50"
             ).fetchall()
-        return tuple(
-            {
-                "client_order_id": row[0], "symbol": row[1], "side": row[2],
-                "quantity": row[3], "status": row[4], "provider_order_id": row[5],
-                "submitted_at": row[6],
-                "next_action": self._paper_order_next_action(row[4]),
-            }
-            for row in rows
-        )
+        history: list[dict[str, str | None]] = []
+        for row in rows:
+            request = PaperOrderRequest.model_validate_json(row[7])
+            planned_loss = request.quantity * abs(request.entry_limit - request.stop_price)
+            history.append(
+                {
+                    "client_order_id": row[0],
+                    "symbol": row[1],
+                    "side": row[2],
+                    "quantity": row[3],
+                    "status": row[4],
+                    "provider_order_id": row[5],
+                    "submitted_at": row[6],
+                    "next_action": self._paper_order_next_action(row[4]),
+                    "entry_limit": str(request.entry_limit),
+                    "stop_price": str(request.stop_price),
+                    "target_price": str(request.target_price),
+                    "planned_loss": str(planned_loss),
+                    "protection_note": (
+                        "Bracket requested with Alpaca; verify active child orders "
+                        "after the entry fills."
+                    ),
+                }
+            )
+        return tuple(history)
 
     async def sync_paper_orders(self) -> tuple[dict[str, str | None], ...]:
         """Explicitly refresh recent known orders; never mutate or cancel provider orders."""

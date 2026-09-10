@@ -297,7 +297,13 @@ async def test_eligible_plan_requires_one_time_exact_paper_approval(tmp_path: Pa
     )
     assert receipt.provider_order_id == "paper-order"
     assert len(placed) == 1
-    assert service.paper_order_history()[0]["status"] == "ACCEPTED"
+    recorded = service.paper_order_history()[0]
+    assert recorded["status"] == "ACCEPTED"
+    assert recorded["entry_limit"] == "100"
+    assert recorded["stop_price"] == "98"
+    assert recorded["target_price"] == "104"
+    assert recorded["planned_loss"] == "2"
+    assert recorded["protection_note"].startswith("Bracket requested")
     cancelled_history = await service.cancel_paper_order(
         PaperCancelInput(
             client_order_id=placed[0].client_order_id,
