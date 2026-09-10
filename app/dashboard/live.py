@@ -4,7 +4,7 @@ import os
 import sqlite3
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
-from decimal import Decimal
+from decimal import ROUND_FLOOR, Decimal
 from typing import Literal
 from uuid import uuid4
 
@@ -131,6 +131,7 @@ class PaperPlanInput(CanonicalModel):
     min_cash_balance: Decimal
     stop_price: Decimal
     max_loss_budget: Decimal
+    auto_size: bool = False
 
 
 class PaperPlanResult(CanonicalModel):
@@ -151,6 +152,8 @@ class PaperPlanResult(CanonicalModel):
     projected_gross_exposure: str | None
     approval_id: str | None
     explanation: str
+    quantity_source: Literal["USER_ENTERED", "AUTOMATIC_SAFE_SIZE"] = "USER_ENTERED"
+    sizing_basis: tuple[str, ...] = ()
 
 
 class PaperApprovalInput(CanonicalModel):
@@ -199,6 +202,7 @@ class DashboardLiveData:
         self._paper_orders_path = settings.directory / "paper-orders.db"
         self._research_artifacts: dict[str, _ResearchArtifact] = {}
         self._approved_plans: dict[str, PaperOrderRequest] = {}
+        self._paper_account: PaperAccount | None = None
 
     async def paper_account(self) -> PaperAccount:
         selected = self._settings.load()
@@ -208,7 +212,9 @@ class DashboardLiveData:
             key, secret = self._settings.alpaca_credentials()
             broker = self._paper_broker_factory(key, secret)
             try:
-                return await broker.account()
+                account = await broker.account()
+                self._paper_account = account
+                return account
             finally:
                 await broker.aclose()
         except (PaperBrokerError, ValidationError, ValueError, TypeError) as exc:
@@ -632,6 +638,63 @@ class DashboardLiveData:
         latest = research.request.history.bars[-1].bar if research.request.history.bars else None
         if latest is None:
             raise LiveProbeError("No completed reference bar is available for this plan.")
+        quantity = request.quantity
+        cash_balance = request.cash_balance
+        quantity_source: Literal["USER_ENTERED", "AUTOMATIC_SAFE_SIZE"] = "USER_ENTERED"
+        sizing_basis: tuple[str, ...] = ()
+        if request.auto_size:
+            synced = self._paper_account
+            if synced is None:
+                raise LiveProbeError("Sync the Alpaca paper account before using automatic sizing.")
+            if synced.trading_blocked:
+                raise LiveProbeError(
+                    "Alpaca reports that this paper account is blocked from trading."
+                )
+            if request.side != "BUY":
+                raise LiveProbeError(
+                    "Automatic sizing currently supports long paper plans only; "
+                    "shorting remains blocked."
+                )
+            per_share_risk = latest.close - request.stop_price
+            if per_share_risk <= 0:
+                raise LiveProbeError("For a long plan, the stop must be below the entry price.")
+            cash_balance = synced.cash
+            spendable_cash = max(Decimal("0"), cash_balance - request.min_cash_balance)
+            existing_gross = sum(abs(position.market_value) for position in synced.positions)
+            existing_instrument = sum(
+                abs(position.market_value)
+                for position in synced.positions
+                if position.symbol == artifact.instrument.symbol
+            )
+            gross_headroom = max(Decimal("0"), request.max_gross_exposure - existing_gross)
+            instrument_headroom = max(
+                Decimal("0"), request.max_instrument_exposure - existing_instrument
+            )
+            concentration_headroom = max(
+                Decimal("0"),
+                synced.equity * request.max_concentration_share - existing_instrument,
+            )
+            caps = (
+                ("loss budget", request.max_loss_budget / per_share_risk),
+                ("maximum trade value", request.max_trade_notional / latest.close),
+                ("maximum total exposure", gross_headroom / latest.close),
+                ("maximum one-symbol exposure", instrument_headroom / latest.close),
+                ("maximum account concentration", concentration_headroom / latest.close),
+                ("paper cash kept available", spendable_cash / latest.close),
+            )
+            limiting_name, limiting_quantity = min(caps, key=lambda item: (item[1], item[0]))
+            quantity = limiting_quantity.to_integral_value(rounding=ROUND_FLOOR)
+            if quantity < 1:
+                raise LiveProbeError(
+                    "No whole share fits the selected limits; "
+                    f"the binding limit is {limiting_name}."
+                )
+            quantity_source = "AUTOMATIC_SAFE_SIZE"
+            sizing_basis = (
+                f"Sized to {quantity} whole shares from the synchronized account and positions.",
+                f"Binding limit: {limiting_name}.",
+                "Buying power and margin were ignored; sizing uses cash-only limits.",
+            )
         as_of = artifact.observed_at
         mark = ObservedPositionMark(
             observation_id=uuid4(),
@@ -649,14 +712,14 @@ class DashboardLiveData:
             currency="USD",
             effective_at=as_of,
             observed_at=as_of,
-            cash_balance=request.cash_balance,
+            cash_balance=cash_balance,
             positions=(),
             pending_actions=(),
         )
         context = DeterministicPortfolioContextEngine().evaluate(
             PortfolioContextRequest(account=account, as_of=as_of, evaluation_at=as_of)
         )
-        signed_quantity = request.quantity if request.side == "BUY" else -request.quantity
+        signed_quantity = quantity if request.side == "BUY" else -quantity
         proposal = PaperRiskProposal(
             proposal_id=uuid4(),
             account_id=account_id,
@@ -671,7 +734,7 @@ class DashboardLiveData:
             policy_version="1",
             account_id=account_id,
             currency="USD",
-            max_abs_quantity_change=request.quantity,
+            max_abs_quantity_change=quantity,
             max_proposal_notional=request.max_trade_notional,
             max_gross_exposure=request.max_gross_exposure,
             max_instrument_exposure=request.max_instrument_exposure,
@@ -717,7 +780,7 @@ class DashboardLiveData:
                 evaluation_at=as_of,
             )
         )
-        estimated_loss = request.quantity * abs(latest.close - request.stop_price)
+        estimated_loss = quantity * abs(latest.close - request.stop_price)
         stop_direction_invalid = (request.side == "BUY" and request.stop_price >= latest.close) or (
             request.side == "SELL" and request.stop_price <= latest.close
         )
@@ -764,7 +827,7 @@ class DashboardLiveData:
                 client_order_id=f"revmind-{uuid4()}",
                 symbol=artifact.instrument.symbol,
                 side="buy" if request.side == "BUY" else "sell",
-                quantity=request.quantity,
+                quantity=quantity,
                 entry_limit=latest.close,
                 stop_price=request.stop_price,
                 target_price=target_price,
@@ -775,7 +838,7 @@ class DashboardLiveData:
             status=status,
             symbol=artifact.instrument.symbol,
             side=request.side,
-            quantity=str(request.quantity),
+            quantity=str(quantity),
             reference_price=str(latest.close),
             stop_price=str(request.stop_price),
             target_price=str(target_price),
@@ -788,6 +851,8 @@ class DashboardLiveData:
             projected_gross_exposure=str(projection.gross_exposure) if projection else None,
             approval_id=approval_id,
             explanation=explanation,
+            quantity_source=quantity_source,
+            sizing_basis=sizing_basis,
         )
 
     @staticmethod

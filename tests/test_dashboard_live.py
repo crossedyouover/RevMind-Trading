@@ -192,6 +192,40 @@ async def test_market_research_uses_historical_bars_and_frozen_engines(tmp_path:
     )
     assert veto.status == "VETOED"
     assert "LOSS_BUDGET_EXCEEDED" in veto.risk_reasons
+    service._paper_account = PaperAccount(  # type: ignore[attr-defined]
+        account_id="paper-account",
+        status="ACTIVE",
+        currency="USD",
+        cash="1000",
+        equity="20000",
+        buying_power="40000",
+        trading_blocked=False,
+        observed_at=FixedClock().now(),
+        positions=(),
+    )
+    automatic = service.paper_plan(
+        PaperPlanInput.model_validate(
+            {
+                "assessment_id": report.rows[0].assessment_id,
+                "side": "BUY",
+                "quantity": "9999",
+                "cash_balance": "999999",
+                "auto_size": True,
+                "max_trade_notional": "1000",
+                "max_gross_exposure": "10000",
+                "max_instrument_exposure": "2500",
+                "max_concentration_share": "1",
+                "min_cash_balance": "0",
+                "stop_price": "120",
+                "max_loss_budget": "40",
+            }
+        )
+    )
+    assert automatic.quantity == "8"
+    assert automatic.quantity_source == "AUTOMATIC_SAFE_SIZE"
+    assert automatic.estimated_loss_at_stop == "40"
+    assert automatic.projected_cash == "0"
+    assert "Binding limit: loss budget." in automatic.sizing_basis
     for client in clients:
         await client.aclose()
 
