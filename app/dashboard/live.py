@@ -161,6 +161,11 @@ class PaperApprovalInput(CanonicalModel):
     confirmation: Literal["PLACE PAPER ORDER"]
 
 
+class PaperCancelInput(CanonicalModel):
+    client_order_id: str
+    confirmation: Literal["CANCEL PAPER ORDER"]
+
+
 class _ResearchArtifact:
     def __init__(
         self,
@@ -286,6 +291,41 @@ class DashboardLiveData:
             ) from exc
         return self.paper_order_history()
 
+    async def cancel_paper_order(
+        self, value: PaperCancelInput
+    ) -> tuple[dict[str, str | None], ...]:
+        """Cancel one journaled active paper order after exact explicit confirmation."""
+        cancellation = PaperCancelInput.model_validate(value)
+        if not self._paper_orders_path.exists():
+            raise LiveProbeError("That RevMind paper order does not exist.")
+        with sqlite3.connect(self._paper_orders_path) as db:
+            row = db.execute(
+                "SELECT provider_order_id,status FROM paper_orders WHERE client_order_id=?",
+                (cancellation.client_order_id,),
+            ).fetchone()
+        if row is None or row[0] is None:
+            raise LiveProbeError("That RevMind paper order cannot be cancelled.")
+        active = {"ACCEPTED", "NEW", "PENDING_NEW", "PARTIALLY_FILLED", "HELD", "CALCULATED"}
+        if str(row[1]).upper() not in active:
+            raise LiveProbeError("That paper order is not in a cancellable state.")
+        try:
+            key, secret = self._settings.alpaca_credentials()
+            broker = self._paper_broker_factory(key, secret)
+            try:
+                await broker.cancel_order(str(row[0]))
+            finally:
+                await broker.aclose()
+        except (PaperBrokerError, ValidationError, ValueError, TypeError) as exc:
+            raise LiveProbeError(
+                "Alpaca did not confirm the paper cancellation. Refresh its status before retrying."
+            ) from exc
+        with sqlite3.connect(self._paper_orders_path) as db:
+            db.execute(
+                "UPDATE paper_orders SET status=? WHERE client_order_id=?",
+                ("CANCEL_REQUESTED", cancellation.client_order_id),
+            )
+        return self.paper_order_history()
+
     def _update_order_status(self, status: PaperOrderStatus) -> None:
         with sqlite3.connect(self._paper_orders_path) as db:
             existing = db.execute(
@@ -308,6 +348,8 @@ class DashboardLiveData:
             return "Not active: review the reason in Alpaca before creating another plan."
         if normalized in {"PARTIALLY_FILLED"}:
             return "Partially filled: inspect the remaining quantity and bracket in Alpaca."
+        if normalized == "CANCEL_REQUESTED":
+            return "Cancellation requested: refresh status for Alpaca confirmation."
         return "Working: wait or inspect the order in Alpaca Paper Trading."
 
     def _record_order(

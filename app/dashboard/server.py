@@ -21,6 +21,7 @@ from app.dashboard.live import (
     DashboardLiveData,
     LiveProbeError,
     PaperApprovalInput,
+    PaperCancelInput,
     PaperPlanInput,
 )
 from app.dashboard.settings import DashboardSettings, SettingsStore
@@ -237,6 +238,7 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                     "/api/paper-plan",
                     "/api/paper-order",
                     "/api/paper-orders/sync",
+                    "/api/paper-order/cancel",
                 }
                 or self.headers.get("Content-Type") != "application/json"
             ):
@@ -280,6 +282,10 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                     if payload != b"{}":
                         raise ValueError("empty request required")
                     value = asyncio.run(app.live.sync_paper_orders())
+                elif self.path == "/api/paper-order/cancel":
+                    value = asyncio.run(
+                        app.live.cancel_paper_order(PaperCancelInput.model_validate_json(payload))
+                    )
                 else:
                     body = json.loads(payload)
                     if not isinstance(body, dict) or set(body) != {

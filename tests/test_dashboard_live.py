@@ -17,6 +17,7 @@ from app.dashboard.live import (
     DashboardLiveData,
     LiveProbeError,
     PaperApprovalInput,
+    PaperCancelInput,
     PaperPlanInput,
 )
 from app.dashboard.settings import DEFAULT_SETTINGS, DataMode, SettingsStore
@@ -238,6 +239,7 @@ async def test_market_research_uses_historical_bars_and_frozen_engines(tmp_path:
 @pytest.mark.asyncio
 async def test_eligible_plan_requires_one_time_exact_paper_approval(tmp_path: Path) -> None:
     placed: list[PaperOrderRequest] = []
+    cancelled: list[str] = []
 
     class FakeBroker:
         async def account(self) -> PaperAccount:
@@ -270,6 +272,9 @@ async def test_eligible_plan_requires_one_time_exact_paper_approval(tmp_path: Pa
                 updated_at=FixedClock().now(),
             )
 
+        async def cancel_order(self, provider_order_id: str) -> None:
+            cancelled.append(provider_order_id)
+
         async def aclose(self) -> None:
             pass
 
@@ -293,6 +298,14 @@ async def test_eligible_plan_requires_one_time_exact_paper_approval(tmp_path: Pa
     assert receipt.provider_order_id == "paper-order"
     assert len(placed) == 1
     assert service.paper_order_history()[0]["status"] == "ACCEPTED"
+    cancelled_history = await service.cancel_paper_order(
+        PaperCancelInput(
+            client_order_id=placed[0].client_order_id,
+            confirmation="CANCEL PAPER ORDER",
+        )
+    )
+    assert cancelled == ["paper-order"]
+    assert cancelled_history[0]["status"] == "CANCEL_REQUESTED"
     refreshed = await service.sync_paper_orders()
     assert refreshed[0]["status"] == "FILLED"
     assert refreshed[0]["next_action"].startswith("Filled:")

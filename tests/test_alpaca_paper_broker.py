@@ -32,6 +32,8 @@ async def test_account_and_bracket_order_use_only_paper_host() -> None:
 
     def respond(request: httpx.Request) -> httpx.Response:
         requests.append(request)
+        if request.method == "DELETE":
+            return httpx.Response(204)
         if request.url.path == "/v2/account":
             return httpx.Response(
                 200,
@@ -88,6 +90,7 @@ async def test_account_and_bracket_order_use_only_paper_host() -> None:
     account = await broker.account()
     receipt = await broker.place_bracket_order(order())
     status = await broker.order_status("provider-order")
+    await broker.cancel_order("provider-order")
     assert account.cash == Decimal("10000.00")
     assert account.positions[0].symbol == "MSFT"
     assert account.positions[0].average_entry_price == Decimal("240")
@@ -95,10 +98,11 @@ async def test_account_and_bracket_order_use_only_paper_host() -> None:
     assert receipt.status == "accepted"
     assert status.status == "filled"
     assert status.filled_average_price == Decimal("100.25")
-    assert requests[-1].url.path == "/v2/orders/provider-order"
+    assert requests[-2].url.path == "/v2/orders/provider-order"
+    assert requests[-1].method == "DELETE"
     assert all(request.url.host == "paper-api.alpaca.markets" for request in requests)
     assert all(request.headers["APCA-API-KEY-ID"] == "paper-key" for request in requests)
-    body = json.loads(requests[-2].content)
+    body = json.loads(requests[-3].content)
     assert body == {
         "client_order_id": order().client_order_id,
         "symbol": "AAPL",

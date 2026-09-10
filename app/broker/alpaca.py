@@ -139,13 +139,7 @@ class AlpacaPaperBroker:
             raise PaperBrokerError("Alpaca returned invalid paper-order data") from exc
 
     async def order_status(self, provider_order_id: str) -> PaperOrderStatus:
-        valid_identity = (
-            bool(provider_order_id)
-            and provider_order_id.isascii()
-            and len(provider_order_id) <= 128
-            and all(character.isalnum() or character in "-_" for character in provider_order_id)
-        )
-        if not valid_identity:
+        if not self._valid_order_identity(provider_order_id):
             raise ValueError("invalid paper-order identity")
         value = await self._request("GET", f"/v2/orders/{provider_order_id}")
         if not isinstance(value, Mapping):
@@ -182,6 +176,11 @@ class AlpacaPaperBroker:
         except (ValidationError, ValueError, TypeError, InvalidOperation) as exc:
             raise PaperBrokerError("Alpaca returned invalid paper-order status") from exc
 
+    async def cancel_order(self, provider_order_id: str) -> None:
+        if not self._valid_order_identity(provider_order_id):
+            raise ValueError("invalid paper-order identity")
+        await self._request("DELETE", f"/v2/orders/{provider_order_id}")
+
     async def _request(
         self, method: str, path: str, *, json_body: dict[str, object] | None = None
     ) -> object:
@@ -196,7 +195,7 @@ class AlpacaPaperBroker:
                     raise PaperBrokerError(
                         f"Alpaca Paper Trading rejected the request (HTTP {response.status_code})."
                     )
-                return json.loads(content)
+                return json.loads(content) if content else {}
         except PaperBrokerError:
             raise
         except (httpx.HTTPError, json.JSONDecodeError) as exc:
@@ -207,6 +206,15 @@ class AlpacaPaperBroker:
         if not isinstance(value, datetime) or value.tzinfo is None:
             raise ValueError("paper receipt clock must be timezone-aware")
         return value.astimezone(UTC)
+
+    @staticmethod
+    def _valid_order_identity(value: str) -> bool:
+        return (
+            bool(value)
+            and value.isascii()
+            and len(value) <= 128
+            and all(character.isalnum() or character in "-_" for character in value)
+        )
 
     @staticmethod
     def _text(value: Mapping[object, object], key: str) -> str:
