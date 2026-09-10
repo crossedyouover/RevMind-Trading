@@ -236,6 +236,7 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                     "/api/alpaca/paper-account",
                     "/api/paper-plan",
                     "/api/paper-order",
+                    "/api/paper-orders/sync",
                 }
                 or self.headers.get("Content-Type") != "application/json"
             ):
@@ -250,6 +251,7 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                 return
             payload = self.rfile.read(length)
             try:
+                value: object
                 if self.path == "/api/demo":
                     if payload != b"{}":
                         raise ValueError("empty request required")
@@ -274,6 +276,10 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                     value = asyncio.run(
                         app.live.place_paper_order(PaperApprovalInput.model_validate_json(payload))
                     ).model_dump(mode="json")
+                elif self.path == "/api/paper-orders/sync":
+                    if payload != b"{}":
+                        raise ValueError("empty request required")
+                    value = asyncio.run(app.live.sync_paper_orders())
                 else:
                     body = json.loads(payload)
                     if not isinstance(body, dict) or set(body) != {

@@ -59,3 +59,19 @@ class PaperOrderReceipt(CanonicalModel):
     quantity: Decimal
     status: str
     submitted_at: UtcDatetime
+
+
+class PaperOrderStatus(CanonicalModel):
+    """Provider-neutral read model for an explicitly submitted paper order."""
+
+    schema_version: Literal[1] = 1
+    provider_order_id: str
+    client_order_id: str
+    symbol: str
+    side: Literal["buy", "sell"]
+    quantity: Decimal
+    filled_quantity: Decimal
+    status: str
+    filled_average_price: Decimal | None
+    submitted_at: UtcDatetime
+    updated_at: UtcDatetime

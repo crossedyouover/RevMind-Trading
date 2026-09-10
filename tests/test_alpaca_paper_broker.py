@@ -65,8 +65,11 @@ async def test_account_and_bracket_order_use_only_paper_host() -> None:
                 "symbol": "AAPL",
                 "side": "buy",
                 "qty": "2",
-                "status": "accepted",
+                "status": "filled" if request.method == "GET" else "accepted",
+                "filled_qty": "2",
+                "filled_avg_price": "100.25",
                 "submitted_at": "2026-09-07T12:00:00Z",
+                "updated_at": "2026-09-07T12:01:00Z",
             },
         )
 
@@ -80,12 +83,16 @@ async def test_account_and_bracket_order_use_only_paper_host() -> None:
     )
     account = await broker.account()
     receipt = await broker.place_bracket_order(order())
+    status = await broker.order_status("provider-order")
     assert account.cash == Decimal("10000.00")
     assert account.positions[0].symbol == "MSFT"
     assert receipt.status == "accepted"
+    assert status.status == "filled"
+    assert status.filled_average_price == Decimal("100.25")
+    assert requests[-1].url.path == "/v2/orders/provider-order"
     assert all(request.url.host == "paper-api.alpaca.markets" for request in requests)
     assert all(request.headers["APCA-API-KEY-ID"] == "paper-key" for request in requests)
-    body = json.loads(requests[-1].content)
+    body = json.loads(requests[-2].content)
     assert body == {
         "client_order_id": order().client_order_id,
         "symbol": "AAPL",

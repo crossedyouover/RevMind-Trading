@@ -7,7 +7,12 @@ from pathlib import Path
 import httpx
 import pytest
 
-from app.broker.models import PaperAccount, PaperOrderReceipt, PaperOrderRequest
+from app.broker.models import (
+    PaperAccount,
+    PaperOrderReceipt,
+    PaperOrderRequest,
+    PaperOrderStatus,
+)
 from app.dashboard.live import (
     DashboardLiveData,
     LiveProbeError,
@@ -250,6 +255,21 @@ async def test_eligible_plan_requires_one_time_exact_paper_approval(tmp_path: Pa
                 submitted_at=FixedClock().now(),
             )
 
+        async def order_status(self, provider_order_id: str) -> PaperOrderStatus:
+            assert provider_order_id == "paper-order"
+            return PaperOrderStatus(
+                provider_order_id=provider_order_id,
+                client_order_id=placed[0].client_order_id,
+                symbol="AAPL",
+                side="buy",
+                quantity="1",
+                filled_quantity="1",
+                status="filled",
+                filled_average_price="100",
+                submitted_at=FixedClock().now(),
+                updated_at=FixedClock().now(),
+            )
+
         async def aclose(self) -> None:
             pass
 
@@ -273,6 +293,9 @@ async def test_eligible_plan_requires_one_time_exact_paper_approval(tmp_path: Pa
     assert receipt.provider_order_id == "paper-order"
     assert len(placed) == 1
     assert service.paper_order_history()[0]["status"] == "ACCEPTED"
+    refreshed = await service.sync_paper_orders()
+    assert refreshed[0]["status"] == "FILLED"
+    assert refreshed[0]["next_action"].startswith("Filled:")
     assert (tmp_path / ".revmind" / "paper-orders.db").is_file()
     with pytest.raises(LiveProbeError, match="expired"):
         await service.place_paper_order(

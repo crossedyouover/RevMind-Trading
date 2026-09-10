@@ -12,6 +12,7 @@ from app.broker.models import (
     PaperAccount,
     PaperOrderReceipt,
     PaperOrderRequest,
+    PaperOrderStatus,
     PaperPositionSummary,
 )
 
@@ -132,6 +133,50 @@ class AlpacaPaperBroker:
             )
         except (ValidationError, ValueError, TypeError, InvalidOperation) as exc:
             raise PaperBrokerError("Alpaca returned invalid paper-order data") from exc
+
+    async def order_status(self, provider_order_id: str) -> PaperOrderStatus:
+        valid_identity = (
+            bool(provider_order_id)
+            and provider_order_id.isascii()
+            and len(provider_order_id) <= 128
+            and all(character.isalnum() or character in "-_" for character in provider_order_id)
+        )
+        if not valid_identity:
+            raise ValueError("invalid paper-order identity")
+        value = await self._request("GET", f"/v2/orders/{provider_order_id}")
+        if not isinstance(value, Mapping):
+            raise PaperBrokerError("Alpaca returned malformed paper-order status")
+        try:
+            side = self._text(value, "side")
+            if side not in {"buy", "sell"}:
+                raise ValueError("invalid order side")
+            submitted_at = datetime.fromisoformat(
+                self._text(value, "submitted_at").replace("Z", "+00:00")
+            )
+            updated_text = value.get("updated_at")
+            updated_at = (
+                datetime.fromisoformat(updated_text.replace("Z", "+00:00"))
+                if isinstance(updated_text, str) and updated_text
+                else submitted_at
+            )
+            average = value.get("filled_avg_price")
+            returned_id = self._text(value, "id")
+            if returned_id != provider_order_id:
+                raise ValueError("paper-order identity mismatch")
+            return PaperOrderStatus(
+                provider_order_id=returned_id,
+                client_order_id=self._text(value, "client_order_id"),
+                symbol=self._text(value, "symbol"),
+                side="buy" if side == "buy" else "sell",
+                quantity=self._decimal(value, "qty"),
+                filled_quantity=self._decimal(value, "filled_qty"),
+                status=self._text(value, "status"),
+                filled_average_price=Decimal(average) if isinstance(average, str) else None,
+                submitted_at=submitted_at,
+                updated_at=updated_at,
+            )
+        except (ValidationError, ValueError, TypeError, InvalidOperation) as exc:
+            raise PaperBrokerError("Alpaca returned invalid paper-order status") from exc
 
     async def _request(
         self, method: str, path: str, *, json_body: dict[str, object] | None = None

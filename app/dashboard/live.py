@@ -11,7 +11,7 @@ from uuid import uuid4
 from pydantic import SecretStr, ValidationError
 
 from app.broker.alpaca import AlpacaPaperBroker, PaperBrokerError
-from app.broker.models import PaperAccount, PaperOrderReceipt, PaperOrderRequest
+from app.broker.models import PaperAccount, PaperOrderReceipt, PaperOrderRequest, PaperOrderStatus
 from app.broker.protocol import PaperBroker
 from app.core.schemas import CanonicalModel, Instrument, MarketSnapshot, Timeframe, UtcDatetime
 from app.dashboard.settings import AlpacaFeed, DataMode, SettingsStore
@@ -256,9 +256,59 @@ class DashboardLiveData:
                 "client_order_id": row[0], "symbol": row[1], "side": row[2],
                 "quantity": row[3], "status": row[4], "provider_order_id": row[5],
                 "submitted_at": row[6],
+                "next_action": self._paper_order_next_action(row[4]),
             }
             for row in rows
         )
+
+    async def sync_paper_orders(self) -> tuple[dict[str, str | None], ...]:
+        """Explicitly refresh recent known orders; never mutate or cancel provider orders."""
+        known = tuple(
+            row for row in self.paper_order_history() if row["provider_order_id"] is not None
+        )[:10]
+        if not known:
+            return ()
+        try:
+            key, secret = self._settings.alpaca_credentials()
+            broker = self._paper_broker_factory(key, secret)
+            try:
+                for row in known:
+                    provider_id = row["provider_order_id"]
+                    if provider_id is None:
+                        continue
+                    status = await broker.order_status(provider_id)
+                    self._update_order_status(status)
+            finally:
+                await broker.aclose()
+        except (PaperBrokerError, ValidationError, ValueError, TypeError) as exc:
+            raise LiveProbeError(
+                "Recent paper-order status could not be refreshed. No order was changed."
+            ) from exc
+        return self.paper_order_history()
+
+    def _update_order_status(self, status: PaperOrderStatus) -> None:
+        with sqlite3.connect(self._paper_orders_path) as db:
+            existing = db.execute(
+                "SELECT provider_order_id FROM paper_orders WHERE client_order_id=?",
+                (status.client_order_id,),
+            ).fetchone()
+            if existing is None or existing[0] != status.provider_order_id:
+                raise LiveProbeError("Paper-order status identity conflict.")
+            db.execute(
+                "UPDATE paper_orders SET status=?,receipt=? WHERE client_order_id=?",
+                (status.status.upper(), status.model_dump_json(), status.client_order_id),
+            )
+
+    @staticmethod
+    def _paper_order_next_action(status: str) -> str:
+        normalized = status.upper()
+        if normalized == "FILLED":
+            return "Filled: verify the position and protective bracket in Alpaca Paper Trading."
+        if normalized in {"CANCELED", "EXPIRED", "REJECTED", "REJECTED_OR_UNKNOWN"}:
+            return "Not active: review the reason in Alpaca before creating another plan."
+        if normalized in {"PARTIALLY_FILLED"}:
+            return "Partially filled: inspect the remaining quantity and bracket in Alpaca."
+        return "Working: wait or inspect the order in Alpaca Paper Trading."
 
     def _record_order(
         self, order: PaperOrderRequest, receipt: PaperOrderReceipt | None, status: str
