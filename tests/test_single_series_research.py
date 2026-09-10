@@ -129,6 +129,9 @@ def test_walk_forward_setup_evaluation_is_deterministic_and_does_not_invent_trad
     assert first.bars == 26
     assert first.results[0].trades == 0
     assert first.results[1].trades == 0
+    assert first.evidence_grade == "INSUFFICIENT"
+    assert first.ranking_score is None
+    assert first.split_bar_index == 18
     assert first.round_trip_cost_percent == Decimal("0.10")
     assert "not a prediction" in first.warning
     assert first.model_dump_json() == second.model_dump_json()
