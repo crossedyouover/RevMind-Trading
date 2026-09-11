@@ -144,6 +144,18 @@ class MarketResearchRow(CanonicalModel):
     opportunity_rank: int | None = None
 
 
+class ScanOutcome(CanonicalModel):
+    symbol: str
+    assessed_at: UtcDatetime
+    readiness: Literal["READY_FOR_RISK_CHECK", "CAUTION", "WAIT"]
+    direction: Literal["LONG", "SHORT", "NONE"]
+    reference_price: str
+    measured_at: UtcDatetime
+    measured_price: str
+    market_return_percent: str
+    direction_result: Literal["FAVORABLE", "ADVERSE", "FLAT", "NOT_APPLICABLE"]
+
+
 class MarketResearchReport(CanonicalModel):
     schema_version: Literal[1] = 1
     status: Literal["COMPLETE_READ_ONLY"]
@@ -154,6 +166,7 @@ class MarketResearchReport(CanonicalModel):
     completed_at: UtcDatetime
     validation_depth: ValidationDepth
     rows: tuple[MarketResearchRow, ...]
+    recent_outcomes: tuple[ScanOutcome, ...] = ()
 
 
 class PaperPlanInput(CanonicalModel):
@@ -249,6 +262,7 @@ class DashboardLiveData:
         self._status_path = settings.directory / "alpaca-status.json"
         self._observations_path = settings.directory / "market-observations.db"
         self._paper_orders_path = settings.directory / "paper-orders.db"
+        self._scan_history_path = settings.directory / "scan-history.db"
         self._research_artifacts: dict[str, _ResearchArtifact] = {}
         self._approved_plans: dict[str, PaperOrderRequest] = {}
         self._paper_account: PaperAccount | None = None
@@ -629,7 +643,7 @@ class DashboardLiveData:
                 ranked.append(item.model_copy(update={"opportunity_rank": item_rank}))
             while len(self._research_artifacts) > 100:
                 self._research_artifacts.pop(next(iter(self._research_artifacts)))
-            return MarketResearchReport(
+            report = MarketResearchReport(
                 status="COMPLETE_READ_ONLY",
                 source=source.name,
                 feed=selected.alpaca_feed,
@@ -639,6 +653,8 @@ class DashboardLiveData:
                 validation_depth=selected.validation_depth,
                 rows=tuple(ranked),
             )
+            outcomes = self._update_scan_history(report.rows, report.completed_at)
+            return report.model_copy(update={"recent_outcomes": outcomes})
         except ProviderRateLimitError as exc:
             raise LiveProbeError("Alpaca rate limit reached; wait before retrying.") from exc
         except InstrumentNotFoundError as exc:
@@ -845,6 +861,107 @@ class DashboardLiveData:
         }[timeframe]
         days = extended_days if depth is ValidationDepth.EXTENDED else standard_days
         return boundary - timedelta(days=days), end
+
+    def _update_scan_history(
+        self, rows: tuple[MarketResearchRow, ...], recorded_at: datetime
+    ) -> tuple[ScanOutcome, ...]:
+        """Persist assessments and measure older ones at the next later completed price."""
+        if recorded_at.tzinfo is None or recorded_at.utcoffset() is None:
+            raise ValueError("scan-history receipt time must include timezone information")
+        if any(row.latest_bar_at is not None and row.latest_bar_at > recorded_at for row in rows):
+            raise ValueError("scan history cannot record a future completed bar")
+        self._settings.directory.mkdir(parents=True, exist_ok=True)
+        with sqlite3.connect(self._scan_history_path) as db:
+            db.execute("PRAGMA synchronous=FULL")
+            db.execute(
+                """CREATE TABLE IF NOT EXISTS scan_assessments (
+                assessment_id TEXT PRIMARY KEY, symbol TEXT NOT NULL,
+                assessed_at TEXT NOT NULL, readiness TEXT NOT NULL,
+                direction TEXT NOT NULL, reference_price TEXT NOT NULL,
+                measured_at TEXT, measured_price TEXT, market_return_percent TEXT,
+                direction_result TEXT)"""
+            )
+            db.execute(
+                """CREATE UNIQUE INDEX IF NOT EXISTS one_equivalent_scan
+                ON scan_assessments(symbol,assessed_at,readiness,direction,reference_price)"""
+            )
+            for row in rows:
+                if row.latest_close is None or row.latest_bar_at is None:
+                    continue
+                prior = db.execute(
+                    """SELECT assessment_id,assessed_at,direction,reference_price
+                    FROM scan_assessments WHERE symbol=? AND measured_at IS NULL
+                    AND assessed_at<? ORDER BY assessed_at,assessment_id""",
+                    (row.symbol, row.latest_bar_at.isoformat()),
+                ).fetchall()
+                current = Decimal(row.latest_close)
+                for assessment_id, assessed_at, direction, reference_text in prior:
+                    reference = Decimal(reference_text)
+                    if reference <= 0:
+                        continue
+                    change = ((current - reference) / reference * Decimal("100")).quantize(
+                        Decimal("0.0001")
+                    )
+                    result = "NOT_APPLICABLE"
+                    if direction == "LONG":
+                        result = "FAVORABLE" if change > 0 else "ADVERSE" if change < 0 else "FLAT"
+                    elif direction == "SHORT":
+                        result = "FAVORABLE" if change < 0 else "ADVERSE" if change > 0 else "FLAT"
+                    db.execute(
+                        """UPDATE scan_assessments SET measured_at=?,measured_price=?,
+                        market_return_percent=?,direction_result=? WHERE assessment_id=?""",
+                        (
+                            row.latest_bar_at.isoformat(),
+                            str(current),
+                            str(change),
+                            result,
+                            assessment_id,
+                        ),
+                    )
+                direction = (
+                    "LONG"
+                    if row.active_setups
+                    and row.active_setups[0] == SetupKey.UPSIDE_BREAKOUT_ABOVE_SMA.value
+                    else "SHORT"
+                    if row.active_setups
+                    else "NONE"
+                )
+                if row.assessment_id is not None:
+                    db.execute(
+                        "INSERT OR IGNORE INTO scan_assessments VALUES (?,?,?,?,?,?,?,?,?,?)",
+                        (
+                            row.assessment_id,
+                            row.symbol,
+                            row.latest_bar_at.isoformat(),
+                            row.readiness,
+                            direction,
+                            row.latest_close,
+                            None,
+                            None,
+                            None,
+                            None,
+                        ),
+                    )
+            selected = db.execute(
+                """SELECT symbol,assessed_at,readiness,direction,reference_price,
+                measured_at,measured_price,market_return_percent,direction_result
+                FROM scan_assessments WHERE measured_at IS NOT NULL
+                ORDER BY measured_at DESC,assessment_id DESC LIMIT 20"""
+            ).fetchall()
+        return tuple(
+            ScanOutcome(
+                symbol=row[0],
+                assessed_at=datetime.fromisoformat(row[1]),
+                readiness=row[2],
+                direction=row[3],
+                reference_price=row[4],
+                measured_at=datetime.fromisoformat(row[5]),
+                measured_price=row[6],
+                market_return_percent=row[7],
+                direction_result=row[8],
+            )
+            for row in selected
+        )
 
     def _receipt_time(self) -> datetime:
         value = self._clock.now()

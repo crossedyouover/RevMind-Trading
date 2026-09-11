@@ -157,6 +157,7 @@ async def test_market_research_uses_historical_bars_and_frozen_engines(tmp_path:
     service = DashboardLiveData(store, clock=FixedClock(), provider_factory=factory)
     report = await service.research()
     assert report.status == "COMPLETE_READ_ONLY"
+    assert report.recent_outcomes == ()
     assert tuple(row.symbol for row in report.rows) == ("AAPL", "MSFT", "SPY")
     assert all(row.bar_count == 25 for row in report.rows)
     assert all(row.latest_close == "125" for row in report.rows)
@@ -243,6 +244,24 @@ async def test_market_research_uses_historical_bars_and_frozen_engines(tmp_path:
         report.rows[0].model_copy(update={"active_setups": (), "action": "WAIT"})
     )
     assert waiting.readiness == "WAIT"
+    later_rows = tuple(
+        row.model_copy(
+            update={
+                "assessment_id": str(uuid4()),
+                "latest_bar_at": row.latest_bar_at + timedelta(minutes=1)
+                if row.latest_bar_at
+                else None,
+                "latest_close": "126",
+            }
+        )
+        for row in report.rows
+    )
+    outcomes = service._update_scan_history(later_rows, FixedClock().now())
+    assert len(outcomes) == 3
+    assert all(item.market_return_percent == "0.8000" for item in outcomes)
+    assert all(item.direction_result == "FAVORABLE" for item in outcomes)
+    assert service._update_scan_history(later_rows, FixedClock().now()) == outcomes
+    assert (store.directory / "scan-history.db").is_file()
     assert all(row.backtest.results[0].trades >= 1 for row in report.rows)
     assert all("not a prediction" in row.backtest.warning for row in report.rows)
     assert all(request.url.params["feed"] == "iex" for request in requests)
