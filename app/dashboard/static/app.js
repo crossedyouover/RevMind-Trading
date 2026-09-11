@@ -111,6 +111,7 @@ async function syncPaperAccount(showNotice=true){if(showNotice)notice("Reading y
 $('sync-orders').onclick=async()=>{$("sync-orders").disabled=true;notice("Reading current status for recent RevMind paper orders…");try{await api("/api/paper-orders/sync","POST",{});await loadPaperOrders();notice("Paper-order statuses refreshed. RevMind did not change or cancel any order.");}catch(e){notice(e.message);}finally{$("sync-orders").disabled=false;}};
 $("sync-paper").onclick=async()=>{$("sync-paper").disabled=true;try{const account=await syncPaperAccount();$("check-paper").disabled=account.trading_blocked;notice("Paper account and positions synchronized. Values are a point-in-time Alpaca snapshot.");}catch(e){$("paper-cash").value="0";$("check-paper").disabled=true;notice(e.message);}finally{await loadSettings();}};
 initializeMarkets();
+const newsRefresh=node("button","Refresh headlines","secondary");newsRefresh.type="button";newsRefresh.onclick=()=>{if(!providerReady){notice("Connect Alpaca and save settings before refreshing market headlines.");return;}runMarketScan();};$("news-status").parentElement.prepend(newsRefresh);
 loadSettings();
 loadHealth();
 const navLinks=[...document.querySelectorAll("aside a[data-section]")];
