@@ -111,6 +111,8 @@ class MarketResearchRow(CanonicalModel):
     evidence_grade: Literal["INSUFFICIENT", "WEAK", "PROMISING", "NOT_APPLICABLE"]
     evidence_score: str | None
     evidence_comment: str
+    market_alignment: Literal["SUPPORTS", "CONTRADICTS", "NEUTRAL", "UNAVAILABLE"]
+    market_comment: str
     opportunity_rank: int | None = None
 
 
@@ -540,10 +542,14 @@ class DashboardLiveData:
                     if row.assessment_id is not None:
                         self._research_artifacts[row.assessment_id] = artifact
                     rows.append(row)
+            benchmark = next((item for item in rows if item.symbol == "SPY"), None)
+            rows = [self._with_market_alignment(item, benchmark) for item in rows]
             grade_order = {"PROMISING": 0, "WEAK": 1, "INSUFFICIENT": 2, "NOT_APPLICABLE": 3}
+            alignment_order = {"SUPPORTS": 0, "NEUTRAL": 1, "UNAVAILABLE": 2, "CONTRADICTS": 3}
             rows.sort(
                 key=lambda item: (
                     item.action != "REVIEW",
+                    alignment_order[item.market_alignment],
                     grade_order[item.evidence_grade],
                     -(
                         Decimal(item.evidence_score)
@@ -557,7 +563,11 @@ class DashboardLiveData:
             rank = 0
             for item in rows:
                 item_rank = None
-                if item.action == "REVIEW" and item.evidence_score is not None:
+                if (
+                    item.action == "REVIEW"
+                    and item.market_alignment != "CONTRADICTS"
+                    and item.evidence_score is not None
+                ):
                     rank += 1
                     item_rank = rank
                 ranked.append(item.model_copy(update={"opportunity_rank": item_rank}))
@@ -760,8 +770,46 @@ class DashboardLiveData:
             evidence_grade=evidence_grade,
             evidence_score=str(evidence_score) if evidence_score is not None else None,
             evidence_comment=evidence_comment,
+            market_alignment="UNAVAILABLE",
+            market_comment="Benchmark context has not been composed yet.",
         )
         return row, _ResearchArtifact(instrument, observed_at, research, trend)
+
+    @staticmethod
+    def _with_market_alignment(
+        row: MarketResearchRow, benchmark: MarketResearchRow | None
+    ) -> MarketResearchRow:
+        if not row.active_setups:
+            alignment: Literal["SUPPORTS", "CONTRADICTS", "NEUTRAL", "UNAVAILABLE"] = (
+                "NEUTRAL"
+            )
+            comment = "No active trade direction exists to confirm against the broad market."
+        elif benchmark is None or benchmark.trend is None:
+            alignment = "UNAVAILABLE"
+            comment = "SPY benchmark trend is unavailable; no market confirmation is claimed."
+        else:
+            is_long = row.active_setups[0] == SetupKey.UPSIDE_BREAKOUT_ABOVE_SMA.value
+            supports = (is_long and benchmark.trend == "UPWARD") or (
+                not is_long and benchmark.trend == "DOWNWARD"
+            )
+            contradicts = (is_long and benchmark.trend == "DOWNWARD") or (
+                not is_long and benchmark.trend == "UPWARD"
+            )
+            alignment = "SUPPORTS" if supports else "CONTRADICTS" if contradicts else "NEUTRAL"
+            direction = "long" if is_long else "short"
+            if supports:
+                relationship = "supports"
+            elif contradicts:
+                relationship = "contradicts"
+            else:
+                relationship = "is neutral for"
+            comment = (
+                f"SPY trend is {benchmark.trend.lower()} and {relationship} "
+                f"this {direction} setup."
+            )
+        return row.model_copy(
+            update={"market_alignment": alignment, "market_comment": comment}
+        )
 
     def paper_plan(self, value: PaperPlanInput) -> PaperPlanResult:
         """Evaluate a user-entered hypothetical plan; never submit or persist an order."""

@@ -163,6 +163,14 @@ async def test_market_research_uses_historical_bars_and_frozen_engines(tmp_path:
     assert all(row.evidence_score is None for row in report.rows)
     assert all(row.opportunity_rank is None for row in report.rows)
     assert all("Fewer than 20" in row.evidence_comment for row in report.rows)
+    assert all(row.market_alignment == "SUPPORTS" for row in report.rows)
+    assert all("SPY trend is upward" in row.market_comment for row in report.rows)
+    short_row = report.rows[0].model_copy(
+        update={"active_setups": ("DOWNSIDE_BREAKDOWN_BELOW_SMA",)}
+    )
+    contradicted = service._with_market_alignment(short_row, report.rows[-1])
+    assert contradicted.market_alignment == "CONTRADICTS"
+    assert "contradicts this short setup" in contradicted.market_comment
     assert all(row.backtest.results[0].trades >= 1 for row in report.rows)
     assert all("not a prediction" in row.backtest.warning for row in report.rows)
     assert all(request.url.params["feed"] == "iex" for request in requests)
