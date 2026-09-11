@@ -21,7 +21,7 @@ from app.dashboard.live import (
     PaperCancelInput,
     PaperPlanInput,
 )
-from app.dashboard.settings import DEFAULT_SETTINGS, DataMode, SettingsStore
+from app.dashboard.settings import DEFAULT_SETTINGS, DataMode, SettingsStore, ValidationDepth
 from app.data.providers.alpaca import (
     AlpacaInstrumentBinding,
     AlpacaMarketDataProvider,
@@ -52,6 +52,19 @@ def snapshot(symbol: str) -> dict[str, object]:
             "p": 101.25 if symbol == "AAPL" else 202.50,
         }
     }
+
+
+def test_extended_validation_window_is_explicit_and_bounded(tmp_path: Path) -> None:
+    service = DashboardLiveData(configured_store(tmp_path), clock=FixedClock())
+    standard_start, standard_end = service._research_window(
+        DEFAULT_SETTINGS.timeframe, ValidationDepth.STANDARD
+    )
+    extended_start, extended_end = service._research_window(
+        DEFAULT_SETTINGS.timeframe, ValidationDepth.EXTENDED
+    )
+    assert standard_end == extended_end
+    assert standard_end - standard_start == timedelta(days=7) - timedelta(microseconds=1)
+    assert extended_end - extended_start == timedelta(days=14) - timedelta(microseconds=1)
 
 
 @pytest.mark.asyncio

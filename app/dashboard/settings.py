@@ -28,6 +28,11 @@ class SessionRule(StrEnum):
     EXTENDED = "EXTENDED"
 
 
+class ValidationDepth(StrEnum):
+    STANDARD = "STANDARD"
+    EXTENDED = "EXTENDED"
+
+
 class WatchInstrument(CanonicalModel):
     symbol: Annotated[str, Field(strict=True, pattern=r"^[A-Z][A-Z0-9.\-]{0,14}$")]
     exchange: Annotated[str, Field(strict=True, pattern=r"^[A-Z]{4}$")]
@@ -53,6 +58,7 @@ class DashboardSettings(CanonicalModel):
     watchlist: tuple[WatchInstrument, ...]
     timeframe: Timeframe
     session_rule: SessionRule
+    validation_depth: ValidationDepth = ValidationDepth.EXTENDED
 
     @field_validator("schema_version", mode="before")
     @classmethod
@@ -81,6 +87,7 @@ DEFAULT_SETTINGS = DashboardSettings(
     ),
     timeframe=Timeframe.ONE_MINUTE,
     session_rule=SessionRule.REGULAR,
+    validation_depth=ValidationDepth.EXTENDED,
 )
 
 

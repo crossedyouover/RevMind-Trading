@@ -14,7 +14,7 @@ from app.broker.alpaca import AlpacaPaperBroker, PaperBrokerError
 from app.broker.models import PaperAccount, PaperOrderReceipt, PaperOrderRequest, PaperOrderStatus
 from app.broker.protocol import PaperBroker
 from app.core.schemas import CanonicalModel, Instrument, MarketSnapshot, Timeframe, UtcDatetime
-from app.dashboard.settings import AlpacaFeed, DataMode, SettingsStore
+from app.dashboard.settings import AlpacaFeed, DataMode, SettingsStore, ValidationDepth
 from app.data.ingestion import Clock, MarketDataIngestionCoordinator, SystemUtcClock
 from app.data.market import (
     BarRequest,
@@ -124,6 +124,7 @@ class MarketResearchReport(CanonicalModel):
     requested_start: UtcDatetime
     requested_end: UtcDatetime
     completed_at: UtcDatetime
+    validation_depth: ValidationDepth
     rows: tuple[MarketResearchRow, ...]
 
 
@@ -502,7 +503,7 @@ class DashboardLiveData:
         provider_settings = self._settings.alpaca_provider_settings()
         if not provider_settings.available:
             raise LiveProbeError("Save both Alpaca credential fields first.")
-        start, end = self._research_window(selected.timeframe)
+        start, end = self._research_window(selected.timeframe, selected.validation_depth)
         bindings = tuple(
             AlpacaInstrumentBinding(instrument=item.to_instrument(), provider_symbol=item.symbol)
             for item in selected.watchlist
@@ -580,6 +581,7 @@ class DashboardLiveData:
                 requested_start=start,
                 requested_end=end,
                 completed_at=self._receipt_time(),
+                validation_depth=selected.validation_depth,
                 rows=tuple(ranked),
             )
         except ProviderRateLimitError as exc:
@@ -596,7 +598,9 @@ class DashboardLiveData:
             if provider is not None:
                 await provider.aclose()
 
-    def _research_window(self, timeframe: Timeframe) -> tuple[datetime, datetime]:
+    def _research_window(
+        self, timeframe: Timeframe, depth: ValidationDepth
+    ) -> tuple[datetime, datetime]:
         now = self._receipt_time()
         seconds = {
             Timeframe.ONE_MINUTE: 60,
@@ -608,13 +612,21 @@ class DashboardLiveData:
         delayed = now - timedelta(minutes=20)
         boundary = datetime.fromtimestamp(int(delayed.timestamp()) // seconds * seconds, UTC)
         end = boundary - timedelta(microseconds=1)
-        days = {
+        standard_days = {
             Timeframe.ONE_MINUTE: 7,
             Timeframe.FIVE_MINUTES: 14,
             Timeframe.FIFTEEN_MINUTES: 30,
             Timeframe.ONE_HOUR: 90,
             Timeframe.ONE_DAY: 365,
         }[timeframe]
+        extended_days = {
+            Timeframe.ONE_MINUTE: 14,
+            Timeframe.FIVE_MINUTES: 45,
+            Timeframe.FIFTEEN_MINUTES: 120,
+            Timeframe.ONE_HOUR: 365,
+            Timeframe.ONE_DAY: 1_825,
+        }[timeframe]
+        days = extended_days if depth is ValidationDepth.EXTENDED else standard_days
         return boundary - timedelta(days=days), end
 
     def _receipt_time(self) -> datetime:
