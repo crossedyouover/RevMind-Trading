@@ -178,12 +178,22 @@ async def test_market_research_uses_historical_bars_and_frozen_engines(tmp_path:
     assert all("Fewer than 20" in row.evidence_comment for row in report.rows)
     assert all(row.market_alignment == "SUPPORTS" for row in report.rows)
     assert all("SPY trend is upward" in row.market_comment for row in report.rows)
+    assert all(row.relative_alignment == "NEUTRAL" for row in report.rows)
+    assert all(Decimal(row.relative_strength_percent or "1") == 0 for row in report.rows)
     short_row = report.rows[0].model_copy(
         update={"active_setups": ("DOWNSIDE_BREAKDOWN_BELOW_SMA",)}
     )
     contradicted = service._with_market_alignment(short_row, report.rows[-1])
     assert contradicted.market_alignment == "CONTRADICTS"
     assert "contradicts this short setup" in contradicted.market_comment
+    stronger_chart = (
+        *report.rows[0].chart[:-1],
+        report.rows[0].chart[-1].model_copy(update={"close": "150"}),
+    )
+    stronger = report.rows[0].model_copy(update={"chart": stronger_chart})
+    relative = service._with_relative_strength(stronger, report.rows[-1])
+    assert relative.relative_alignment == "SUPPORTS"
+    assert Decimal(relative.relative_strength_percent or "0") > 0
     assert all(row.backtest.results[0].trades >= 1 for row in report.rows)
     assert all("not a prediction" in row.backtest.warning for row in report.rows)
     assert all(request.url.params["feed"] == "iex" for request in requests)

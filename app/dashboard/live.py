@@ -113,6 +113,9 @@ class MarketResearchRow(CanonicalModel):
     evidence_comment: str
     market_alignment: Literal["SUPPORTS", "CONTRADICTS", "NEUTRAL", "UNAVAILABLE"]
     market_comment: str
+    relative_strength_percent: str | None
+    relative_alignment: Literal["SUPPORTS", "CONTRADICTS", "NEUTRAL", "UNAVAILABLE"]
+    relative_strength_comment: str
     opportunity_rank: int | None = None
 
 
@@ -545,12 +548,14 @@ class DashboardLiveData:
                     rows.append(row)
             benchmark = next((item for item in rows if item.symbol == "SPY"), None)
             rows = [self._with_market_alignment(item, benchmark) for item in rows]
+            rows = [self._with_relative_strength(item, benchmark) for item in rows]
             grade_order = {"PROMISING": 0, "WEAK": 1, "INSUFFICIENT": 2, "NOT_APPLICABLE": 3}
             alignment_order = {"SUPPORTS": 0, "NEUTRAL": 1, "UNAVAILABLE": 2, "CONTRADICTS": 3}
             rows.sort(
                 key=lambda item: (
                     item.action != "REVIEW",
                     alignment_order[item.market_alignment],
+                    alignment_order[item.relative_alignment],
                     grade_order[item.evidence_grade],
                     -(
                         Decimal(item.evidence_score)
@@ -784,6 +789,9 @@ class DashboardLiveData:
             evidence_comment=evidence_comment,
             market_alignment="UNAVAILABLE",
             market_comment="Benchmark context has not been composed yet.",
+            relative_strength_percent=None,
+            relative_alignment="UNAVAILABLE",
+            relative_strength_comment="Relative-strength context has not been composed yet.",
         )
         return row, _ResearchArtifact(instrument, observed_at, research, trend)
 
@@ -821,6 +829,62 @@ class DashboardLiveData:
             )
         return row.model_copy(
             update={"market_alignment": alignment, "market_comment": comment}
+        )
+
+    @staticmethod
+    def _with_relative_strength(
+        row: MarketResearchRow, benchmark: MarketResearchRow | None
+    ) -> MarketResearchRow:
+        unavailable = {
+            "relative_strength_percent": None,
+            "relative_alignment": "UNAVAILABLE",
+            "relative_strength_comment": (
+                "At least two timestamp-aligned symbol and SPY closes are required."
+            ),
+        }
+        if benchmark is None:
+            return row.model_copy(update=unavailable)
+        row_by_time = {point.event_at: Decimal(point.close) for point in row.chart}
+        benchmark_by_time = {
+            point.event_at: Decimal(point.close) for point in benchmark.chart
+        }
+        common = tuple(sorted(set(row_by_time) & set(benchmark_by_time)))[-21:]
+        if len(common) < 2:
+            return row.model_copy(update=unavailable)
+        first, last = common[0], common[-1]
+        if row_by_time[first] <= 0 or benchmark_by_time[first] <= 0:
+            return row.model_copy(update=unavailable)
+        row_return = row_by_time[last] / row_by_time[first] - Decimal("1")
+        benchmark_return = (
+            benchmark_by_time[last] / benchmark_by_time[first] - Decimal("1")
+        )
+        excess = (row_return - benchmark_return) * Decimal("100")
+        if not row.active_setups or excess == 0:
+            alignment: Literal["SUPPORTS", "CONTRADICTS", "NEUTRAL", "UNAVAILABLE"] = (
+                "NEUTRAL"
+            )
+        else:
+            is_long = row.active_setups[0] == SetupKey.UPSIDE_BREAKOUT_ABOVE_SMA.value
+            alignment = (
+                "SUPPORTS"
+                if (is_long and excess > 0) or (not is_long and excess < 0)
+                else "CONTRADICTS"
+            )
+        relationship = {
+            "SUPPORTS": "supports the active direction",
+            "CONTRADICTS": "contradicts the active direction",
+            "NEUTRAL": "is neutral for the current decision",
+            "UNAVAILABLE": "is unavailable",
+        }[alignment]
+        return row.model_copy(
+            update={
+                "relative_strength_percent": str(excess),
+                "relative_alignment": alignment,
+                "relative_strength_comment": (
+                    f"20-bar performance versus SPY is {excess:+.2f} percentage points; "
+                    f"this {relationship}."
+                ),
+            }
         )
 
     def paper_plan(self, value: PaperPlanInput) -> PaperPlanResult:
