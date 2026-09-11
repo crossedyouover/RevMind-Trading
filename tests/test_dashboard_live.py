@@ -158,6 +158,8 @@ async def test_market_research_uses_historical_bars_and_frozen_engines(tmp_path:
     report = await service.research()
     assert report.status == "COMPLETE_READ_ONLY"
     assert report.recent_outcomes == ()
+    assert all(item.measured == 0 for item in report.calibration)
+    assert all(item.evidence_status == "INSUFFICIENT" for item in report.calibration)
     assert tuple(row.symbol for row in report.rows) == ("AAPL", "MSFT", "SPY")
     assert all(row.bar_count == 25 for row in report.rows)
     assert all(row.latest_close == "125" for row in report.rows)
@@ -260,6 +262,12 @@ async def test_market_research_uses_historical_bars_and_frozen_engines(tmp_path:
     assert len(outcomes) == 3
     assert all(item.market_return_percent == "0.8000" for item in outcomes)
     assert all(item.direction_result == "FAVORABLE" for item in outcomes)
+    calibration = service._scan_calibration()
+    cautious = next(item for item in calibration if item.readiness == "CAUTION")
+    assert cautious.measured == 3
+    assert cautious.favorable_rate_percent == "100.0"
+    assert cautious.evidence_status == "INSUFFICIENT"
+    assert "3 of 20" in cautious.explanation
     assert service._update_scan_history(later_rows, FixedClock().now()) == outcomes
     assert (store.directory / "scan-history.db").is_file()
     assert all(row.backtest.results[0].trades >= 1 for row in report.rows)

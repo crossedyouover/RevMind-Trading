@@ -156,6 +156,17 @@ class ScanOutcome(CanonicalModel):
     direction_result: Literal["FAVORABLE", "ADVERSE", "FLAT", "NOT_APPLICABLE"]
 
 
+class ScanCalibration(CanonicalModel):
+    readiness: Literal["READY_FOR_RISK_CHECK", "CAUTION"]
+    measured: int
+    favorable: int
+    adverse: int
+    flat: int
+    favorable_rate_percent: str | None
+    evidence_status: Literal["INSUFFICIENT", "OBSERVED"]
+    explanation: str
+
+
 class MarketResearchReport(CanonicalModel):
     schema_version: Literal[1] = 1
     status: Literal["COMPLETE_READ_ONLY"]
@@ -167,6 +178,7 @@ class MarketResearchReport(CanonicalModel):
     validation_depth: ValidationDepth
     rows: tuple[MarketResearchRow, ...]
     recent_outcomes: tuple[ScanOutcome, ...] = ()
+    calibration: tuple[ScanCalibration, ...] = ()
 
 
 class PaperPlanInput(CanonicalModel):
@@ -654,7 +666,12 @@ class DashboardLiveData:
                 rows=tuple(ranked),
             )
             outcomes = self._update_scan_history(report.rows, report.completed_at)
-            return report.model_copy(update={"recent_outcomes": outcomes})
+            return report.model_copy(
+                update={
+                    "recent_outcomes": outcomes,
+                    "calibration": self._scan_calibration(),
+                }
+            )
         except ProviderRateLimitError as exc:
             raise LiveProbeError("Alpaca rate limit reached; wait before retrying.") from exc
         except InstrumentNotFoundError as exc:
@@ -962,6 +979,56 @@ class DashboardLiveData:
             )
             for row in selected
         )
+
+    def _scan_calibration(self) -> tuple[ScanCalibration, ...]:
+        """Summarize measured directions without overstating small samples."""
+        with sqlite3.connect(self._scan_history_path) as db:
+            rows = db.execute(
+                """SELECT readiness,direction_result,COUNT(*) FROM scan_assessments
+                WHERE readiness IN ('READY_FOR_RISK_CHECK','CAUTION')
+                AND direction_result IN ('FAVORABLE','ADVERSE','FLAT')
+                GROUP BY readiness,direction_result"""
+            ).fetchall()
+        readiness_values: tuple[Literal["READY_FOR_RISK_CHECK", "CAUTION"], ...] = (
+            "READY_FOR_RISK_CHECK",
+            "CAUTION",
+        )
+        counts = {
+            readiness: {"FAVORABLE": 0, "ADVERSE": 0, "FLAT": 0} for readiness in readiness_values
+        }
+        for readiness, result, count in rows:
+            counts[readiness][result] = count
+        output = []
+        for readiness in readiness_values:
+            values = counts[readiness]
+            measured = sum(values.values())
+            rate = (
+                (Decimal(values["FAVORABLE"]) / Decimal(measured) * Decimal("100")).quantize(
+                    Decimal("0.1")
+                )
+                if measured
+                else None
+            )
+            enough = measured >= 20
+            output.append(
+                ScanCalibration(
+                    readiness=readiness,
+                    measured=measured,
+                    favorable=values["FAVORABLE"],
+                    adverse=values["ADVERSE"],
+                    flat=values["FLAT"],
+                    favorable_rate_percent=str(rate) if rate is not None else None,
+                    evidence_status="OBSERVED" if enough else "INSUFFICIENT",
+                    explanation=(
+                        "At least 20 live forward observations exist. This is observed direction "
+                        "frequency, not a guarantee or realized P/L."
+                        if enough
+                        else f"Only {measured} of 20 required live forward observations exist; "
+                        "do not infer reliability yet."
+                    ),
+                )
+            )
+        return tuple(output)
 
     def _receipt_time(self) -> datetime:
         value = self._clock.now()
