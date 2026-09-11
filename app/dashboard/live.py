@@ -101,6 +101,12 @@ class ResearchHeadline(CanonicalModel):
     url: str
 
 
+class DecisionCheck(CanonicalModel):
+    label: str
+    status: Literal["PASS", "CAUTION", "BLOCK", "INFO"]
+    detail: str
+
+
 class MarketResearchRow(CanonicalModel):
     assessment_id: str | None
     symbol: str
@@ -132,6 +138,9 @@ class MarketResearchRow(CanonicalModel):
     news_status: Literal["AVAILABLE", "NONE", "UNAVAILABLE"] = "UNAVAILABLE"
     catalyst_comment: str = "Recent catalyst context has not been loaded."
     recent_news: tuple[ResearchHeadline, ...] = ()
+    readiness: Literal["READY_FOR_RISK_CHECK", "CAUTION", "WAIT"] = "WAIT"
+    readiness_comment: str = "Trade readiness has not been composed yet."
+    decision_checks: tuple[DecisionCheck, ...] = ()
     opportunity_rank: int | None = None
 
 
@@ -589,6 +598,7 @@ class DashboardLiveData:
             rows = await self._with_recent_news(
                 rows, tuple(item.instrument for item in bindings), end
             )
+            rows = [self._with_trade_readiness(item) for item in rows]
             grade_order = {"PROMISING": 0, "WEAK": 1, "INSUFFICIENT": 2, "NOT_APPLICABLE": 3}
             alignment_order = {"SUPPORTS": 0, "NEUTRAL": 1, "UNAVAILABLE": 2, "CONTRADICTS": 3}
             rows.sort(
@@ -725,6 +735,83 @@ class DashboardLiveData:
                     "They provide context only and are not classified as bullish or bearish."
                 ),
                 "recent_news": headlines,
+            }
+        )
+
+    @staticmethod
+    def _with_trade_readiness(row: MarketResearchRow) -> MarketResearchRow:
+        """Explain whether an opportunity merits a separate risk check."""
+        has_setup = bool(row.active_setups)
+        market_block = row.market_alignment == "CONTRADICTS"
+        relative_block = row.relative_alignment == "CONTRADICTS"
+        evidence_pass = row.evidence_grade == "PROMISING"
+        checks = (
+            DecisionCheck(
+                label="Active setup",
+                status="PASS" if has_setup else "BLOCK",
+                detail=(
+                    row.active_setups[0].replace("_", " ")
+                    if has_setup
+                    else "No frozen entry setup is active."
+                ),
+            ),
+            DecisionCheck(
+                label="Broad market",
+                status="BLOCK"
+                if market_block
+                else "PASS"
+                if row.market_alignment == "SUPPORTS"
+                else "CAUTION",
+                detail=row.market_comment,
+            ),
+            DecisionCheck(
+                label="Relative strength",
+                status="BLOCK"
+                if relative_block
+                else "PASS"
+                if row.relative_alignment == "SUPPORTS"
+                else "CAUTION",
+                detail=row.relative_strength_comment,
+            ),
+            DecisionCheck(
+                label="Held-out evidence",
+                status="PASS" if evidence_pass else "CAUTION" if has_setup else "INFO",
+                detail=row.evidence_comment,
+            ),
+            DecisionCheck(
+                label="Recent catalysts",
+                status="INFO",
+                detail=row.catalyst_comment,
+            ),
+        )
+        if not has_setup:
+            readiness: Literal["READY_FOR_RISK_CHECK", "CAUTION", "WAIT"] = "WAIT"
+            comment = "WAIT: no entry setup exists. Check again after another completed bar."
+        elif market_block or relative_block:
+            readiness = "CAUTION"
+            blockers = []
+            if market_block:
+                blockers.append("the SPY trend contradicts the setup")
+            if relative_block:
+                blockers.append("relative performance contradicts the setup")
+            comment = "CAUTION: " + " and ".join(blockers) + ". Do not treat this as trade-ready."
+        elif not evidence_pass:
+            readiness = "CAUTION"
+            comment = (
+                "CAUTION: a setup exists, but held-out history is not yet PROMISING. "
+                "You may inspect a paper plan, but the evidence does not justify confidence."
+            )
+        else:
+            readiness = "READY_FOR_RISK_CHECK"
+            comment = (
+                "READY FOR RISK CHECK: price evidence is aligned and held-out validation is "
+                "PROMISING. Risk can still veto the paper plan."
+            )
+        return row.model_copy(
+            update={
+                "readiness": readiness,
+                "readiness_comment": comment,
+                "decision_checks": checks,
             }
         )
 

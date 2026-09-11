@@ -184,6 +184,9 @@ async def test_market_research_uses_historical_bars_and_frozen_engines(tmp_path:
     assert all("SPY trend is upward" in row.market_comment for row in report.rows)
     assert all(row.relative_alignment == "NEUTRAL" for row in report.rows)
     assert all(Decimal(row.relative_strength_percent or "1") == 0 for row in report.rows)
+    assert all(row.readiness == "CAUTION" for row in report.rows)
+    assert all(len(row.decision_checks) == 5 for row in report.rows)
+    assert all("held-out history" in row.readiness_comment for row in report.rows)
     short_row = report.rows[0].model_copy(
         update={"active_setups": ("DOWNSIDE_BREAKDOWN_BELOW_SMA",)}
     )
@@ -223,6 +226,23 @@ async def test_market_research_uses_historical_bars_and_frozen_engines(tmp_path:
     assert with_news.news_status == "AVAILABLE"
     assert with_news.recent_news[0].headline == "Timestamped company update"
     assert "context only" in with_news.catalyst_comment
+    news_readiness = service._with_trade_readiness(with_news)
+    assert news_readiness.readiness == report.rows[0].readiness
+    ready = service._with_trade_readiness(
+        report.rows[0].model_copy(
+            update={
+                "evidence_grade": "PROMISING",
+                "market_alignment": "SUPPORTS",
+                "relative_alignment": "SUPPORTS",
+            }
+        )
+    )
+    assert ready.readiness == "READY_FOR_RISK_CHECK"
+    assert "Risk can still veto" in ready.readiness_comment
+    waiting = service._with_trade_readiness(
+        report.rows[0].model_copy(update={"active_setups": (), "action": "WAIT"})
+    )
+    assert waiting.readiness == "WAIT"
     assert all(row.backtest.results[0].trades >= 1 for row in report.rows)
     assert all("not a prediction" in row.backtest.warning for row in report.rows)
     assert all(request.url.params["feed"] == "iex" for request in requests)
