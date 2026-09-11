@@ -167,6 +167,16 @@ class ScanCalibration(CanonicalModel):
     explanation: str
 
 
+class DeskSummary(CanonicalModel):
+    stance: Literal["REVIEW_READY", "CAUTION_ONLY", "WAIT"]
+    headline: str
+    instruction: str
+    lead_symbol: str | None
+    ready_count: int
+    caution_count: int
+    wait_count: int
+
+
 class MarketResearchReport(CanonicalModel):
     schema_version: Literal[1] = 1
     status: Literal["COMPLETE_READ_ONLY"]
@@ -179,6 +189,7 @@ class MarketResearchReport(CanonicalModel):
     rows: tuple[MarketResearchRow, ...]
     recent_outcomes: tuple[ScanOutcome, ...] = ()
     calibration: tuple[ScanCalibration, ...] = ()
+    desk_summary: DeskSummary
 
 
 class PaperPlanInput(CanonicalModel):
@@ -664,6 +675,7 @@ class DashboardLiveData:
                 completed_at=self._receipt_time(),
                 validation_depth=selected.validation_depth,
                 rows=tuple(ranked),
+                desk_summary=self._desk_summary(tuple(ranked)),
             )
             outcomes = self._update_scan_history(report.rows, report.completed_at)
             return report.model_copy(
@@ -1029,6 +1041,49 @@ class DashboardLiveData:
                 )
             )
         return tuple(output)
+
+    @staticmethod
+    def _desk_summary(rows: tuple[MarketResearchRow, ...]) -> DeskSummary:
+        """Produce one conservative instruction from the fully composed rows."""
+        ready = tuple(row for row in rows if row.readiness == "READY_FOR_RISK_CHECK")
+        cautious = tuple(row for row in rows if row.readiness == "CAUTION")
+        waiting = tuple(row for row in rows if row.readiness == "WAIT")
+        if ready:
+            lead = ready[0]
+            return DeskSummary(
+                stance="REVIEW_READY",
+                headline=f"{lead.symbol} leads {len(ready)} setup(s) ready for a risk check.",
+                instruction=(
+                    "Inspect the lead card, then build a paper plan. Do not submit anything "
+                    "unless the separate risk gate passes and you explicitly approve it."
+                ),
+                lead_symbol=lead.symbol,
+                ready_count=len(ready),
+                caution_count=len(cautious),
+                wait_count=len(waiting),
+            )
+        if cautious:
+            return DeskSummary(
+                stance="CAUTION_ONLY",
+                headline="No setup is trade-ready; only cautious candidates exist.",
+                instruction=(
+                    "Review the blockers for learning, but wait for stronger aligned and "
+                    "validated evidence before treating a candidate as ready."
+                ),
+                lead_symbol=None,
+                ready_count=0,
+                caution_count=len(cautious),
+                wait_count=len(waiting),
+            )
+        return DeskSummary(
+            stance="WAIT",
+            headline="No valid entry is present on the latest completed bars.",
+            instruction="Do nothing. Scan again after the next completed bar.",
+            lead_symbol=None,
+            ready_count=0,
+            caution_count=0,
+            wait_count=len(waiting),
+        )
 
     def _receipt_time(self) -> datetime:
         value = self._clock.now()

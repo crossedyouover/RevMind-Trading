@@ -160,6 +160,9 @@ async def test_market_research_uses_historical_bars_and_frozen_engines(tmp_path:
     assert report.recent_outcomes == ()
     assert all(item.measured == 0 for item in report.calibration)
     assert all(item.evidence_status == "INSUFFICIENT" for item in report.calibration)
+    assert report.desk_summary.stance == "CAUTION_ONLY"
+    assert report.desk_summary.ready_count == 0
+    assert report.desk_summary.caution_count == 3
     assert tuple(row.symbol for row in report.rows) == ("AAPL", "MSFT", "SPY")
     assert all(row.bar_count == 25 for row in report.rows)
     assert all(row.latest_close == "125" for row in report.rows)
@@ -242,10 +245,14 @@ async def test_market_research_uses_historical_bars_and_frozen_engines(tmp_path:
     )
     assert ready.readiness == "READY_FOR_RISK_CHECK"
     assert "Risk can still veto" in ready.readiness_comment
+    ready_summary = service._desk_summary((ready,))
+    assert ready_summary.stance == "REVIEW_READY"
+    assert ready_summary.lead_symbol == ready.symbol
     waiting = service._with_trade_readiness(
         report.rows[0].model_copy(update={"active_setups": (), "action": "WAIT"})
     )
     assert waiting.readiness == "WAIT"
+    assert service._desk_summary((waiting,)).stance == "WAIT"
     later_rows = tuple(
         row.model_copy(
             update={
