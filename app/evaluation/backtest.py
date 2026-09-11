@@ -34,6 +34,29 @@ class BacktestSummary(CanonicalModel):
     warning: str
 
 
+def grade_setup(
+    summary: SetupBacktestSummary,
+) -> tuple[Literal["INSUFFICIENT", "WEAK", "PROMISING"], Decimal | None, str]:
+    if summary.trades < 20:
+        return (
+            "INSUFFICIENT",
+            None,
+            "Fewer than 20 held-out trades; do not treat the result as predictive.",
+        )
+    if summary.expectancy_r is None or summary.expectancy_r <= 0:
+        return (
+            "WEAK",
+            summary.expectancy_r,
+            "Held-out expectancy is not positive for this setup direction.",
+        )
+    drawdown = summary.max_drawdown_r or Decimal("0")
+    return (
+        "PROMISING",
+        summary.expectancy_r - drawdown / Decimal("20"),
+        "Positive held-out expectancy with enough trades; paper validation is still required.",
+    )
+
+
 def _summarize(
     bars: tuple[MarketBar, ...],
     snapshots: tuple[SetupSnapshot, ...],
@@ -120,22 +143,11 @@ def evaluate_frozen_setups(result: SingleSeriesResearchResult) -> BacktestSummar
     )
     candidates = tuple(item for item in held_out if item.trades > 0)
     sample = max(candidates, key=lambda item: item.trades) if candidates else None
-    if sample is None or sample.trades < 20:
-        grade: Literal["INSUFFICIENT", "WEAK", "PROMISING"] = "INSUFFICIENT"
-        score = None
-        explanation = "Fewer than 20 held-out trades; do not treat the result as predictive."
-    elif sample.expectancy_r is None or sample.expectancy_r <= 0:
-        grade = "WEAK"
-        score = sample.expectancy_r
-        explanation = "The largest held-out sample does not have positive expectancy."
-    else:
-        grade = "PROMISING"
-        drawdown = sample.max_drawdown_r or Decimal("0")
-        score = sample.expectancy_r - drawdown / Decimal("20")
-        explanation = (
-            "Positive held-out expectancy with at least 20 trades; "
-            "paper validation is still required."
-        )
+    grade, score, explanation = grade_setup(sample) if sample else (
+        "INSUFFICIENT",
+        None,
+        "No held-out trades; do not treat the result as predictive.",
+    )
     return BacktestSummary(
         bars=len(bars),
         split_bar_index=split,

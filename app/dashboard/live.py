@@ -29,7 +29,7 @@ from app.data.providers.alpaca import AlpacaInstrumentBinding, AlpacaMarketDataP
 from app.data.providers.alpaca.config import AlpacaMarketDataSettings
 from app.desks.engine import DeterministicAdvisoryDeskEngine
 from app.desks.models import SetupDeskRequest, TrendDeskRequest
-from app.evaluation.backtest import BacktestSummary, evaluate_frozen_setups
+from app.evaluation.backtest import BacktestSummary, evaluate_frozen_setups, grade_setup
 from app.evidence.models import MarketEvidenceConfig
 from app.materialization.engine import DeterministicBarMaterializationEngine
 from app.materialization.models import BarSeriesRequest
@@ -108,6 +108,10 @@ class MarketResearchRow(CanonicalModel):
     next_step: str
     chart: tuple[ResearchPoint, ...]
     backtest: BacktestSummary
+    evidence_grade: Literal["INSUFFICIENT", "WEAK", "PROMISING", "NOT_APPLICABLE"]
+    evidence_score: str | None
+    evidence_comment: str
+    opportunity_rank: int | None = None
 
 
 class MarketResearchReport(CanonicalModel):
@@ -536,6 +540,27 @@ class DashboardLiveData:
                     if row.assessment_id is not None:
                         self._research_artifacts[row.assessment_id] = artifact
                     rows.append(row)
+            grade_order = {"PROMISING": 0, "WEAK": 1, "INSUFFICIENT": 2, "NOT_APPLICABLE": 3}
+            rows.sort(
+                key=lambda item: (
+                    item.action != "REVIEW",
+                    grade_order[item.evidence_grade],
+                    -(
+                        Decimal(item.evidence_score)
+                        if item.evidence_score is not None
+                        else Decimal("-999999")
+                    ),
+                    item.symbol,
+                )
+            )
+            ranked: list[MarketResearchRow] = []
+            rank = 0
+            for item in rows:
+                item_rank = None
+                if item.action == "REVIEW" and item.evidence_score is not None:
+                    rank += 1
+                    item_rank = rank
+                ranked.append(item.model_copy(update={"opportunity_rank": item_rank}))
             while len(self._research_artifacts) > 100:
                 self._research_artifacts.pop(next(iter(self._research_artifacts)))
             return MarketResearchReport(
@@ -545,7 +570,7 @@ class DashboardLiveData:
                 requested_start=start,
                 requested_end=end,
                 completed_at=self._receipt_time(),
-                rows=tuple(rows),
+                rows=tuple(ranked),
             )
         except ProviderRateLimitError as exc:
             raise LiveProbeError("Alpaca rate limit reached; wait before retrying.") from exc
@@ -696,6 +721,18 @@ class DashboardLiveData:
             if active
             else "Wait. Check again after another completed bar; do not force a trade."
         )
+        backtest = evaluate_frozen_setups(research)
+        evidence_grade: Literal["INSUFFICIENT", "WEAK", "PROMISING", "NOT_APPLICABLE"]
+        if active:
+            active_key = SetupKey(active[0])
+            held_out = next(
+                item for item in backtest.out_of_sample_results if item.setup is active_key
+            )
+            evidence_grade, evidence_score, evidence_comment = grade_setup(held_out)
+        else:
+            evidence_grade = "NOT_APPLICABLE"
+            evidence_score = None
+            evidence_comment = "No active setup exists to rank."
         assessment_id = str(uuid4()) if latest_bar is not None else None
         row = MarketResearchRow(
             assessment_id=assessment_id,
@@ -719,7 +756,10 @@ class DashboardLiveData:
                 ResearchPoint(event_at=item.bar.timestamp, close=str(item.bar.close))
                 for item in history.bars[-120:]
             ),
-            backtest=evaluate_frozen_setups(research),
+            backtest=backtest,
+            evidence_grade=evidence_grade,
+            evidence_score=str(evidence_score) if evidence_score is not None else None,
+            evidence_comment=evidence_comment,
         )
         return row, _ResearchArtifact(instrument, observed_at, research, trend)
 
