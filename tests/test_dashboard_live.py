@@ -71,6 +71,27 @@ def test_extended_validation_window_is_explicit_and_bounded(tmp_path: Path) -> N
     assert extended_end - extended_start == timedelta(days=14) - timedelta(microseconds=1)
 
 
+def test_regular_session_filter_handles_dst_boundaries_and_weekends() -> None:
+    regular = DashboardLiveData._is_regular_us_equity_time
+    assert regular(datetime(2026, 1, 5, 14, 30, tzinfo=UTC))
+    assert not regular(datetime(2026, 1, 5, 14, 29, tzinfo=UTC))
+    assert not regular(datetime(2026, 1, 5, 21, 0, tzinfo=UTC))
+    assert regular(datetime(2026, 7, 6, 13, 30, tzinfo=UTC))
+    assert not regular(datetime(2026, 7, 6, 20, 0, tzinfo=UTC))
+    assert not regular(datetime(2026, 7, 5, 15, 0, tzinfo=UTC))
+
+
+def test_regular_session_filter_uses_explicit_us_eastern_dst_boundaries() -> None:
+    check = DashboardLiveData._is_regular_us_equity_time
+    assert not check(datetime(2026, 9, 8, 13, 29, tzinfo=UTC))
+    assert check(datetime(2026, 9, 8, 13, 30, tzinfo=UTC))
+    assert check(datetime(2026, 9, 8, 19, 59, tzinfo=UTC))
+    assert not check(datetime(2026, 9, 8, 20, 0, tzinfo=UTC))
+    assert check(datetime(2026, 1, 6, 14, 30, tzinfo=UTC))
+    assert not check(datetime(2026, 1, 6, 21, 0, tzinfo=UTC))
+    assert not check(datetime(2026, 9, 6, 14, 0, tzinfo=UTC))
+
+
 @pytest.mark.asyncio
 async def test_probe_uses_frozen_adapter_and_persists_receipt_aware_snapshots(
     tmp_path: Path,
@@ -129,7 +150,7 @@ async def test_market_research_uses_historical_bars_and_frozen_engines(tmp_path:
         def respond(request: httpx.Request) -> httpx.Response:
             requests.append(request)
             symbol = request.url.path.split("/")[-2]
-            first = datetime(2026, 9, 7, 9, 0, tzinfo=UTC)
+            first = datetime(2026, 9, 4, 13, 30, tzinfo=UTC)
             bars = [
                 {
                     "t": (first + timedelta(minutes=index)).isoformat().replace("+00:00", "Z"),
@@ -157,6 +178,7 @@ async def test_market_research_uses_historical_bars_and_frozen_engines(tmp_path:
     service = DashboardLiveData(store, clock=FixedClock(), provider_factory=factory)
     report = await service.research()
     assert report.status == "COMPLETE_READ_ONLY"
+    assert report.session_rule == "REGULAR"
     assert report.recent_outcomes == ()
     assert all(item.measured == 0 for item in report.calibration)
     assert all(item.evidence_status == "INSUFFICIENT" for item in report.calibration)
@@ -267,17 +289,24 @@ async def test_market_research_uses_historical_bars_and_frozen_engines(tmp_path:
         )
         for row in report.rows
     )
-    outcomes = service._update_scan_history(later_rows, FixedClock().now())
+    outcomes = service._update_scan_history(
+        later_rows, DEFAULT_SETTINGS.session_rule, FixedClock().now()
+    )
     assert len(outcomes) == 3
     assert all(item.market_return_percent == "0.8000" for item in outcomes)
     assert all(item.direction_result == "FAVORABLE" for item in outcomes)
-    calibration = service._scan_calibration()
+    calibration = service._scan_calibration(
+        DEFAULT_SETTINGS.timeframe, DEFAULT_SETTINGS.session_rule
+    )
     cautious = next(item for item in calibration if item.readiness == "CAUTION")
     assert cautious.measured == 3
     assert cautious.favorable_rate_percent == "100.0"
     assert cautious.evidence_status == "INSUFFICIENT"
     assert "3 of 20" in cautious.explanation
-    assert service._update_scan_history(later_rows, FixedClock().now()) == outcomes
+    assert (
+        service._update_scan_history(later_rows, DEFAULT_SETTINGS.session_rule, FixedClock().now())
+        == outcomes
+    )
     assert (store.directory / "scan-history.db").is_file()
     assert all(row.backtest.results[0].trades >= 1 for row in report.rows)
     assert all("not a prediction" in row.backtest.warning for row in report.rows)

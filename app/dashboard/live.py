@@ -16,7 +16,7 @@ from app.broker.protocol import PaperBroker
 from app.catalysts.models import ObservedCatalystFact
 from app.catalysts.provider import CatalystProvider, CatalystProviderError
 from app.core.schemas import CanonicalModel, Instrument, MarketSnapshot, Timeframe, UtcDatetime
-from app.dashboard.settings import AlpacaFeed, DataMode, SettingsStore, ValidationDepth
+from app.dashboard.settings import AlpacaFeed, DataMode, SessionRule, SettingsStore, ValidationDepth
 from app.data.ingestion import Clock, MarketDataIngestionCoordinator, SystemUtcClock
 from app.data.market import (
     BarRequest,
@@ -148,6 +148,8 @@ class MarketResearchRow(CanonicalModel):
 
 class ScanOutcome(CanonicalModel):
     symbol: str
+    timeframe: Timeframe
+    session_rule: SessionRule
     assessed_at: UtcDatetime
     readiness: Literal["READY_FOR_RISK_CHECK", "CAUTION", "WAIT"]
     direction: Literal["LONG", "SHORT", "NONE"]
@@ -188,6 +190,7 @@ class MarketResearchReport(CanonicalModel):
     requested_end: UtcDatetime
     completed_at: UtcDatetime
     validation_depth: ValidationDepth
+    session_rule: SessionRule
     rows: tuple[MarketResearchRow, ...]
     recent_outcomes: tuple[ScanOutcome, ...] = ()
     calibration: tuple[ScanCalibration, ...] = ()
@@ -626,7 +629,9 @@ class DashboardLiveData:
                         acquired.observed_at,
                         start,
                         end,
-                        acquired.observations,
+                        self._session_observations(
+                            acquired.observations, selected.timeframe, selected.session_rule
+                        ),
                     )
                     if row.assessment_id is not None:
                         self._research_artifacts[row.assessment_id] = artifact
@@ -676,14 +681,19 @@ class DashboardLiveData:
                 requested_end=end,
                 completed_at=self._receipt_time(),
                 validation_depth=selected.validation_depth,
+                session_rule=selected.session_rule,
                 rows=tuple(ranked),
                 desk_summary=self._desk_summary(tuple(ranked)),
             )
-            outcomes = self._update_scan_history(report.rows, report.completed_at)
+            outcomes = self._update_scan_history(
+                report.rows, report.session_rule, report.completed_at
+            )
             return report.model_copy(
                 update={
                     "recent_outcomes": outcomes,
-                    "calibration": self._scan_calibration(),
+                    "calibration": self._scan_calibration(
+                        report.rows[0].timeframe, report.session_rule
+                    ),
                 }
             )
         except ProviderRateLimitError as exc:
@@ -893,8 +903,42 @@ class DashboardLiveData:
         days = extended_days if depth is ValidationDepth.EXTENDED else standard_days
         return boundary - timedelta(days=days), end
 
+    @classmethod
+    def _session_observations(
+        cls,
+        observations: tuple[ObservedMarketData, ...],
+        timeframe: Timeframe,
+        rule: SessionRule,
+    ) -> tuple[ObservedMarketData, ...]:
+        """Apply the explicit US-equity session preference before research."""
+        if rule is SessionRule.EXTENDED or timeframe is Timeframe.ONE_DAY:
+            return observations
+        return tuple(
+            item for item in observations if cls._is_regular_us_equity_time(item.payload.timestamp)
+        )
+
+    @staticmethod
+    def _is_regular_us_equity_time(event_at: datetime) -> bool:
+        """Return whether UTC event time is in 09:30–16:00 US Eastern, weekdays only."""
+        utc = event_at.astimezone(UTC)
+        year = utc.year
+
+        def sunday(year_value: int, month: int, occurrence: int) -> int:
+            first_weekday = datetime(year_value, month, 1, tzinfo=UTC).weekday()
+            return 1 + (6 - first_weekday) % 7 + 7 * (occurrence - 1)
+
+        daylight_start = datetime(year, 3, sunday(year, 3, 2), 7, tzinfo=UTC)
+        daylight_end = datetime(year, 11, sunday(year, 11, 1), 6, tzinfo=UTC)
+        offset = -4 if daylight_start <= utc < daylight_end else -5
+        eastern = utc + timedelta(hours=offset)
+        minutes = eastern.hour * 60 + eastern.minute
+        return eastern.weekday() < 5 and 9 * 60 + 30 <= minutes < 16 * 60
+
     def _update_scan_history(
-        self, rows: tuple[MarketResearchRow, ...], recorded_at: datetime
+        self,
+        rows: tuple[MarketResearchRow, ...],
+        session_rule: SessionRule,
+        recorded_at: datetime,
     ) -> tuple[ScanOutcome, ...]:
         """Persist assessments and measure older ones at the next later completed price."""
         if recorded_at.tzinfo is None or recorded_at.utcoffset() is None:
@@ -907,23 +951,43 @@ class DashboardLiveData:
             db.execute(
                 """CREATE TABLE IF NOT EXISTS scan_assessments (
                 assessment_id TEXT PRIMARY KEY, symbol TEXT NOT NULL,
+                timeframe TEXT NOT NULL, session_rule TEXT NOT NULL,
                 assessed_at TEXT NOT NULL, readiness TEXT NOT NULL,
                 direction TEXT NOT NULL, reference_price TEXT NOT NULL,
                 measured_at TEXT, measured_price TEXT, market_return_percent TEXT,
                 direction_result TEXT)"""
             )
+            columns = {row[1] for row in db.execute("PRAGMA table_info(scan_assessments)")}
+            if "timeframe" not in columns:
+                db.execute(
+                    "ALTER TABLE scan_assessments ADD COLUMN timeframe TEXT NOT NULL "
+                    "DEFAULT 'UNKNOWN'"
+                )
+            if "session_rule" not in columns:
+                db.execute(
+                    "ALTER TABLE scan_assessments ADD COLUMN session_rule TEXT NOT NULL "
+                    "DEFAULT 'UNKNOWN'"
+                )
+            db.execute("DROP INDEX IF EXISTS one_equivalent_scan")
             db.execute(
                 """CREATE UNIQUE INDEX IF NOT EXISTS one_equivalent_scan
-                ON scan_assessments(symbol,assessed_at,readiness,direction,reference_price)"""
+                ON scan_assessments(
+                symbol,timeframe,session_rule,assessed_at,readiness,direction,reference_price)"""
             )
             for row in rows:
                 if row.latest_close is None or row.latest_bar_at is None:
                     continue
                 prior = db.execute(
                     """SELECT assessment_id,assessed_at,direction,reference_price
-                    FROM scan_assessments WHERE symbol=? AND measured_at IS NULL
+                    FROM scan_assessments WHERE symbol=? AND timeframe=? AND session_rule=?
+                    AND measured_at IS NULL
                     AND assessed_at<? ORDER BY assessed_at,assessment_id""",
-                    (row.symbol, row.latest_bar_at.isoformat()),
+                    (
+                        row.symbol,
+                        row.timeframe.value,
+                        session_rule.value,
+                        row.latest_bar_at.isoformat(),
+                    ),
                 ).fetchall()
                 current = Decimal(row.latest_close)
                 for assessment_id, assessed_at, direction, reference_text in prior:
@@ -959,10 +1023,15 @@ class DashboardLiveData:
                 )
                 if row.assessment_id is not None:
                     db.execute(
-                        "INSERT OR IGNORE INTO scan_assessments VALUES (?,?,?,?,?,?,?,?,?,?)",
+                        """INSERT OR IGNORE INTO scan_assessments (
+                        assessment_id,symbol,timeframe,session_rule,assessed_at,readiness,
+                        direction,reference_price,measured_at,measured_price,
+                        market_return_percent,direction_result) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
                         (
                             row.assessment_id,
                             row.symbol,
+                            row.timeframe.value,
+                            session_rule.value,
                             row.latest_bar_at.isoformat(),
                             row.readiness,
                             direction,
@@ -974,34 +1043,43 @@ class DashboardLiveData:
                         ),
                     )
             selected = db.execute(
-                """SELECT symbol,assessed_at,readiness,direction,reference_price,
+                """SELECT symbol,timeframe,session_rule,assessed_at,readiness,direction,
+                reference_price,
                 measured_at,measured_price,market_return_percent,direction_result
-                FROM scan_assessments WHERE measured_at IS NOT NULL
-                ORDER BY measured_at DESC,assessment_id DESC LIMIT 20"""
+                FROM scan_assessments WHERE timeframe=? AND session_rule=?
+                AND measured_at IS NOT NULL
+                ORDER BY measured_at DESC,assessment_id DESC LIMIT 20""",
+                (rows[0].timeframe.value, session_rule.value),
             ).fetchall()
         return tuple(
             ScanOutcome(
                 symbol=row[0],
-                assessed_at=datetime.fromisoformat(row[1]),
-                readiness=row[2],
-                direction=row[3],
-                reference_price=row[4],
-                measured_at=datetime.fromisoformat(row[5]),
-                measured_price=row[6],
-                market_return_percent=row[7],
-                direction_result=row[8],
+                timeframe=row[1],
+                session_rule=row[2],
+                assessed_at=datetime.fromisoformat(row[3]),
+                readiness=row[4],
+                direction=row[5],
+                reference_price=row[6],
+                measured_at=datetime.fromisoformat(row[7]),
+                measured_price=row[8],
+                market_return_percent=row[9],
+                direction_result=row[10],
             )
             for row in selected
         )
 
-    def _scan_calibration(self) -> tuple[ScanCalibration, ...]:
+    def _scan_calibration(
+        self, timeframe: Timeframe, session_rule: SessionRule
+    ) -> tuple[ScanCalibration, ...]:
         """Summarize measured directions without overstating small samples."""
         with sqlite3.connect(self._scan_history_path) as db:
             rows = db.execute(
                 """SELECT readiness,direction_result,COUNT(*) FROM scan_assessments
                 WHERE readiness IN ('READY_FOR_RISK_CHECK','CAUTION')
                 AND direction_result IN ('FAVORABLE','ADVERSE','FLAT')
-                GROUP BY readiness,direction_result"""
+                AND timeframe=? AND session_rule=?
+                GROUP BY readiness,direction_result""",
+                (timeframe.value, session_rule.value),
             ).fetchall()
         readiness_values: tuple[Literal["READY_FOR_RISK_CHECK", "CAUTION"], ...] = (
             "READY_FOR_RISK_CHECK",
