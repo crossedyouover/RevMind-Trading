@@ -13,6 +13,8 @@ from pydantic import SecretStr, ValidationError
 from app.broker.alpaca import AlpacaPaperBroker, PaperBrokerError
 from app.broker.models import PaperAccount, PaperOrderReceipt, PaperOrderRequest, PaperOrderStatus
 from app.broker.protocol import PaperBroker
+from app.catalysts.models import ObservedCatalystFact
+from app.catalysts.provider import CatalystProvider, CatalystProviderError
 from app.core.schemas import CanonicalModel, Instrument, MarketSnapshot, Timeframe, UtcDatetime
 from app.dashboard.settings import AlpacaFeed, DataMode, SettingsStore, ValidationDepth
 from app.data.ingestion import Clock, MarketDataIngestionCoordinator, SystemUtcClock
@@ -25,7 +27,11 @@ from app.data.market import (
 )
 from app.data.observation_store import ObservationStoreError, SQLiteObservationStore
 from app.data.observations import ObservedMarketData, SourceIdentity
-from app.data.providers.alpaca import AlpacaInstrumentBinding, AlpacaMarketDataProvider
+from app.data.providers.alpaca import (
+    AlpacaInstrumentBinding,
+    AlpacaMarketDataProvider,
+    AlpacaNewsProvider,
+)
 from app.data.providers.alpaca.config import AlpacaMarketDataSettings
 from app.desks.engine import DeterministicAdvisoryDeskEngine
 from app.desks.models import SetupDeskRequest, TrendDeskRequest
@@ -88,6 +94,13 @@ class ResearchPoint(CanonicalModel):
     close: str
 
 
+class ResearchHeadline(CanonicalModel):
+    headline: str
+    source: str
+    published_at: UtcDatetime
+    url: str
+
+
 class MarketResearchRow(CanonicalModel):
     assessment_id: str | None
     symbol: str
@@ -116,6 +129,9 @@ class MarketResearchRow(CanonicalModel):
     relative_strength_percent: str | None
     relative_alignment: Literal["SUPPORTS", "CONTRADICTS", "NEUTRAL", "UNAVAILABLE"]
     relative_strength_comment: str
+    news_status: Literal["AVAILABLE", "NONE", "UNAVAILABLE"] = "UNAVAILABLE"
+    catalyst_comment: str = "Recent catalyst context has not been loaded."
+    recent_news: tuple[ResearchHeadline, ...] = ()
     opportunity_rank: int | None = None
 
 
@@ -197,6 +213,7 @@ ProviderFactory = Callable[
     AlpacaMarketDataProvider,
 ]
 PaperBrokerFactory = Callable[[SecretStr, SecretStr], PaperBroker]
+NewsProviderFactory = Callable[[SecretStr, SecretStr], CatalystProvider]
 
 
 class DashboardLiveData:
@@ -209,11 +226,17 @@ class DashboardLiveData:
         clock: Clock | None = None,
         provider_factory: ProviderFactory = AlpacaMarketDataProvider,
         paper_broker_factory: PaperBrokerFactory = AlpacaPaperBroker,
+        news_provider_factory: NewsProviderFactory | None = None,
     ) -> None:
         self._settings = settings
         self._clock = clock or SystemUtcClock()
         self._provider_factory = provider_factory
         self._paper_broker_factory = paper_broker_factory
+        self._news_provider_factory = (
+            AlpacaNewsProvider
+            if news_provider_factory is None and provider_factory is AlpacaMarketDataProvider
+            else news_provider_factory
+        )
         self._status_path = settings.directory / "alpaca-status.json"
         self._observations_path = settings.directory / "market-observations.db"
         self._paper_orders_path = settings.directory / "paper-orders.db"
@@ -403,16 +426,30 @@ class DashboardLiveData:
             if existing is None:
                 db.execute(
                     "INSERT INTO paper_orders VALUES (?,?,?,?,?,?,?,?,?,?)",
-                    (order.client_order_id, order.symbol, order.side, str(order.quantity),
-                     encoded, status, None, None, None, self._receipt_time().isoformat()),
+                    (
+                        order.client_order_id,
+                        order.symbol,
+                        order.side,
+                        str(order.quantity),
+                        encoded,
+                        status,
+                        None,
+                        None,
+                        None,
+                        self._receipt_time().isoformat(),
+                    ),
                 )
             else:
                 db.execute(
                     "UPDATE paper_orders SET status=?,provider_order_id=?,submitted_at=?,receipt=? "
                     "WHERE client_order_id=?",
-                    (status, receipt.provider_order_id if receipt else None,
-                     receipt.submitted_at.isoformat() if receipt else None,
-                     receipt.model_dump_json() if receipt else None, order.client_order_id),
+                    (
+                        status,
+                        receipt.provider_order_id if receipt else None,
+                        receipt.submitted_at.isoformat() if receipt else None,
+                        receipt.model_dump_json() if receipt else None,
+                        order.client_order_id,
+                    ),
                 )
 
     def state(self) -> ProbeState:
@@ -549,6 +586,9 @@ class DashboardLiveData:
             benchmark = next((item for item in rows if item.symbol == "SPY"), None)
             rows = [self._with_market_alignment(item, benchmark) for item in rows]
             rows = [self._with_relative_strength(item, benchmark) for item in rows]
+            rows = await self._with_recent_news(
+                rows, tuple(item.instrument for item in bindings), end
+            )
             grade_order = {"PROMISING": 0, "WEAK": 1, "INSUFFICIENT": 2, "NOT_APPLICABLE": 3}
             alignment_order = {"SUPPORTS": 0, "NEUTRAL": 1, "UNAVAILABLE": 2, "CONTRADICTS": 3}
             rows.sort(
@@ -602,6 +642,91 @@ class DashboardLiveData:
         finally:
             if provider is not None:
                 await provider.aclose()
+
+    async def _with_recent_news(
+        self,
+        rows: list[MarketResearchRow],
+        instruments: tuple[Instrument, ...],
+        market_end: datetime,
+    ) -> list[MarketResearchRow]:
+        """Attach bounded factual headlines without changing signal or risk decisions."""
+        if self._news_provider_factory is None:
+            return rows
+        provider: CatalystProvider | None = None
+        try:
+            key, secret = self._settings.alpaca_credentials()
+            provider = self._news_provider_factory(key, secret)
+            published_end = market_end + timedelta(microseconds=1)
+            facts = await provider.get_news(
+                instruments,
+                published_start=published_end - timedelta(days=7),
+                published_end=published_end,
+                observed_at=self._receipt_time(),
+            )
+        except (CatalystProviderError, ValidationError, ValueError, TypeError, OSError):
+            return [
+                row.model_copy(
+                    update={
+                        "news_status": "UNAVAILABLE",
+                        "catalyst_comment": (
+                            "Recent headline context is unavailable; no catalyst claim is made."
+                        ),
+                    }
+                )
+                for row in rows
+            ]
+        finally:
+            if provider is not None:
+                await provider.aclose()
+        return [self._attach_news(row, facts) for row in rows]
+
+    @staticmethod
+    def _attach_news(
+        row: MarketResearchRow, facts: tuple[ObservedCatalystFact, ...]
+    ) -> MarketResearchRow:
+        matching = tuple(
+            sorted(
+                (
+                    fact
+                    for fact in facts
+                    if any(item.symbol == row.symbol for item in fact.instruments)
+                ),
+                key=lambda fact: (
+                    fact.published_at or fact.observed_at,
+                    fact.source_record_id or "",
+                ),
+                reverse=True,
+            )
+        )
+        if not matching:
+            return row.model_copy(
+                update={
+                    "news_status": "NONE",
+                    "catalyst_comment": (
+                        "No timestamped Alpaca headlines were found in the last 7 days."
+                    ),
+                    "recent_news": (),
+                }
+            )
+        headlines = tuple(
+            ResearchHeadline(
+                headline=fact.headline,
+                source=fact.source.name,
+                published_at=fact.published_at or fact.observed_at,
+                url=fact.url or "",
+            )
+            for fact in matching[:3]
+        )
+        return row.model_copy(
+            update={
+                "news_status": "AVAILABLE",
+                "catalyst_comment": (
+                    f"{len(matching)} timestamped headline(s) found in the last 7 days. "
+                    "They provide context only and are not classified as bullish or bearish."
+                ),
+                "recent_news": headlines,
+            }
+        )
 
     def _research_window(
         self, timeframe: Timeframe, depth: ValidationDepth
@@ -705,18 +830,20 @@ class DashboardLiveData:
             if active
             else "No active frozen setup is present on the latest completed bar."
         )
-        values = {
-            item.key: item.value
-            for item in latest_technical.features
-            if item.value is not None and item.period == 20
-        } if latest_technical is not None else {}
+        values = (
+            {
+                item.key: item.value
+                for item in latest_technical.features
+                if item.value is not None and item.period == 20
+            }
+            if latest_technical is not None
+            else {}
+        )
         sma = values.get(TechnicalFeatureKey.SMA_CLOSE)
         prior_high = values.get(TechnicalFeatureKey.ROLLING_HIGHEST_HIGH)
         prior_low = values.get(TechnicalFeatureKey.ROLLING_LOWEST_LOW)
         trend_name = (
-            latest_trend.regime.value.lower()
-            if latest_trend and latest_trend.regime
-            else None
+            latest_trend.regime.value.lower() if latest_trend and latest_trend.regime else None
         )
         trend_comment = (
             f"The 20-bar trend model is {trend_name}."
@@ -800,9 +927,7 @@ class DashboardLiveData:
         row: MarketResearchRow, benchmark: MarketResearchRow | None
     ) -> MarketResearchRow:
         if not row.active_setups:
-            alignment: Literal["SUPPORTS", "CONTRADICTS", "NEUTRAL", "UNAVAILABLE"] = (
-                "NEUTRAL"
-            )
+            alignment: Literal["SUPPORTS", "CONTRADICTS", "NEUTRAL", "UNAVAILABLE"] = "NEUTRAL"
             comment = "No active trade direction exists to confirm against the broad market."
         elif benchmark is None or benchmark.trend is None:
             alignment = "UNAVAILABLE"
@@ -824,12 +949,9 @@ class DashboardLiveData:
             else:
                 relationship = "is neutral for"
             comment = (
-                f"SPY trend is {benchmark.trend.lower()} and {relationship} "
-                f"this {direction} setup."
+                f"SPY trend is {benchmark.trend.lower()} and {relationship} this {direction} setup."
             )
-        return row.model_copy(
-            update={"market_alignment": alignment, "market_comment": comment}
-        )
+        return row.model_copy(update={"market_alignment": alignment, "market_comment": comment})
 
     @staticmethod
     def _with_relative_strength(
@@ -845,9 +967,7 @@ class DashboardLiveData:
         if benchmark is None:
             return row.model_copy(update=unavailable)
         row_by_time = {point.event_at: Decimal(point.close) for point in row.chart}
-        benchmark_by_time = {
-            point.event_at: Decimal(point.close) for point in benchmark.chart
-        }
+        benchmark_by_time = {point.event_at: Decimal(point.close) for point in benchmark.chart}
         common = tuple(sorted(set(row_by_time) & set(benchmark_by_time)))[-21:]
         if len(common) < 2:
             return row.model_copy(update=unavailable)
@@ -855,14 +975,10 @@ class DashboardLiveData:
         if row_by_time[first] <= 0 or benchmark_by_time[first] <= 0:
             return row.model_copy(update=unavailable)
         row_return = row_by_time[last] / row_by_time[first] - Decimal("1")
-        benchmark_return = (
-            benchmark_by_time[last] / benchmark_by_time[first] - Decimal("1")
-        )
+        benchmark_return = benchmark_by_time[last] / benchmark_by_time[first] - Decimal("1")
         excess = (row_return - benchmark_return) * Decimal("100")
         if not row.active_setups or excess == 0:
-            alignment: Literal["SUPPORTS", "CONTRADICTS", "NEUTRAL", "UNAVAILABLE"] = (
-                "NEUTRAL"
-            )
+            alignment: Literal["SUPPORTS", "CONTRADICTS", "NEUTRAL", "UNAVAILABLE"] = "NEUTRAL"
         else:
             is_long = row.active_setups[0] == SetupKey.UPSIDE_BREAKOUT_ABOVE_SMA.value
             alignment = (

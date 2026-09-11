@@ -4,6 +4,7 @@ import json
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
+from uuid import uuid4
 
 import httpx
 import pytest
@@ -14,6 +15,8 @@ from app.broker.models import (
     PaperOrderRequest,
     PaperOrderStatus,
 )
+from app.catalysts.models import ObservedCatalystFact
+from app.core.schemas import CatalystSourceType
 from app.dashboard.live import (
     DashboardLiveData,
     LiveProbeError,
@@ -22,6 +25,7 @@ from app.dashboard.live import (
     PaperPlanInput,
 )
 from app.dashboard.settings import DEFAULT_SETTINGS, DataMode, SettingsStore, ValidationDepth
+from app.data.observations import SourceIdentity
 from app.data.providers.alpaca import (
     AlpacaInstrumentBinding,
     AlpacaMarketDataProvider,
@@ -194,6 +198,31 @@ async def test_market_research_uses_historical_bars_and_frozen_engines(tmp_path:
     relative = service._with_relative_strength(stronger, report.rows[-1])
     assert relative.relative_alignment == "SUPPORTS"
     assert Decimal(relative.relative_strength_percent or "0") > 0
+    with_news = service._attach_news(
+        report.rows[0],
+        (
+            ObservedCatalystFact(
+                observation_id=uuid4(),
+                headline="Timestamped company update",
+                source=SourceIdentity(name="ALPACA_NEWS"),
+                source_type=CatalystSourceType.SECONDARY,
+                observed_at=FixedClock().now(),
+                published_at=FixedClock().now() - timedelta(days=1),
+                source_record_id="story-1",
+                url="https://example.test/story-1",
+                instruments=(
+                    next(
+                        item.to_instrument()
+                        for item in DEFAULT_SETTINGS.watchlist
+                        if item.symbol == report.rows[0].symbol
+                    ),
+                ),
+            ),
+        ),
+    )
+    assert with_news.news_status == "AVAILABLE"
+    assert with_news.recent_news[0].headline == "Timestamped company update"
+    assert "context only" in with_news.catalyst_comment
     assert all(row.backtest.results[0].trades >= 1 for row in report.rows)
     assert all("not a prediction" in row.backtest.warning for row in report.rows)
     assert all(request.url.params["feed"] == "iex" for request in requests)

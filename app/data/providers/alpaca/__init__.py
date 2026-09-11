@@ -2,9 +2,13 @@
 
 from app.data.providers.alpaca.config import AlpacaDataFeed, AlpacaMarketDataSettings
 from app.data.providers.alpaca.mapping import AlpacaInstrumentBinding
+from app.data.providers.alpaca.news import AlpacaNewsProvider
 from app.data.providers.alpaca.provider import AlpacaMarketDataProvider
 
 __all__ = (
-    "AlpacaDataFeed", "AlpacaInstrumentBinding", "AlpacaMarketDataProvider",
+    "AlpacaDataFeed",
+    "AlpacaInstrumentBinding",
+    "AlpacaMarketDataProvider",
+    "AlpacaNewsProvider",
     "AlpacaMarketDataSettings",
 )
