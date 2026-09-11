@@ -121,7 +121,8 @@ def test_local_session_routes(app):
         assert b'id="run-market"' in html
         assert b'id="research-results"' in html
         assert b'id="paper-planner"' in html
-        assert b"continuous monitoring" in html
+        assert b'id="auto-scan"' in html
+        assert b"bounded browser-session monitoring" in html
         assert "frame-ancestors 'none'" in csp
         status, logo, _ = call("/revmind-logo-lockup.png")
         assert status == 200 and logo.startswith(b"\x89PNG\r\n\x1a\n")
