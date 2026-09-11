@@ -124,6 +124,8 @@ class MarketResearchRow(CanonicalModel):
     trend_comment: str
     opportunity_comment: str
     price_location: str
+    suggested_stop: str | None
+    stop_comment: str
     next_step: str
     chart: tuple[ResearchPoint, ...]
     backtest: BacktestSummary
@@ -1168,6 +1170,9 @@ class DashboardLiveData:
         sma = values.get(TechnicalFeatureKey.SMA_CLOSE)
         prior_high = values.get(TechnicalFeatureKey.ROLLING_HIGHEST_HIGH)
         prior_low = values.get(TechnicalFeatureKey.ROLLING_LOWEST_LOW)
+        prior_structure = history.bars[-21:-1] if len(history.bars) >= 21 else ()
+        structural_high = max((item.bar.high for item in prior_structure), default=None)
+        structural_low = min((item.bar.low for item in prior_structure), default=None)
         trend_name = (
             latest_trend.regime.value.lower() if latest_trend and latest_trend.regime else None
         )
@@ -1196,6 +1201,27 @@ class DashboardLiveData:
             if latest_bar is not None
             else "No completed price location is available."
         )
+        suggested_stop: Decimal | None = None
+        stop_comment = "No active setup exists, so RevMind is not suggesting a stop."
+        if latest_bar is not None and SetupKey.UPSIDE_BREAKOUT_ABOVE_SMA.value in active:
+            if structural_high is not None and structural_high < latest_bar.close:
+                suggested_stop = structural_high
+                stop_comment = (
+                    "Suggested invalidation reference: the prior 20-bar high that price broke "
+                    "above. You must review and may change it before running risk checks."
+                )
+        elif latest_bar is not None and SetupKey.DOWNSIDE_BREAKDOWN_BELOW_SMA.value in active:
+            if structural_low is not None and structural_low > latest_bar.close:
+                suggested_stop = structural_low
+                stop_comment = (
+                    "Suggested invalidation reference: the prior 20-bar low that price broke "
+                    "below. You must review and may change it before running risk checks."
+                )
+        if active and suggested_stop is None:
+            stop_comment = (
+                "The setup has no valid structural stop reference. Enter and review a stop "
+                "manually before running risk checks."
+            )
         next_step = (
             "Open the trade planner, choose a stop and loss budget, then let risk decide."
             if active
@@ -1231,6 +1257,8 @@ class DashboardLiveData:
             trend_comment=trend_comment,
             opportunity_comment=opportunity_comment,
             price_location=price_location,
+            suggested_stop=str(suggested_stop) if suggested_stop is not None else None,
+            stop_comment=stop_comment,
             next_step=next_step,
             chart=tuple(
                 ResearchPoint(event_at=item.bar.timestamp, close=str(item.bar.close))
