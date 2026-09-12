@@ -984,6 +984,13 @@ class DashboardLiveData:
                 "readiness": readiness,
                 "readiness_comment": comment,
                 "decision_checks": checks,
+                "next_step": (
+                    "RevMind will automatically build the risk-bounded paper plan; review it "
+                    "before any explicit paper-order approval."
+                    if readiness == "READY_FOR_RISK_CHECK"
+                    else "Wait. RevMind will not create an approvable plan until the setup, "
+                    "market context, and held-out evidence pass the readiness gate."
+                ),
             }
         )
 

@@ -198,7 +198,7 @@ async def test_market_research_uses_historical_bars_and_frozen_engines(tmp_path:
     assert all("Latest close $125" in row.price_location for row in report.rows)
     assert {row.suggested_stop for row in report.rows} == {"124"}
     assert all("prior 20-bar high" in row.stop_comment for row in report.rows)
-    assert all("Open the trade planner" in row.next_step for row in report.rows)
+    assert all("RevMind will not create an approvable plan" in row.next_step for row in report.rows)
     assert all(row.backtest.bars == 25 for row in report.rows)
     assert all(row.backtest.stop_percent == Decimal("2") for row in report.rows)
     assert all(row.backtest.target_percent == Decimal("4") for row in report.rows)
