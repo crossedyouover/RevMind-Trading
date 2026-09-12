@@ -707,6 +707,7 @@ class DashboardLiveData:
         source = SourceIdentity(name=f"ALPACA_{selected.alpaca_feed.value}")
         provider: AlpacaMarketDataProvider | None = None
         rows: list[MarketResearchRow] = []
+        scan_artifacts: dict[str, _ResearchArtifact] = {}
         self._settings.directory.mkdir(parents=True, exist_ok=True)
         try:
             provider = self._provider_factory(provider_settings, bindings)
@@ -739,7 +740,7 @@ class DashboardLiveData:
                         ),
                     )
                     if row.assessment_id is not None:
-                        self._research_artifacts[row.assessment_id] = artifact
+                        scan_artifacts[row.assessment_id] = artifact
                     rows.append(row)
             benchmark = next((item for item in rows if item.symbol == "SPY"), None)
             rows = [self._with_market_alignment(item, benchmark) for item in rows]
@@ -776,8 +777,13 @@ class DashboardLiveData:
                     rank += 1
                     item_rank = rank
                 ranked.append(item.model_copy(update={"opportunity_rank": item_rank}))
-            while len(self._research_artifacts) > 100:
-                self._research_artifacts.pop(next(iter(self._research_artifacts)))
+            # A successful scan supersedes every earlier assessment. Retain the heavyweight
+            # deterministic analysis graph only for the current rows; the append-only
+            # observations and scan history remain the durable audit record.
+            self._research_artifacts = {
+                assessment_id: scan_artifacts[assessment_id]
+                for assessment_id in sorted(scan_artifacts)
+            }
             report = MarketResearchReport(
                 status="COMPLETE_READ_ONLY",
                 source=source.name,
