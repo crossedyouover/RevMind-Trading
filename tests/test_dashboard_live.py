@@ -482,6 +482,39 @@ async def test_eligible_plan_requires_one_time_exact_paper_approval(tmp_path: Pa
 
 
 @pytest.mark.asyncio
+async def test_news_refresh_is_independent_of_bar_provider(tmp_path: Path) -> None:
+    class NewsProvider:
+        async def get_news(self, instruments, *, published_start, published_end, observed_at):
+            return (
+                ObservedCatalystFact(
+                    observation_id=uuid4(),
+                    headline="Independent timestamped headline",
+                    source=SourceIdentity(name="ALPACA_NEWS"),
+                    source_type=CatalystSourceType.SECONDARY,
+                    observed_at=observed_at,
+                    published_at=published_end - timedelta(hours=1),
+                    source_record_id="independent-1",
+                    url="https://example.test/independent-1",
+                    instruments=(instruments[0],),
+                ),
+            )
+
+        async def aclose(self) -> None:
+            return None
+
+    service = DashboardLiveData(
+        configured_store(tmp_path),
+        clock=FixedClock(),
+        provider_factory=lambda *_args: (_ for _ in ()).throw(AssertionError("bars called")),
+        news_provider_factory=lambda *_args: NewsProvider(),
+    )
+    report = await service.news()
+    assert report.observed_at == FixedClock().now()
+    assert report.rows[0].recent_news[0].headline == "Independent timestamped headline"
+    assert all(len(row.recent_news) <= 10 for row in report.rows)
+
+
+@pytest.mark.asyncio
 async def test_probe_failure_is_redacted_and_durable(tmp_path: Path) -> None:
     clients: list[httpx.AsyncClient] = []
 

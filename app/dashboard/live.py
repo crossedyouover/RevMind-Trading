@@ -101,6 +101,17 @@ class ResearchHeadline(CanonicalModel):
     url: str
 
 
+class NewsDeskRow(CanonicalModel):
+    symbol: str
+    recent_news: tuple[ResearchHeadline, ...]
+
+
+class NewsDeskReport(CanonicalModel):
+    schema_version: Literal[1] = 1
+    observed_at: UtcDatetime
+    rows: tuple[NewsDeskRow, ...]
+
+
 class DecisionCheck(CanonicalModel):
     label: str
     status: Literal["PASS", "CAUTION", "BLOCK", "INFO"]
@@ -294,6 +305,60 @@ class DashboardLiveData:
         self._research_artifacts: dict[str, _ResearchArtifact] = {}
         self._approved_plans: dict[str, PaperOrderRequest] = {}
         self._paper_account: PaperAccount | None = None
+
+    async def news(self) -> NewsDeskReport:
+        """Fetch bounded factual news independently of historical price availability."""
+        selected = self._settings.load()
+        if selected.data_mode is not DataMode.ALPACA:
+            raise LiveProbeError("Select Alpaca and save settings first.")
+        if self._news_provider_factory is None:
+            raise LiveProbeError("No news provider is configured.")
+        observed_at = self._receipt_time()
+        instruments = tuple(item.to_instrument() for item in selected.watchlist)
+        provider: CatalystProvider | None = None
+        try:
+            key, secret = self._settings.alpaca_credentials()
+            provider = self._news_provider_factory(key, secret)
+            facts = await provider.get_news(
+                instruments,
+                published_start=observed_at - timedelta(days=7),
+                published_end=observed_at,
+                observed_at=observed_at,
+            )
+        except (CatalystProviderError, ValidationError, ValueError, TypeError, OSError) as exc:
+            raise LiveProbeError("Recent Alpaca news was unavailable or unauthorized.") from exc
+        finally:
+            if provider is not None:
+                await provider.aclose()
+        rows = []
+        for instrument in instruments:
+            matching = sorted(
+                (
+                    fact
+                    for fact in facts
+                    if any(item.symbol == instrument.symbol for item in fact.instruments)
+                ),
+                key=lambda fact: (
+                    fact.published_at or fact.observed_at,
+                    fact.source_record_id or "",
+                ),
+                reverse=True,
+            )
+            rows.append(
+                NewsDeskRow(
+                    symbol=instrument.symbol,
+                    recent_news=tuple(
+                        ResearchHeadline(
+                            headline=fact.headline,
+                            source=fact.source.name,
+                            published_at=fact.published_at or fact.observed_at,
+                            url=fact.url or "",
+                        )
+                        for fact in matching[:10]
+                    ),
+                )
+            )
+        return NewsDeskReport(observed_at=observed_at, rows=tuple(rows))
 
     async def paper_account(self) -> PaperAccount:
         selected = self._settings.load()

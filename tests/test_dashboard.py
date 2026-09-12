@@ -174,6 +174,7 @@ def test_local_session_routes(app):
         assert call("/api/settings", "POST", headers, '{"settings":{}}')[0] == 400
         assert call("/api/alpaca/test", "POST", headers, '{"symbols":["AAPL"]}')[0] == 400
         assert call("/api/alpaca/research", "POST", headers, '{"days":30}')[0] == 400
+        assert call("/api/alpaca/news", "POST", headers, '{"days":30}')[0] == 400
         assert call("/api/alpaca/paper-account", "POST", headers, '{"live":true}')[0] == 400
         assert call("/api/paper-plan", "POST", headers, "{}")[0] == 400
         assert call("/api/paper-order", "POST", headers, "{}")[0] == 400
