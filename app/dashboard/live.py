@@ -16,6 +16,7 @@ from app.broker.protocol import PaperBroker
 from app.catalysts.models import ObservedCatalystFact
 from app.catalysts.provider import CatalystProvider, CatalystProviderError
 from app.core.schemas import CanonicalModel, Instrument, MarketSnapshot, Timeframe, UtcDatetime
+from app.dashboard.public_news import PublicNewsError, PublicRssNewsProvider
 from app.dashboard.settings import AlpacaFeed, DataMode, SessionRule, SettingsStore, ValidationDepth
 from app.data.ingestion import Clock, MarketDataIngestionCoordinator, SystemUtcClock
 from app.data.market import (
@@ -325,8 +326,33 @@ class DashboardLiveData:
                 published_end=observed_at,
                 observed_at=observed_at,
             )
-        except (CatalystProviderError, ValidationError, ValueError, TypeError, OSError) as exc:
-            raise LiveProbeError("Recent Alpaca news was unavailable or unauthorized.") from exc
+        except (CatalystProviderError, ValidationError, ValueError, TypeError, OSError):
+            public_provider = PublicRssNewsProvider()
+            try:
+                public_headlines = await public_provider.get_news(observed_at)
+                return NewsDeskReport(
+                    observed_at=observed_at,
+                    rows=(
+                        NewsDeskRow(
+                            symbol="MACRO",
+                            recent_news=tuple(
+                                ResearchHeadline(
+                                    headline=item.headline,
+                                    source=item.source,
+                                    published_at=item.published_at,
+                                    url=item.url,
+                                )
+                                for item in public_headlines
+                            ),
+                        ),
+                    ),
+                )
+            except PublicNewsError as public_exc:
+                raise LiveProbeError(
+                    "Alpaca news and official public RSS feeds were unavailable."
+                ) from public_exc
+            finally:
+                await public_provider.aclose()
         finally:
             if provider is not None:
                 await provider.aclose()
