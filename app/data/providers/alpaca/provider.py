@@ -17,6 +17,8 @@ from app.data.market import (
     InvalidMarketDataRequestError,
     MarketDataProvider,
     MarketDataUnavailableError,
+    ProviderAuthenticationError,
+    ProviderEntitlementError,
     ProviderRateLimitError,
 )
 from app.data.providers.alpaca.config import AlpacaMarketDataSettings
@@ -253,6 +255,10 @@ class AlpacaMarketDataProvider(MarketDataProvider):
             return
         if status_code == 404:
             raise InstrumentNotFoundError("Alpaca instrument not found")
+        if status_code == 401:
+            raise ProviderAuthenticationError("Alpaca rejected the configured credentials")
+        if status_code == 403:
+            raise ProviderEntitlementError("Alpaca denied access to the requested data feed")
         if status_code == 429:
             raise ProviderRateLimitError("Alpaca rate limit reached")
         if status_code in {400, 422}:

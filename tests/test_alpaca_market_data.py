@@ -16,6 +16,8 @@ from app.data.market import (
     InstrumentNotFoundError,
     InvalidMarketDataRequestError,
     MarketDataUnavailableError,
+    ProviderAuthenticationError,
+    ProviderEntitlementError,
     ProviderRateLimitError,
 )
 from app.data.providers.alpaca import (
@@ -413,8 +415,8 @@ def test_unsupported_runtime_timeframe_is_rejected_without_approximation() -> No
     ("status", "error"),
     (
         (400, InvalidMarketDataRequestError),
-        (401, MarketDataUnavailableError),
-        (403, MarketDataUnavailableError),
+        (401, ProviderAuthenticationError),
+        (403, ProviderEntitlementError),
         (404, InstrumentNotFoundError),
         (422, InvalidMarketDataRequestError),
         (429, ProviderRateLimitError),

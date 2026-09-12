@@ -540,7 +540,8 @@ async def test_probe_failure_is_redacted_and_durable(tmp_path: Path) -> None:
     assert "distinct" not in str(captured.value)
     state = service.state()
     assert state.status == "FAILED"
-    assert state.reason == "UNAVAILABLE_OR_UNAUTHORIZED"
+    assert state.reason == "CREDENTIALS_REJECTED"
+    assert "rejected the stored API key" in str(captured.value)
     assert "distinct" not in json.dumps(state.model_dump(mode="json"))
     for client in clients:
         await client.aclose()

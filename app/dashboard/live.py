@@ -24,6 +24,8 @@ from app.data.market import (
     InstrumentNotFoundError,
     InvalidMarketDataRequestError,
     MarketDataUnavailableError,
+    ProviderAuthenticationError,
+    ProviderEntitlementError,
     ProviderRateLimitError,
 )
 from app.data.observation_store import ObservationStoreError, SQLiteObservationStore
@@ -654,6 +656,18 @@ class DashboardLiveData:
                 )
             )
             return report
+        except ProviderAuthenticationError as exc:
+            self._record_failure("CREDENTIALS_REJECTED", selected.alpaca_feed)
+            raise LiveProbeError(
+                "Alpaca rejected the stored API key or secret. Revoke the exposed key, generate "
+                "a new Paper Trading key pair, and save both new values in Connections."
+            ) from exc
+        except ProviderEntitlementError as exc:
+            self._record_failure("FEED_NOT_ENTITLED", selected.alpaca_feed)
+            raise LiveProbeError(
+                "The Alpaca credentials are valid but cannot access the selected feed. "
+                "Select IEX unless this account has SIP entitlement."
+            ) from exc
         except ProviderRateLimitError as exc:
             self._record_failure("RATE_LIMITED", selected.alpaca_feed)
             raise LiveProbeError("Alpaca rate limit reached; wait before retrying.") from exc
@@ -787,6 +801,16 @@ class DashboardLiveData:
                     ),
                 }
             )
+        except ProviderAuthenticationError as exc:
+            raise LiveProbeError(
+                "Alpaca rejected the stored API key or secret. Replace both credentials in "
+                "Connections, then run Test read-only connection."
+            ) from exc
+        except ProviderEntitlementError as exc:
+            raise LiveProbeError(
+                "Alpaca denied historical access for the selected feed. Use IEX unless this "
+                "account has SIP entitlement."
+            ) from exc
         except ProviderRateLimitError as exc:
             raise LiveProbeError("Alpaca rate limit reached; wait before retrying.") from exc
         except InstrumentNotFoundError as exc:
