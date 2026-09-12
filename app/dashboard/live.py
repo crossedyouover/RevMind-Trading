@@ -41,7 +41,7 @@ from app.desks.models import SetupDeskRequest, TrendDeskRequest
 from app.evaluation.backtest import BacktestSummary, evaluate_frozen_setups, grade_setup
 from app.evidence.models import MarketEvidenceConfig
 from app.materialization.engine import DeterministicBarMaterializationEngine
-from app.materialization.models import BarSeriesRequest
+from app.materialization.models import BarSeriesRequest, MaterializedBarHistory
 from app.orchestration.desk import DeterministicHeadOfDeskEngine
 from app.orchestration.models import HeadOfDeskPolicy, HeadOfDeskRequest
 from app.portfolio.engine import DeterministicPortfolioContextEngine
@@ -51,9 +51,9 @@ from app.portfolio.models import (
     PortfolioContextRequest,
 )
 from app.regime.engine import DeterministicTrendRegimeEngine
-from app.regime.models import TrendRegimeConfig, TrendRegimeRequest, TrendRegimeResult
+from app.regime.models import TrendRegimeConfig, TrendRegimeRequest
 from app.research.engine import DeterministicSingleSeriesResearchEngine
-from app.research.models import SingleSeriesResearchRequest, SingleSeriesResearchResult
+from app.research.models import SingleSeriesResearchRequest
 from app.risk.engine import DeterministicPaperRiskEngine
 from app.risk.models import PaperRiskPolicy, PaperRiskProposal, PaperRiskRequest
 from app.setups.models import SetupKey, SetupStatus
@@ -263,13 +263,11 @@ class _ResearchArtifact:
         self,
         instrument: Instrument,
         observed_at: datetime,
-        research: SingleSeriesResearchResult,
-        trend: TrendRegimeResult,
+        history: MaterializedBarHistory,
     ) -> None:
         self.instrument = instrument
         self.observed_at = observed_at
-        self.research = research
-        self.trend = trend
+        self.history = history
 
 
 ProviderFactory = Callable[
@@ -1480,7 +1478,7 @@ class DashboardLiveData:
             relative_alignment="UNAVAILABLE",
             relative_strength_comment="Relative-strength context has not been composed yet.",
         )
-        return row, _ResearchArtifact(instrument, observed_at, research, trend)
+        return row, _ResearchArtifact(instrument, observed_at, history)
 
     @staticmethod
     def _with_market_alignment(
@@ -1584,8 +1582,20 @@ class DashboardLiveData:
             raise LiveProbeError(
                 "Paper-plan amounts must be positive and concentration must be 0–1."
             )
-        research = artifact.research
-        trend = artifact.trend
+        research = DeterministicSingleSeriesResearchEngine().analyze(
+            SingleSeriesResearchRequest(
+                history=artifact.history,
+                technical_config=TechnicalAnalysisConfig(),
+                evidence_config=MarketEvidenceConfig(),
+            )
+        )
+        trend = DeterministicTrendRegimeEngine().analyze(
+            TrendRegimeRequest(
+                history=artifact.history,
+                config=TrendRegimeConfig(sma_period=20, return_period=1),
+                evaluation_at=artifact.observed_at,
+            )
+        )
         latest = research.request.history.bars[-1].bar if research.request.history.bars else None
         if latest is None:
             raise LiveProbeError("No completed reference bar is available for this plan.")
