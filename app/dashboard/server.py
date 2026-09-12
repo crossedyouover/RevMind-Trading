@@ -17,6 +17,7 @@ from uuid import UUID, uuid4
 from app.capture.__main__ import SimulatedClock
 from app.capture.coordinator import OfflineCaptureCoordinator
 from app.capture.models import CycleRequest, CycleResult, SealedInputs, digest
+from app.dashboard.capabilities import public_capability_registry
 from app.dashboard.live import (
     DashboardLiveData,
     LiveProbeError,
@@ -191,6 +192,12 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                     self.reply(200, json.dumps(app.settings.public()).encode(), "application/json")
                 elif path == "/api/health":
                     self.reply(200, json.dumps(app.health()).encode(), "application/json")
+                elif path == "/api/providers":
+                    self.reply(
+                        200,
+                        json.dumps(public_capability_registry()).encode(),
+                        "application/json",
+                    )
                 elif path == "/api/paper-orders":
                     body = json.dumps(app.live.paper_order_history()).encode()
                     self.reply(200, body, "application/json")

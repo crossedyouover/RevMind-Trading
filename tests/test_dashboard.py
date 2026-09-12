@@ -140,6 +140,13 @@ def test_local_session_routes(app):
         assert health["broker_execution"] == "PAPER_ONLY_CONFIRMATION_REQUIRED"
         assert health["credentials"] == "NOT_CONFIGURED"
         assert health["live_probe"]["status"] == "NOT_TESTED"
+        providers = json.loads(call("/api/providers", headers=token)[1])
+        assert providers["schema_version"] == 1
+        assert providers["providers"][0]["provider_id"] == "alpaca"
+        assert providers["providers"][0]["execution"] == "PAPER_EXPLICIT_APPROVAL"
+        assert all(
+            provider["execution"] == "NONE" for provider in providers["providers"][1:]
+        )
         assert call("/", headers={"Host": "attacker.example"})[0] == 403
         assert call("/", headers={"Sec-Fetch-Site": "cross-site"})[0] == 403
         assert call("/api/runs", headers={**token, "Origin": "https://attacker.example"})[0] == 403
