@@ -18,7 +18,11 @@ from app.capture.__main__ import SimulatedClock
 from app.capture.coordinator import OfflineCaptureCoordinator
 from app.capture.models import CycleRequest, CycleResult, SealedInputs, digest
 from app.dashboard.capabilities import public_capability_registry
-from app.dashboard.import_history import ImportHistoryRecord, ImportHistoryStore
+from app.dashboard.import_history import (
+    ImportHistoryError,
+    ImportHistoryRecord,
+    ImportHistoryStore,
+)
 from app.dashboard.live import (
     DashboardLiveData,
     LiveProbeError,
@@ -116,6 +120,11 @@ class Dashboard:
         settings = self.settings.public()
         runs = self.list_runs()
         live_state = self.live.state().model_dump(mode="json")
+        try:
+            imports = self.import_history()
+            import_health = {"status": "READY", "count": len(imports)}
+        except ImportHistoryError:
+            import_health = {"status": "CORRUPT", "count": 0}
         return {
             "schema_version": 1,
             "dashboard": "READY",
@@ -134,6 +143,7 @@ class Dashboard:
             "broker_execution": "PAPER_ONLY_CONFIRMATION_REQUIRED",
             "stored_runs": len(runs),
             "unreadable_runs": sum(row["state"] == "UNREADABLE" for row in runs),
+            "imports": import_health,
         }
 
     def run_demo(self) -> dict[str, Any]:
@@ -292,7 +302,7 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                     self.reply(200, content, mime)
                 else:
                     self.reply(404, b"Not found", "text/plain")
-            except (ValueError, OSError, sqlite3.Error):
+            except (ValueError, OSError, sqlite3.Error, ImportHistoryError):
                 self.reply(
                     400, b'{"error":"Unable to read or validate this run."}', "application/json"
                 )

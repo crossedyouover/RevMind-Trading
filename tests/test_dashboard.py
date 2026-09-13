@@ -158,6 +158,7 @@ def test_local_session_routes(app):
         assert health["broker_execution"] == "PAPER_ONLY_CONFIRMATION_REQUIRED"
         assert health["credentials"] == "NOT_CONFIGURED"
         assert health["live_probe"]["status"] == "NOT_TESTED"
+        assert health["imports"] == {"status": "READY", "count": 0}
         providers = json.loads(call("/api/providers", headers=token)[1])
         assert providers["schema_version"] == 1
         assert providers["providers"][0]["provider_id"] == "alpaca"
@@ -226,6 +227,8 @@ def test_local_session_routes(app):
         assert len(imports) == 1
         assert imports[0]["symbol"] == "EURUSD"
         assert imports[0]["content_digest"] == imported_body["content_digest"]
+        health = json.loads(call("/api/health", headers=token)[1])
+        assert health["imports"] == {"status": "READY", "count": 1}
         assert call("/api/import/csv-bars", "POST", headers, "{}")[0] == 400
         assert call("/api/paper-plan", "POST", headers, "{}")[0] == 400
         assert call("/api/paper-order", "POST", headers, "{}")[0] == 400

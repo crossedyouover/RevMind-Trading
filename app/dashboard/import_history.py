@@ -2,6 +2,7 @@
 
 import sqlite3
 from pathlib import Path
+from typing import Annotated, Literal
 from uuid import UUID, uuid4
 
 from pydantic import UUID4, Field, ValidationError
@@ -16,18 +17,18 @@ class ImportHistoryError(Exception):
 class ImportHistoryRecord(CanonicalModel):
     schema_version: int = Field(default=1, ge=1, le=1, strict=True)
     import_id: UUID4 = Field(default_factory=uuid4)
-    symbol: str
-    asset_class: str
+    symbol: str = Field(min_length=1, max_length=40)
+    asset_class: str = Field(min_length=1, max_length=20)
     timeframe: Timeframe
-    source: str
+    source: str = Field(min_length=1, max_length=80)
     received_at: UtcDatetime
     latest_event_at: UtcDatetime
     content_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
     imported_bar_count: int = Field(ge=1, le=10_000, strict=True)
     analyzed_bar_count: int = Field(ge=1, le=1_500, strict=True)
-    readiness: str
-    trend: str | None
-    active_setups: tuple[str, ...]
+    readiness: Literal["READY_FOR_RISK_CHECK", "CAUTION", "WAIT"]
+    trend: Annotated[str, Field(pattern=r"^(UPWARD|DOWNWARD|FLAT|MIXED)$")] | None
+    active_setups: tuple[str, ...] = Field(max_length=2)
 
 
 class ImportHistoryStore:
@@ -69,19 +70,23 @@ class ImportHistoryStore:
         try:
             with sqlite3.connect(self._path) as db:
                 rows = db.execute(
-                    "SELECT import_id,record_json FROM imports "
+                    "SELECT import_id,received_at,record_json FROM imports "
                     "ORDER BY received_at DESC, import_id DESC LIMIT ?",
                     (limit,),
                 ).fetchall()
         except sqlite3.Error as exc:
             raise ImportHistoryError("unable to read import journal") from exc
         records = []
-        for import_id, payload in rows:
+        for import_id, received_at, payload in rows:
             try:
                 record = ImportHistoryRecord.model_validate_json(payload)
             except (ValidationError, ValueError, TypeError) as exc:
                 raise ImportHistoryError("import journal record is invalid") from exc
-            if str(record.import_id) != import_id or not isinstance(record.import_id, UUID):
+            if (
+                str(record.import_id) != import_id
+                or not isinstance(record.import_id, UUID)
+                or record.received_at.isoformat() != received_at
+            ):
                 raise ImportHistoryError("import journal identity mismatch")
             records.append(record)
         return tuple(records)

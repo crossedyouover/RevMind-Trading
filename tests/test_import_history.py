@@ -1,5 +1,6 @@
 """Tests for the append-only imported-research summary journal."""
 
+import sqlite3
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID
@@ -47,3 +48,13 @@ def test_limit_is_strict_and_bounded(tmp_path: Path) -> None:
         store.recent(0)
     with pytest.raises(ValueError):
         store.recent(True)
+
+
+def test_rejects_projection_tampering(tmp_path: Path) -> None:
+    path = tmp_path / "imports.db"
+    store = ImportHistoryStore(path)
+    store.append(record())
+    with sqlite3.connect(path) as db:
+        db.execute("UPDATE imports SET received_at='2020-01-01T00:00:00+00:00'")
+    with pytest.raises(ImportHistoryError, match="identity mismatch"):
+        store.recent()
