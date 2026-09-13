@@ -26,6 +26,9 @@ from app.dashboard.live import (
     PaperPlanInput,
 )
 from app.dashboard.settings import DashboardSettings, SettingsStore
+from app.data.csv_import import CsvBarImportCoordinator, CsvBarImportRequest
+from app.data.ingestion import SystemUtcClock
+from app.data.observation_store import SQLiteObservationStore
 
 POLICY = "2bfebfe92eb5b76469b6da94b8f49714147cf85bc0cb12bbacaf77b66edbbeae"
 STATIC = Path(__file__).parent / "static"
@@ -144,6 +147,34 @@ class Dashboard:
             capture.close()
         return self.read(key)
 
+    def import_csv_bars(self, body: object) -> dict[str, object]:
+        """Validate and persist one bounded local CSV export without broker authority."""
+        if not isinstance(body, dict) or set(body) != {"request", "csv_text"}:
+            raise ValueError("invalid CSV import envelope")
+        csv_text = body["csv_text"]
+        if not isinstance(csv_text, str):
+            raise ValueError("CSV text must be a string")
+        request = CsvBarImportRequest.model_validate(body["request"])
+        self.settings.directory.mkdir(parents=True, exist_ok=True)
+        with SQLiteObservationStore(self.settings.directory / "market-observations.db") as store:
+            receipt = CsvBarImportCoordinator(store, clock=SystemUtcClock()).import_bars(
+                csv_text.encode("utf-8"), request
+            )
+        return {
+            "schema_version": 1,
+            "status": "IMPORTED_RESEARCH_ONLY",
+            "symbol": receipt.request.instrument.symbol,
+            "asset_class": receipt.request.asset_class.value,
+            "timeframe": receipt.request.timeframe.value,
+            "source": receipt.request.source_name,
+            "bar_count": receipt.count,
+            "first_event_at": receipt.observations[0].event_time.isoformat(),
+            "last_event_at": receipt.observations[-1].event_time.isoformat(),
+            "received_at": receipt.received_at.isoformat(),
+            "content_digest": receipt.content_digest,
+            "paper_execution": "UNAVAILABLE_FOR_IMPORTED_DATA",
+        }
+
 
 def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
     class Handler(BaseHTTPRequestHandler):
@@ -253,6 +284,7 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                     "/api/paper-order",
                     "/api/paper-orders/sync",
                     "/api/paper-order/cancel",
+                    "/api/import/csv-bars",
                 }
                 or self.headers.get("Content-Type") != "application/json"
             ):
@@ -262,7 +294,8 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                 length = int(self.headers.get("Content-Length", "-1"))
             except ValueError:
                 length = -1
-            if not 0 <= length <= 32_768:
+            maximum = 1_100_000 if self.path == "/api/import/csv-bars" else 32_768
+            if not 0 <= length <= maximum:
                 self.reply(400, b"Invalid request size", "text/plain")
                 return
             payload = self.rfile.read(length)
@@ -272,6 +305,8 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                     if payload != b"{}":
                         raise ValueError("empty request required")
                     value = app.run_demo()
+                elif self.path == "/api/import/csv-bars":
+                    value = app.import_csv_bars(json.loads(payload))
                 elif self.path == "/api/alpaca/test":
                     if payload != b"{}":
                         raise ValueError("empty request required")

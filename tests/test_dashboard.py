@@ -121,6 +121,7 @@ def test_local_session_routes(app):
         assert b'id="run-market"' in html
         assert b'id="research-results"' in html
         assert b'id="paper-planner"' in html
+        assert b'id="csv-import-form"' in html
         assert b'id="auto-scan"' in html
         assert b'id="desktop-alerts"' in html
         assert b"bounded browser-session monitoring" in html
@@ -183,6 +184,31 @@ def test_local_session_routes(app):
         assert call("/api/alpaca/research", "POST", headers, '{"days":30}')[0] == 400
         assert call("/api/alpaca/news", "POST", headers, '{"days":30}')[0] == 400
         assert call("/api/alpaca/paper-account", "POST", headers, '{"live":true}')[0] == 400
+        import_envelope = {
+            "request": {
+                "schema_version": 1,
+                "symbol": "EURUSD",
+                "asset_class": "FX",
+                "exchange": "IDEALPRO",
+                "currency": "USD",
+                "timeframe": "FIVE_MINUTES",
+                "source_name": "manual-export",
+            },
+            "csv_text": (
+                "timestamp,open,high,low,close,volume\n"
+                "2026-09-12T10:00:00Z,1.1,1.2,1.0,1.15,100\n"
+            ),
+        }
+        status, imported, _ = call(
+            "/api/import/csv-bars", "POST", headers, json.dumps(import_envelope)
+        )
+        imported_body = json.loads(imported)
+        assert status == 200
+        assert imported_body["status"] == "IMPORTED_RESEARCH_ONLY"
+        assert imported_body["paper_execution"] == "UNAVAILABLE_FOR_IMPORTED_DATA"
+        assert imported_body["bar_count"] == 1
+        assert "observations" not in imported_body
+        assert call("/api/import/csv-bars", "POST", headers, "{}")[0] == 400
         assert call("/api/paper-plan", "POST", headers, "{}")[0] == 400
         assert call("/api/paper-order", "POST", headers, "{}")[0] == 400
     finally:
