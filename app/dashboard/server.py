@@ -18,6 +18,7 @@ from app.capture.__main__ import SimulatedClock
 from app.capture.coordinator import OfflineCaptureCoordinator
 from app.capture.models import CycleRequest, CycleResult, SealedInputs, digest
 from app.dashboard.capabilities import public_capability_registry
+from app.dashboard.import_history import ImportHistoryRecord, ImportHistoryStore
 from app.dashboard.live import (
     DashboardLiveData,
     LiveProbeError,
@@ -40,6 +41,14 @@ class Dashboard:
         self.runs = self.root / ".dashboard-runs"
         self.settings = SettingsStore(self.root / ".revmind")
         self.live = DashboardLiveData(self.settings)
+
+    def import_history(self) -> tuple[dict[str, object], ...]:
+        if not self.settings.directory.is_dir():
+            return ()
+        path = self.settings.directory / "imports.db"
+        if not path.exists():
+            return ()
+        return tuple(item.model_dump(mode="json") for item in ImportHistoryStore(path).recent())
 
     def directory(self, key: str) -> Path:
         if key == "existing":
@@ -161,6 +170,22 @@ class Dashboard:
                 csv_text.encode("utf-8"), request
             )
         research = self.live.research_import(receipt)
+        ImportHistoryStore(self.settings.directory / "imports.db").append(
+            ImportHistoryRecord(
+                symbol=receipt.request.instrument.symbol,
+                asset_class=receipt.request.asset_class.value,
+                timeframe=receipt.request.timeframe,
+                source=receipt.request.source_name,
+                received_at=receipt.received_at,
+                latest_event_at=receipt.observations[-1].event_time,
+                content_digest=receipt.content_digest,
+                imported_bar_count=receipt.count,
+                analyzed_bar_count=research.bar_count,
+                readiness=research.readiness,
+                trend=research.trend,
+                active_setups=research.active_setups,
+            )
+        )
         return {
             "schema_version": 1,
             "status": "IMPORTED_RESEARCH_ONLY",
@@ -232,6 +257,8 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                         json.dumps(public_capability_registry()).encode(),
                         "application/json",
                     )
+                elif path == "/api/imports":
+                    self.reply(200, json.dumps(app.import_history()).encode(), "application/json")
                 elif path == "/api/paper-orders":
                     body = json.dumps(app.live.paper_order_history()).encode()
                     self.reply(200, body, "application/json")

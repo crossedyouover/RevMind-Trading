@@ -222,6 +222,10 @@ def test_local_session_routes(app):
         assert imported_body["research"]["assessment_id"] is None
         assert imported_body["research"]["readiness"] == "WAIT"
         assert "observations" not in imported_body
+        imports = json.loads(call("/api/imports", headers=token)[1])
+        assert len(imports) == 1
+        assert imports[0]["symbol"] == "EURUSD"
+        assert imports[0]["content_digest"] == imported_body["content_digest"]
         assert call("/api/import/csv-bars", "POST", headers, "{}")[0] == 400
         assert call("/api/paper-plan", "POST", headers, "{}")[0] == 400
         assert call("/api/paper-order", "POST", headers, "{}")[0] == 400

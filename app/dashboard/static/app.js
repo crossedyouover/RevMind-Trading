@@ -45,6 +45,7 @@ async function loadProviderCapabilities(){try{const registry=await api("/api/pro
 function openCsvImport(){location.hash="#import";setTimeout(()=>$("csv-symbol").focus(),0);notice("Enter the exact instrument identity and choose its completed-bar CSV export.");}
 const renderMarketCatalog=renderMarkets;
 renderMarkets=()=>{renderMarketCatalog();for(const label of document.querySelectorAll(".market-unavailable"))label.textContent="CSV IMPORT AVAILABLE";const summary=$("selected-market-summary");for(const text of summary.querySelectorAll("small"))text.textContent=text.textContent.replace("need another provider","can use CSV import");const action=node("button","Import external CSV","secondary");action.type="button";action.onclick=openCsvImport;summary.append(action);};
+async function loadImportHistory(){let box=document.querySelector(".import-history");if(!box){box=node("div","","import-history");$("csv-import-form").closest("section").append(box);}try{const rows=await api("/api/imports");box.replaceChildren(node("h3","Recent imported research"));if(!rows.length){box.append(node("p","No imported analyses have been recorded yet."));return;}for(const item of rows.slice(0,10)){const card=node("article","","import-history-item");card.append(node("strong",item.symbol+" · "+item.timeframe.replaceAll("_"," ")),node("span",item.readiness.replaceAll("_"," ")),node("small",item.imported_bar_count+" imported · "+item.analyzed_bar_count+" analyzed · "+item.source+" · "+item.received_at.replace("T"," ")));box.append(card);}}catch{box.replaceChildren(node("p","Import history could not be read safely."));}}
 function chart(bars){
   $("chart").replaceChildren();
   if(!bars.length){$("chart").append(node("p","No selected bars."));return;}
@@ -137,6 +138,7 @@ const newsToolbar=document.createElement("div");newsToolbar.className="news-tool
 const newsRefresh=node("button","Refresh headlines","secondary");newsRefresh.type="button";newsRefresh.onclick=async()=>{if(!providerReady){notice("Connect Alpaca and save settings before refreshing market headlines.");return;}newsRefresh.disabled=true;$("news-status").textContent="REFRESHING";notice("Requesting recent factual headlines independently of price-bar research…");try{const report=await api("/api/alpaca/news","POST");renderNews(report);notice(report.rows.some(row=>row.recent_news.length)?"Recent watchlist headlines loaded. They remain context only.":"No recent watchlist headlines were returned.");}catch(e){$("news-status").textContent="FAILED SAFELY";notice(e.message);}finally{newsRefresh.disabled=false;}};$("news-status").parentElement.prepend(newsRefresh);
 const loadHealthStatus=loadHealth;
 loadHealth=async()=>{await loadHealthStatus();const probe=$("health-probe").textContent;if(probe==="CONNECTED READ ONLY")$("source-badge").textContent="ALPACA DATA VERIFIED · PAPER APPROVAL";else if(providerReady)$("source-badge").textContent="ALPACA CONFIGURED · VERIFY DATA";};
+const submitCsvImport=$("csv-import-form").onsubmit;$("csv-import-form").onsubmit=async event=>{await submitCsvImport(event);if($("csv-import-status").textContent==="ANALYZED")await loadImportHistory();};
 const csvTemplate=node("button","Download CSV template","secondary");csvTemplate.type="button";csvTemplate.onclick=()=>{const sample="timestamp,open,high,low,close,volume\n2026-09-11T14:30:00Z,100.00,101.00,99.50,100.75,12500\n";const url=URL.createObjectURL(new Blob([sample],{type:"text/csv"}));const link=node("a","");link.href=url;link.download="revmind-bars-template.csv";link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);notice("CSV template downloaded. Replace the example row with completed bars from your lawful data export.");};$("csv-import").before(csvTemplate);
 loadSettings();
 loadHealth();
@@ -152,7 +154,7 @@ function highlightNav(section=(location.hash||"#desk").slice(1)){
   if(section==="desk")show.push(startHere,document.querySelector(".intro"),document.querySelector(".workflow"),document.querySelector(".paper-account"));
   else if(section==="opportunities")show.push($("opportunities"));
   else if(section==="markets")show.push($("markets"));
-  else if(section==="import")show.push($("csv-import-form").closest("section"));
+  else if(section==="import"){show.push($("csv-import-form").closest("section"));loadImportHistory();}
   else if(section==="news")show.push($("news"));
   else if(section==="providers")show.push($("providers"));
   else if(section==="history")show.push(...direct.filter(panel=>panel.classList.contains("stats")||panel.classList.contains("grid")||(!panel.id&&panel.classList.contains("panel")&&!panel.classList.contains("csv-import"))));
