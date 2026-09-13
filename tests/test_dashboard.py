@@ -133,6 +133,8 @@ def test_local_session_routes(app):
         assert b"function openCsvImport()" in javascript
         assert b"Choose your market-data path" in javascript
         assert b"CSV IMPORT AVAILABLE" in javascript
+        assert b"Download CSV template" in javascript
+        assert b"ALPACA CONFIGURED" in javascript
         assert b'querySelectorAll("main > section")' in javascript
         assert b'WORKSPACE / IMPORT DATA' in javascript
         status, stylesheet, _ = call("/style.css")
