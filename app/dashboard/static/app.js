@@ -108,7 +108,7 @@ async function restoreLatestResearch(){try{const report=await api("/api/alpaca/r
 function monitorDelay(){const minutes={ONE_MINUTE:5,FIVE_MINUTES:15,FIFTEEN_MINUTES:15,ONE_HOUR:60,ONE_DAY:60}[$("timeframe").value]??15;return minutes*60000;}
 function stopMonitoring(status="Monitoring off · nothing trades without approval"){monitoring=false;if(monitorTimer!==null)clearTimeout(monitorTimer);monitorTimer=null;$("auto-scan").textContent="Start monitoring";$("auto-scan-status").textContent=status;}
 async function monitorTick(){if(!monitoring)return;if(!providerReady){stopMonitoring();notice("Monitoring stopped because Alpaca is not ready.");return;}await runMarketScan();if(!monitoring)return;const minutes=monitorDelay()/60000;$("auto-scan-status").textContent="Monitoring every "+minutes+" min while this page is open · no automatic orders";monitorTimer=setTimeout(monitorTick,monitorDelay());}
-$("run-market").onclick=()=>runMarketScan();
+$("run-market").onclick=()=>{location.hash="#opportunities";highlightNav("opportunities");return runMarketScan();};
 $("auto-scan").onclick=()=>{if(monitoring){stopMonitoring();notice("Opportunity monitoring stopped.");return;}if(!providerReady){notice("Connect Alpaca and save settings before starting monitoring.");return;}if(allBarsStale(lastResearchReport)){stopMonitoring("Paused · market bars are stale");notice("Monitoring was not started because the latest scan shows every completed bar is stale. Use a manual scan when the market reopens.");return;}monitoring=true;$("auto-scan").textContent="Stop monitoring";monitorTick();};
 if(!("Notification" in window)){$("desktop-alerts").disabled=true;$("desktop-alerts").textContent="Desktop alerts unavailable";}else if(Notification.permission==="granted"){$("desktop-alerts").textContent="Desktop alerts enabled";$("desktop-alerts").disabled=true;}else if(Notification.permission==="denied"){$("desktop-alerts").textContent="Desktop alerts blocked";$("desktop-alerts").disabled=true;}
 $("desktop-alerts").onclick=async()=>{const permission=await Notification.requestPermission();if(permission==="granted"){$("desktop-alerts").textContent="Desktop alerts enabled";$("desktop-alerts").disabled=true;notice("Desktop alerts enabled only for newly ready monitored setups.");}else{$("desktop-alerts").textContent="Desktop alerts not enabled";notice("Desktop notification permission was not granted. Monitoring still works in the page.");}};
@@ -139,7 +139,24 @@ loadSettings();
 loadHealth();
 restoreLatestResearch();
 const navLinks=[...document.querySelectorAll("aside a[data-section]")];
-function highlightNav(section=(location.hash||"#desk").slice(1)){for(const link of navLinks){const selected=link.dataset.section===section;link.classList.toggle("active",selected);if(selected)link.setAttribute("aria-current","page");else link.removeAttribute("aria-current");}const focus={desk:["desk"],opportunities:["opportunities","paper-planner"],markets:["markets"],import:["import"],news:["news"],providers:["providers"],history:["history"]}[section]||["desk"];for(const id of ["markets","news","providers","history"]){const panel=$(id);if(panel)panel.hidden=!focus.includes(id);}const importPanel=$("csv-import-form").closest("section");importPanel.hidden=!focus.includes("import");const research=$("opportunities");if(research)research.hidden=!(focus.includes("opportunities")||focus.includes("desk"));if($("paper-planner")&&!focus.includes("paper-planner"))$("paper-planner").hidden=true;}
+function highlightNav(section=(location.hash||"#desk").slice(1)){
+  const valid=new Set(["desk","opportunities","markets","import","news","providers","history"]);
+  if(!valid.has(section))section="desk";
+  for(const link of navLinks){const selected=link.dataset.section===section;link.classList.toggle("active",selected);if(selected)link.setAttribute("aria-current","page");else link.removeAttribute("aria-current");}
+  const direct=[...document.querySelectorAll("main > section")];
+  direct.forEach(panel=>panel.hidden=true);
+  const show=[];
+  if(section==="desk")show.push(startHere,document.querySelector(".intro"),document.querySelector(".workflow"),document.querySelector(".paper-account"));
+  else if(section==="opportunities")show.push($("opportunities"));
+  else if(section==="markets")show.push($("markets"));
+  else if(section==="import")show.push($("csv-import-form").closest("section"));
+  else if(section==="news")show.push($("news"));
+  else if(section==="providers")show.push($("providers"));
+  else if(section==="history")show.push(...direct.filter(panel=>panel.classList.contains("stats")||panel.classList.contains("grid")||(!panel.id&&panel.classList.contains("panel")&&!panel.classList.contains("csv-import"))));
+  show.filter(Boolean).forEach(panel=>panel.hidden=false);
+  const titles={desk:"WORKSPACE / TODAY",opportunities:"WORKSPACE / OPPORTUNITIES",markets:"WORKSPACE / MARKETS",import:"WORKSPACE / IMPORT DATA",news:"WORKSPACE / NEWS",providers:"WORKSPACE / CONNECTIONS",history:"WORKSPACE / JOURNAL & AUDIT"};
+  document.querySelector("main > header span").textContent=titles[section];
+}
 for(const link of navLinks)link.addEventListener("click",()=>highlightNav(link.dataset.section));
 window.addEventListener("hashchange",()=>highlightNav());
 highlightNav();

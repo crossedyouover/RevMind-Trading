@@ -131,6 +131,10 @@ def test_local_session_routes(app):
         assert status == 200
         assert b"function allBarsStale(report)" in javascript
         assert b"function openCsvImport()" in javascript
+        assert b'querySelectorAll("main > section")' in javascript
+        assert b'WORKSPACE / IMPORT DATA' in javascript
+        status, stylesheet, _ = call("/style.css")
+        assert status == 200 and b"[hidden]{display:none!important}" in stylesheet
         assert (
             b"Monitoring was not started because the latest scan shows every completed bar is stale"
             in javascript
