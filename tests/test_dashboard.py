@@ -125,6 +125,9 @@ def test_local_session_routes(app):
         assert b'id="desktop-alerts"' in html
         assert b"bounded browser-session monitoring" in html
         assert "frame-ancestors 'none'" in csp
+        status, javascript, _ = call("/app.js")
+        assert status == 200
+        assert b"Monitoring paused: every instrument has stale completed bars" in javascript
         status, logo, _ = call("/revmind-logo-lockup.png")
         assert status == 200 and logo.startswith(b"\x89PNG\r\n\x1a\n")
         assert call("/api/runs")[0] == 403
