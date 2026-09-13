@@ -116,6 +116,7 @@ def test_local_session_routes(app):
         status, html, csp = call("/")
         assert status == 200 and b"test-session" in html
         assert b'data-section="providers"' in html
+        assert b'data-section="import"' in html
         assert b'src="/revmind-logo-lockup.png"' in html
         assert b'id="source-badge"' in html
         assert b'id="run-market"' in html
@@ -129,6 +130,7 @@ def test_local_session_routes(app):
         status, javascript, _ = call("/app.js")
         assert status == 200
         assert b"function allBarsStale(report)" in javascript
+        assert b"function openCsvImport()" in javascript
         assert (
             b"Monitoring was not started because the latest scan shows every completed bar is stale"
             in javascript
