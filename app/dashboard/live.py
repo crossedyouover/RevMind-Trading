@@ -18,6 +18,7 @@ from app.catalysts.provider import CatalystProvider, CatalystProviderError
 from app.core.schemas import CanonicalModel, Instrument, MarketSnapshot, Timeframe, UtcDatetime
 from app.dashboard.public_news import PublicNewsError, PublicRssNewsProvider
 from app.dashboard.settings import AlpacaFeed, DataMode, SessionRule, SettingsStore, ValidationDepth
+from app.data.csv_import import CsvImportReceipt
 from app.data.ingestion import Clock, MarketDataIngestionCoordinator, SystemUtcClock
 from app.data.market import (
     BarRequest,
@@ -863,6 +864,48 @@ class DashboardLiveData:
         finally:
             if provider is not None:
                 await provider.aclose()
+
+    def research_import(self, receipt: CsvImportReceipt) -> MarketResearchRow:
+        """Analyze one sealed local import without creating paper-broker authority."""
+        seconds = {
+            Timeframe.ONE_MINUTE: 60,
+            Timeframe.FIVE_MINUTES: 300,
+            Timeframe.FIFTEEN_MINUTES: 900,
+            Timeframe.ONE_HOUR: 3_600,
+            Timeframe.ONE_DAY: 86_400,
+        }[receipt.request.timeframe]
+        source = SourceIdentity(name=receipt.request.source_name)
+        first = receipt.observations[0].event_time
+        end = receipt.observations[-1].event_time + timedelta(seconds=seconds)
+        row, _ = self._research_row(
+            receipt.request.instrument,
+            receipt.request.timeframe,
+            source,
+            receipt.received_at,
+            first,
+            end,
+            receipt.observations,
+        )
+        assessed = self._with_trade_readiness(row)
+        return assessed.model_copy(
+            update={
+                "assessment_id": None,
+                "market_alignment": "UNAVAILABLE",
+                "market_comment": (
+                    "No matching benchmark was imported; no broad-market claim is made."
+                ),
+                "relative_alignment": "UNAVAILABLE",
+                "relative_strength_comment": (
+                    "No benchmark series was imported; relative performance is unavailable."
+                ),
+                "news_status": "UNAVAILABLE",
+                "catalyst_comment": "News is isolated from imported price research.",
+                "next_step": (
+                    "Inspect this research result only. Imported data has no verified broker "
+                    "binding, so RevMind cannot create or submit a paper order from it."
+                ),
+            }
+        )
 
     async def _with_recent_news(
         self,

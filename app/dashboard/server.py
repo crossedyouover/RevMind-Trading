@@ -160,6 +160,7 @@ class Dashboard:
             receipt = CsvBarImportCoordinator(store, clock=SystemUtcClock()).import_bars(
                 csv_text.encode("utf-8"), request
             )
+        research = self.live.research_import(receipt)
         return {
             "schema_version": 1,
             "status": "IMPORTED_RESEARCH_ONLY",
@@ -173,6 +174,7 @@ class Dashboard:
             "received_at": receipt.received_at.isoformat(),
             "content_digest": receipt.content_digest,
             "paper_execution": "UNAVAILABLE_FOR_IMPORTED_DATA",
+            "research": research.model_dump(mode="json"),
         }
 
 
