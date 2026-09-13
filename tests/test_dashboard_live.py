@@ -314,6 +314,12 @@ async def test_market_research_uses_historical_bars_and_frozen_engines(tmp_path:
     assert all(request.url.params["adjustment"] == "raw" for request in requests)
     assert "distinct" not in report.model_dump_json()
     assert (store.directory / "market-observations.db").is_file()
+    assert (store.directory / "latest-research.json").is_file()
+    restored = service.latest_research()
+    assert restored is not None
+    assert restored.completed_at == report.completed_at
+    assert all(row.assessment_id is None for row in restored.rows)
+    assert all("Run Check opportunities again" in row.next_step for row in restored.rows)
     plan = service.paper_plan(
         PaperPlanInput.model_validate(
             {

@@ -201,6 +201,12 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                 elif path == "/api/paper-orders":
                     body = json.dumps(app.live.paper_order_history()).encode()
                     self.reply(200, body, "application/json")
+                elif path == "/api/alpaca/research/latest":
+                    latest = app.live.latest_research()
+                    body = json.dumps(
+                        None if latest is None else latest.model_dump(mode="json")
+                    ).encode()
+                    self.reply(200, body, "application/json")
                 elif path.startswith("/api/runs/"):
                     body = json.dumps(app.read(path.removeprefix("/api/runs/"))).encode()
                     self.reply(200, body, "application/json")

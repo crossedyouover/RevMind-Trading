@@ -300,6 +300,7 @@ class DashboardLiveData:
             else news_provider_factory
         )
         self._status_path = settings.directory / "alpaca-status.json"
+        self._latest_research_path = settings.directory / "latest-research.json"
         self._observations_path = settings.directory / "market-observations.db"
         self._paper_orders_path = settings.directory / "paper-orders.db"
         self._scan_history_path = settings.directory / "scan-history.db"
@@ -608,6 +609,32 @@ class DashboardLiveData:
     def invalidate(self) -> None:
         """Make every settings save require a fresh explicit connection test."""
         self._write_state(ProbeState(status="NOT_TESTED"))
+        self._latest_research_path.unlink(missing_ok=True)
+
+    def latest_research(self) -> MarketResearchReport | None:
+        """Restore the latest completed display report without reviving plan authority."""
+        if not self._latest_research_path.exists():
+            return None
+        payload = self._latest_research_path.read_bytes()
+        if len(payload) > 5_000_000:
+            raise LiveProbeError("Saved research report is invalid.")
+        try:
+            report = MarketResearchReport.model_validate_json(payload)
+        except ValidationError as exc:
+            raise LiveProbeError("Saved research report is invalid.") from exc
+        rows = tuple(
+            row.model_copy(
+                update={
+                    "assessment_id": None,
+                    "next_step": (
+                        "This is a saved scan for review. Run Check opportunities again before "
+                        "RevMind can create a current risk plan."
+                    ),
+                }
+            )
+            for row in report.rows
+        )
+        return report.model_copy(update={"rows": rows})
 
     async def probe(self) -> ProbeReport:
         selected = self._settings.load()
@@ -797,7 +824,7 @@ class DashboardLiveData:
             outcomes = self._update_scan_history(
                 report.rows, report.session_rule, report.completed_at
             )
-            return report.model_copy(
+            completed = report.model_copy(
                 update={
                     "recent_outcomes": outcomes,
                     "calibration": self._scan_calibration(
@@ -805,6 +832,8 @@ class DashboardLiveData:
                     ),
                 }
             )
+            self._write_latest_research(completed)
+            return completed
         except ProviderAuthenticationError as exc:
             raise LiveProbeError(
                 "Alpaca rejected the stored API key or secret. Replace both credentials in "
@@ -1847,5 +1876,19 @@ class DashboardLiveData:
                 stream.flush()
                 os.fsync(stream.fileno())
             os.replace(temporary, self._status_path)
+        finally:
+            temporary.unlink(missing_ok=True)
+
+    def _write_latest_research(self, report: MarketResearchReport) -> None:
+        self._settings.directory.mkdir(parents=True, exist_ok=True)
+        temporary = self._latest_research_path.with_name(
+            f".{self._latest_research_path.name}.{uuid4()}.tmp"
+        )
+        try:
+            with temporary.open("xb") as stream:
+                stream.write(report.model_dump_json(indent=2).encode())
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(temporary, self._latest_research_path)
         finally:
             temporary.unlink(missing_ok=True)
