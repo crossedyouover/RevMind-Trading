@@ -803,11 +803,17 @@ class DashboardLiveData:
                     item_rank = rank
                 ranked.append(item.model_copy(update={"opportunity_rank": item_rank}))
             # A successful scan supersedes every earlier assessment. Retain the heavyweight
-            # deterministic analysis graph only for the current rows; the append-only
-            # observations and scan history remain the durable audit record.
+            # deterministic analysis graph only for current rows that passed the complete
+            # readiness gate; the append-only observations and scan history remain the durable
+            # audit record. UI visibility is never the authority for paper-plan eligibility.
+            ready_ids = {
+                item.assessment_id
+                for item in ranked
+                if item.readiness == "READY_FOR_RISK_CHECK" and item.assessment_id is not None
+            }
             self._research_artifacts = {
                 assessment_id: scan_artifacts[assessment_id]
-                for assessment_id in sorted(scan_artifacts)
+                for assessment_id in sorted(ready_ids)
             }
             report = MarketResearchReport(
                 status="COMPLETE_READ_ONLY",

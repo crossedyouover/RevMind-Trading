@@ -25,6 +25,7 @@ from app.dashboard.live import (
     PaperPlanInput,
 )
 from app.dashboard.settings import DEFAULT_SETTINGS, DataMode, SettingsStore, ValidationDepth
+from app.data.observation_store import SQLiteObservationStore
 from app.data.observations import SourceIdentity
 from app.data.providers.alpaca import (
     AlpacaInstrumentBinding,
@@ -334,22 +335,48 @@ async def test_market_research_uses_historical_bars_and_frozen_engines(tmp_path:
     assert restored.completed_at == report.completed_at
     assert all(row.assessment_id is None for row in restored.rows)
     assert all("Run Check opportunities again" in row.next_step for row in restored.rows)
-    plan = service.paper_plan(
-        PaperPlanInput.model_validate(
-            {
-                "assessment_id": report.rows[0].assessment_id,
-                "side": "BUY",
-                "quantity": "1",
-                "cash_balance": "10000",
-                "max_trade_notional": "1000",
-                "max_gross_exposure": "10000",
-                "max_instrument_exposure": "2500",
-                "max_concentration_share": "1",
-                "min_cash_balance": "0",
-                "stop_price": "120",
-                "max_loss_budget": "10",
-            }
+    assessment_id = report.rows[0].assessment_id
+    assert assessment_id is not None
+    plan_input = PaperPlanInput.model_validate(
+        {
+            "assessment_id": assessment_id,
+            "side": "BUY",
+            "quantity": "1",
+            "cash_balance": "10000",
+            "max_trade_notional": "1000",
+            "max_gross_exposure": "10000",
+            "max_instrument_exposure": "2500",
+            "max_concentration_share": "1",
+            "min_cash_balance": "0",
+            "stop_price": "120",
+            "max_loss_budget": "10",
+        }
+    )
+    with pytest.raises(LiveProbeError, match="expired"):
+        service.paper_plan(plan_input)
+    instrument = next(
+        item.to_instrument()
+        for item in DEFAULT_SETTINGS.watchlist
+        if item.symbol == report.rows[0].symbol
+    )
+    with SQLiteObservationStore(store.directory / "market-observations.db") as observation_store:
+        observations = tuple(
+            item
+            for item in observation_store.available_at(report.rows[0].observed_at)
+            if item.payload.instrument == instrument
         )
+    _, artifact = service._research_row(
+        instrument,
+        DEFAULT_SETTINGS.timeframe,
+        SourceIdentity(name="ALPACA_IEX"),
+        report.rows[0].observed_at,
+        report.requested_start,
+        report.requested_end,
+        observations,
+    )
+    service._research_artifacts[assessment_id] = artifact  # type: ignore[attr-defined]
+    plan = service.paper_plan(
+        plan_input
     )
     assert plan.status == "ELIGIBLE_FOR_PAPER_REVIEW"
     assert plan.risk_status == "PASS_CHECKS"
