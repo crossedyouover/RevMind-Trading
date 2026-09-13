@@ -131,6 +131,8 @@ def test_local_session_routes(app):
         assert status == 200
         assert b"function allBarsStale(report)" in javascript
         assert b"function openCsvImport()" in javascript
+        assert b"Choose your market-data path" in javascript
+        assert b"CSV IMPORT AVAILABLE" in javascript
         assert b'querySelectorAll("main > section")' in javascript
         assert b'WORKSPACE / IMPORT DATA' in javascript
         status, stylesheet, _ = call("/style.css")
