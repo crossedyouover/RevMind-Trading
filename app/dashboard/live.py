@@ -891,9 +891,20 @@ class DashboardLiveData:
             selected,
         )
         assessed = self._with_trade_readiness(row)
+        imported_readiness: Literal["READY_FOR_RISK_CHECK", "CAUTION", "WAIT"] = (
+            "CAUTION" if assessed.readiness == "READY_FOR_RISK_CHECK" else assessed.readiness
+        )
+        imported_comment = (
+            "CAUTION: local price evidence passed, but benchmark confirmation and a verified "
+            "broker binding are unavailable. Keep this as research only."
+            if assessed.readiness == "READY_FOR_RISK_CHECK"
+            else assessed.readiness_comment
+        )
         return assessed.model_copy(
             update={
                 "assessment_id": None,
+                "readiness": imported_readiness,
+                "readiness_comment": imported_comment,
                 "market_alignment": "UNAVAILABLE",
                 "market_comment": (
                     "No matching benchmark was imported; no broad-market claim is made."

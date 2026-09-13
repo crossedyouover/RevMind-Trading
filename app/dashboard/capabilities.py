@@ -41,6 +41,18 @@ CAPABILITIES = (
         explanation="US equity and ETF research; paper orders require a separate approval.",
     ),
     ProviderCapability(
+        provider_id="local_csv",
+        display_name="Local CSV bars",
+        status="CONNECTED",
+        asset_classes=tuple(AssetClass),
+        timeframes=tuple(Timeframe),
+        data_modes=("HISTORICAL",),
+        execution="NONE",
+        explanation=(
+            "Bounded local OHLCV imports for deterministic research; no broker binding."
+        ),
+    ),
+    ProviderCapability(
         provider_id="fx",
         display_name="FX provider",
         status="ADAPTER_REQUIRED",
