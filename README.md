@@ -7,8 +7,8 @@ Provider-agnostic AI-assisted market intelligence and paper-trading research pla
 Double-click **Start-RevMind.cmd** to open the local research dashboard in your browser.
 It can check Alpaca historical bars, read an Alpaca Paper Trading account, build deterministic
 risk-vetted plans, and submit an explicitly approved paper bracket order. See
-[DASHBOARD_GUIDE.md](DASHBOARD_GUIDE.md). Continuous monitoring and real-money trading remain
-disabled.
+[DASHBOARD_GUIDE.md](DASHBOARD_GUIDE.md). Optional polling exists only while the browser page is
+open; server-side continuous ingestion and real-money trading remain disabled.
 
 > **Current status: local Alpaca research and explicitly approved paper orders are available. Automatic and real-money execution do not exist.**
 
@@ -282,8 +282,9 @@ and allowed actions; they cannot override domain or risk rules.
 
 See [SHADOW_RUN_GUIDE.md](SHADOW_RUN_GUIDE.md) for a synthetic demo and local control invocation.
 The Phase 27 first-slice [CAPTURE_RUN_GUIDE.md](CAPTURE_RUN_GUIDE.md) adds a separate mock-only
-capture-to-research demo with durable sealed PIT inputs. This does not make the frozen runtime
-live-capable and does not complete Phase 27's broader live-shadow integration design.
+capture-to-research demo with durable sealed PIT inputs. The frozen shadow runtime itself remains
+offline and deterministic; the local dashboard now composes separate bounded Alpaca adapters around
+those frozen boundaries for on-demand market research and explicitly approved paper orders.
 The separate [PAPER_RESEARCH_GUIDE.md](PAPER_RESEARCH_GUIDE.md) describes explicit paper inputs,
 frozen risk/desk composition and crash-safe decision journaling over sealed capture evidence.
 The local dashboard performs explicit bounded Alpaca snapshot and historical-bar requests for its
@@ -357,7 +358,10 @@ Market Data
 → Evaluation & Learning
 ```
 
-No strategy engine, full backtesting engine, LLM intelligence, portfolio optimizer, execution
-integration, general-purpose REST/WebSocket control server, or live Angelo OS connection is implemented.
-The local dashboard exposes only a fixed offline demo and its stored research; it is not a live desk.
-The local control contract is an integration seam, not a deployed authenticated network service.
+No autonomous strategy engine, production-grade backtesting system, LLM trade authority, portfolio
+optimizer, general-purpose REST/WebSocket control server, live-money execution, or live Angelo OS
+connection is implemented. The local dashboard is an on-demand research and Alpaca Paper Trading
+desk: it can read bounded data, rank deterministic evidence, enforce freshness/readiness/risk gates,
+and submit a bracket order only after explicit one-time user approval. Its browser-session monitoring
+is local polling, stops on stale markets, and never places an order automatically. The local control
+contract remains an integration seam, not a deployed authenticated network service.

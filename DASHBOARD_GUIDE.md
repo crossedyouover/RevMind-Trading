@@ -15,12 +15,17 @@ bars from the selected Alpaca feed and passes each symbol through RevMind's rece
 point-in-time materialization, technical evidence, setup and trend engines. The result cards show
 the latest close, trend, active setup, number of analyzed bars and a recent chart.
 
-Use the card labels as a review queue:
+Use the card labels as a decision queue:
 
-- **PLAN TRADE**: a frozen descriptive setup is active. Open the planner and enter explicit limits;
-  this is not yet permission to submit an order.
-- **WAIT**: the latest completed bar has no active frozen setup.
-- **NO DATA**: Alpaca returned no completed bars in the bounded window.
+- **READY**: setup, broad-market context, relative strength, held-out evidence, and bar freshness
+  passed the readiness gate. Only this state can create a risk plan.
+- **CAUTION**: a setup exists but one or more evidence checks did not pass. Inspect the blockers and
+  wait; the server will reject paper-plan requests for this assessment.
+- **WAIT**: no valid current entry exists, including when the latest completed bar is stale.
+
+The scan header summarizes blockers across the watchlist. Cards are ranked and expandable; the top
+cautious candidates and every READY result open by default. A saved result is restored after browser
+reload as `LAST SAVED`, but its assessment IDs are removed. Re-scan before creating any current plan.
 
 Every symbol card includes four deterministic comments: **Trend**, **What RevMind sees**,
 **Where**, and **What to do**. They describe the 20-bar trend, which breakout/breakdown conditions
@@ -47,7 +52,8 @@ paper-account and paper-order authority. RevMind fixes order traffic to Alpaca's
 must still protect the keys and never paste credentials into chat or commit them.
 
 `CONFIGURED NOT ACTIVE` means selections and credentials are saved; a request occurs only when you
-explicitly test the connection or analyze the watchlist.
+explicitly test the connection, analyze the watchlist, refresh headlines, synchronize the paper
+account, or start browser-session monitoring.
 `CREDENTIALS REQUIRED` means Alpaca was selected without both credentials. `OFFLINE DEMO` means
 only synthetic captures are enabled. Feed entitlement and credential validity are not asserted
 until a later explicit connection/health-check phase.
@@ -55,9 +61,9 @@ until a later explicit connection/health-check phase.
 The status strip reports dashboard readiness, the selected source, credential/test state,
 continuous-streaming status, and that broker execution is restricted to explicit paper approval.
 
-The header mirrors the selected source but keeps `LIVE DISABLED` visible for Alpaca until an
-explicit provider-activation phase succeeds. Sidebar highlighting follows the section selected
-through its navigation links.
+The header mirrors the selected source. `CONNECTED READ ONLY` means the bounded market-data probe
+succeeded; it does not mean streaming or automatic execution is enabled. Sidebar highlighting and
+visible panels follow the selected workflow section.
 
 After saving Alpaca settings, **Test read-only connection** performs one bounded HTTPS snapshot
 request for each configured watchlist identity through the fixed market-data origin
@@ -69,13 +75,19 @@ Every settings save resets the connection claim to `NOT TESTED` until another ex
 
 **Check opportunities** performs separate bounded historical-bar requests. To avoid incomplete
 bars and delayed-feed entitlement ambiguity, the end boundary is at least 20 minutes behind the
-current UTC clock and aligned to the selected timeframe. The lookback is bounded by timeframe:
-7 days for one-minute, 14 days for five-minute, 30 days for fifteen-minute, 90 days for hourly,
-and 365 days for daily bars. Provider-returned sessions are analyzed as received; the saved session
-preference is not yet an enforced exchange-calendar filter.
+current UTC clock and aligned to the selected timeframe. Standard lookback is bounded to 7 days for
+one-minute, 14 days for five-minute, 30 days for fifteen-minute, 90 days for hourly, and 365 days for
+daily bars. Extended validation uses 14, 45, 120, 365, and 1,825 days respectively. The regular-session
+rule retains weekday 09:30–16:00 US Eastern bars; extended-hours mode keeps provider-returned bars.
 
-There are no WebSockets, background polling, scheduling, or live-money endpoints. A completed
-result is research evidence, not a completeness guarantee or trading signal.
+Freshness is a separate readiness veto: M1 bars may be at most 30 minutes old, M5 45 minutes, M15
+75 minutes, H1 3 hours, and D1 3 days. This prevents an old intraday setup from becoming READY after
+the market closes or over a weekend.
+
+There are no WebSockets, server-side scheduler, or live-money endpoints. Optional monitoring is a
+bounded timer in the open browser tab. It never approves or submits orders, and it pauses when every
+selected instrument has stale completed bars. A completed result is research evidence, not a
+completeness guarantee or promise of market direction.
 
 New demo records are saved in `.dashboard-runs/<UUID>/`. They are not deleted automatically.
 Each run has its own observation/capture databases so repeated demos do not exhaust a shared
@@ -83,16 +95,21 @@ history limit. Your existing PowerShell demo is read only; it is not modified by
 Digests are checked when displaying completed records; invalid records are marked unreadable.
 
 Use **Sync paper account** to read cash, equity, buying power, and open positions from the fixed
-`paper-api.alpaca.markets` host. A PLAN TRADE card opens the deterministic planner. Enter direction,
-quantity, stop, maximum loss, trade/exposure caps, concentration, and cash floor. A risk veto cannot
-be overridden. An eligible result displays entry limit, protective stop, illustrative two-risk-unit
-target, projected cash, and an **Approve Alpaca paper order** button. That button shows a final
-confirmation and submits one day limit bracket order to Alpaca Paper Trading. The one-time approval
-is consumed on use. RevMind never chooses approval for you, never retries a rejected order, and has
-no route to `api.alpaca.markets`.
+`paper-api.alpaca.markets` host. For a READY result RevMind selects the evidence-aligned direction,
+uses the structural invalidation reference as the proposed stop, synchronizes paper capacity,
+calculates a conservative whole-share size from the configured loss/exposure/cash limits, and applies
+the deterministic desk and risk vetoes. An eligible result displays entry limit, protective stop,
+illustrative two-risk-unit target, projected cash, and an **Approve Alpaca paper order** button. You
+may change limits and recalculate, but cannot override a veto. Final confirmation submits one day
+limit bracket order to Alpaca Paper Trading. The one-time approval is consumed on use. RevMind never
+chooses approval for you, never retries a rejected order, and has no route to `api.alpaca.markets`.
 
 The watchlist cards use real historical Alpaca data when Alpaca is selected; the lower offline-demo
-section remains synthetic. External alerts and automatic trade selection remain unavailable.
+section remains synthetic. The News section displays bounded timestamped Alpaca headlines and
+allowlisted official public RSS fallbacks as neutral context only. News never changes setup,
+readiness, risk, sizing, or order decisions. Desktop notifications may announce newly READY monitored
+setups when the user grants browser permission; external alerts and automatic trade execution remain
+unavailable.
 
 The server binds only to 127.0.0.1 and checks Host, Origin, fetch-site and a per-launch API token.
 It permits only fixed static files, run reads and the fixed synthetic demo action, not arbitrary
