@@ -65,6 +65,9 @@ class LiveProbeError(Exception):
     """Safe dashboard-facing error with no provider response or credential content."""
 
 
+IMPORT_RESEARCH_BAR_LIMIT = 1_500
+
+
 class ProbeQuote(CanonicalModel):
     symbol: str
     exchange: str
@@ -875,8 +878,9 @@ class DashboardLiveData:
             Timeframe.ONE_DAY: 86_400,
         }[receipt.request.timeframe]
         source = SourceIdentity(name=receipt.request.source_name)
-        first = receipt.observations[0].event_time
-        end = receipt.observations[-1].event_time + timedelta(seconds=seconds)
+        selected = receipt.observations[-IMPORT_RESEARCH_BAR_LIMIT:]
+        first = selected[0].event_time
+        end = selected[-1].event_time + timedelta(seconds=seconds)
         row, _ = self._research_row(
             receipt.request.instrument,
             receipt.request.timeframe,
@@ -884,7 +888,7 @@ class DashboardLiveData:
             receipt.received_at,
             first,
             end,
-            receipt.observations,
+            selected,
         )
         assessed = self._with_trade_readiness(row)
         return assessed.model_copy(

@@ -169,6 +169,7 @@ class Dashboard:
             "timeframe": receipt.request.timeframe.value,
             "source": receipt.request.source_name,
             "bar_count": receipt.count,
+            "analyzed_bar_count": research.bar_count,
             "first_event_at": receipt.observations[0].event_time.isoformat(),
             "last_event_at": receipt.observations[-1].event_time.isoformat(),
             "received_at": receipt.received_at.isoformat(),

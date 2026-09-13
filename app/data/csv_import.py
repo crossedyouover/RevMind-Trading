@@ -71,8 +71,9 @@ class ParsedCsvBarImport(CanonicalModel):
         if not self.bars or len(self.bars) > MAX_CSV_ROWS:
             raise ValueError("bar import must contain 1 to 10000 rows")
         previous: datetime | None = None
+        instrument = self.request.instrument
         for bar in self.bars:
-            if bar.instrument != self.request.instrument or bar.timeframe != self.request.timeframe:
+            if bar.instrument != instrument or bar.timeframe != self.request.timeframe:
                 raise ValueError("bar identity differs from import request")
             if bar.timestamp >= self.received_at:
                 raise ValueError("imported bars must predate the actual receipt time")
@@ -157,6 +158,7 @@ def parse_csv_bars(
         if reader.fieldnames is None or tuple(reader.fieldnames) != CSV_HEADERS:
             raise CsvImportError("CSV headers must exactly match the documented schema")
         bars: list[MarketBar] = []
+        instrument = request.instrument
         for row in reader:
             if len(bars) >= MAX_CSV_ROWS:
                 raise CsvImportError("CSV exceeds the 10000 row limit")
@@ -167,7 +169,7 @@ def parse_csv_bars(
                 values = {name: Decimal(row[name]) for name in CSV_HEADERS[1:]}
                 bars.append(
                     MarketBar(
-                        instrument=request.instrument,
+                        instrument=instrument,
                         timeframe=request.timeframe,
                         timestamp=timestamp,
                         **values,

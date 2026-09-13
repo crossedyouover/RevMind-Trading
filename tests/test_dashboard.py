@@ -217,6 +217,7 @@ def test_local_session_routes(app):
         assert imported_body["status"] == "IMPORTED_RESEARCH_ONLY"
         assert imported_body["paper_execution"] == "UNAVAILABLE_FOR_IMPORTED_DATA"
         assert imported_body["bar_count"] == 1
+        assert imported_body["analyzed_bar_count"] == 1
         assert imported_body["research"]["symbol"] == "EURUSD"
         assert imported_body["research"]["assessment_id"] is None
         assert imported_body["research"]["readiness"] == "WAIT"
