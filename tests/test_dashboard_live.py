@@ -38,6 +38,11 @@ class FixedClock:
         return datetime(2026, 9, 7, 10, 0, tzinfo=UTC)
 
 
+class RecentBarClock:
+    def now(self) -> datetime:
+        return datetime(2026, 9, 4, 14, 15, tzinfo=UTC)
+
+
 def configured_store(tmp_path: Path) -> SettingsStore:
     store = SettingsStore(tmp_path / ".revmind")
     store.save(
@@ -175,7 +180,7 @@ async def test_market_research_uses_historical_bars_and_frozen_engines(tmp_path:
         return AlpacaMarketDataProvider(settings, bindings, client=client)
 
     store = configured_store(tmp_path)
-    service = DashboardLiveData(store, clock=FixedClock(), provider_factory=factory)
+    service = DashboardLiveData(store, clock=RecentBarClock(), provider_factory=factory)
     report = await service.research()
     assert report.status == "COMPLETE_READ_ONLY"
     assert report.session_rule == "REGULAR"
@@ -215,7 +220,9 @@ async def test_market_research_uses_historical_bars_and_frozen_engines(tmp_path:
     assert all(row.relative_alignment == "NEUTRAL" for row in report.rows)
     assert all(Decimal(row.relative_strength_percent or "1") == 0 for row in report.rows)
     assert all(row.readiness == "CAUTION" for row in report.rows)
-    assert all(len(row.decision_checks) == 5 for row in report.rows)
+    assert all(len(row.decision_checks) == 6 for row in report.rows)
+    assert all(row.decision_checks[0].label == "Bar freshness" for row in report.rows)
+    assert all(row.decision_checks[0].status == "PASS" for row in report.rows)
     assert all("held-out history" in row.readiness_comment for row in report.rows)
     short_row = report.rows[0].model_copy(
         update={"active_setups": ("DOWNSIDE_BREAKDOWN_BELOW_SMA",)}
@@ -260,15 +267,22 @@ async def test_market_research_uses_historical_bars_and_frozen_engines(tmp_path:
     assert news_readiness.readiness == report.rows[0].readiness
     ready = service._with_trade_readiness(
         report.rows[0].model_copy(
-            update={
-                "evidence_grade": "PROMISING",
-                "market_alignment": "SUPPORTS",
-                "relative_alignment": "SUPPORTS",
-            }
+                update={
+                    "evidence_grade": "PROMISING",
+                    "market_alignment": "SUPPORTS",
+                    "relative_alignment": "SUPPORTS",
+                    "latest_bar_at": report.rows[0].observed_at - timedelta(minutes=1),
+                }
         )
     )
     assert ready.readiness == "READY_FOR_RISK_CHECK"
     assert "Risk can still veto" in ready.readiness_comment
+    stale = service._with_trade_readiness(
+        ready.model_copy(update={"latest_bar_at": ready.observed_at - timedelta(days=1)})
+    )
+    assert stale.readiness == "WAIT"
+    assert stale.decision_checks[0].status == "BLOCK"
+    assert "market is open" in stale.readiness_comment
     ready_summary = service._desk_summary((ready,))
     assert ready_summary.stance == "REVIEW_READY"
     assert ready_summary.lead_symbol == ready.symbol

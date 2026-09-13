@@ -947,10 +947,30 @@ class DashboardLiveData:
     def _with_trade_readiness(row: MarketResearchRow) -> MarketResearchRow:
         """Explain whether an opportunity merits a separate risk check."""
         has_setup = bool(row.active_setups)
+        freshness_limit = {
+            Timeframe.ONE_MINUTE: timedelta(minutes=30),
+            Timeframe.FIVE_MINUTES: timedelta(minutes=45),
+            Timeframe.FIFTEEN_MINUTES: timedelta(minutes=75),
+            Timeframe.ONE_HOUR: timedelta(hours=3),
+            Timeframe.ONE_DAY: timedelta(days=3),
+        }[row.timeframe]
+        bar_age = row.observed_at - row.latest_bar_at if row.latest_bar_at is not None else None
+        fresh_bar = bar_age is not None and timedelta(0) <= bar_age <= freshness_limit
         market_block = row.market_alignment == "CONTRADICTS"
         relative_block = row.relative_alignment == "CONTRADICTS"
         evidence_pass = row.evidence_grade == "PROMISING"
         checks = (
+            DecisionCheck(
+                label="Bar freshness",
+                status="PASS" if fresh_bar else "BLOCK",
+                detail=(
+                    f"Latest completed bar is {int(bar_age.total_seconds() // 60)} minutes old; "
+                    f"the {row.timeframe.value.replace('_', ' ').lower()} limit is "
+                    f"{int(freshness_limit.total_seconds() // 60)} minutes."
+                    if bar_age is not None and bar_age >= timedelta(0)
+                    else "No valid latest completed bar time is available."
+                ),
+            ),
             DecisionCheck(
                 label="Active setup",
                 status="PASS" if has_setup else "BLOCK",
@@ -989,8 +1009,11 @@ class DashboardLiveData:
                 detail=row.catalyst_comment,
             ),
         )
-        if not has_setup:
+        if not fresh_bar:
             readiness: Literal["READY_FOR_RISK_CHECK", "CAUTION", "WAIT"] = "WAIT"
+            comment = "WAIT: the latest completed bar is stale. Re-scan when this market is open."
+        elif not has_setup:
+            readiness = "WAIT"
             comment = "WAIT: no entry setup exists. Check again after another completed bar."
         elif market_block or relative_block:
             readiness = "CAUTION"
