@@ -3,9 +3,11 @@
 import csv
 import hashlib
 import io
+from collections.abc import Callable
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
-from typing import Annotated
+from typing import Annotated, Protocol
+from uuid import UUID, uuid4
 
 from pydantic import Field, model_validator
 
@@ -17,6 +19,8 @@ from app.core.schemas import (
     Timeframe,
     UtcDatetime,
 )
+from app.data.observation_store import ObservationStore
+from app.data.observations import ObservedMarketData, SourceIdentity
 
 CSV_HEADERS = ("timestamp", "open", "high", "low", "close", "volume")
 MAX_CSV_BYTES = 1_000_000
@@ -25,6 +29,12 @@ MAX_CSV_ROWS = 10_000
 
 class CsvImportError(ValueError):
     """Raised when a local bar export cannot be trusted."""
+
+
+class ImportClock(Protocol):
+    def now(self) -> datetime:
+        """Return the actual import receipt boundary."""
+        ...
 
 
 class CsvBarImportRequest(CanonicalModel):
@@ -70,6 +80,61 @@ class ParsedCsvBarImport(CanonicalModel):
                 raise ValueError("bar timestamps must be strictly increasing")
             previous = bar.timestamp
         return self
+
+
+class CsvImportReceipt(CanonicalModel):
+    """Immutable evidence that one complete parsed batch was appended."""
+
+    request: CsvBarImportRequest
+    received_at: UtcDatetime
+    content_digest: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+    observations: tuple[ObservedMarketData, ...]
+
+    @property
+    def count(self) -> int:
+        return len(self.observations)
+
+
+class CsvBarImportCoordinator:
+    """Assign knowledge time and atomically persist one validated local export."""
+
+    def __init__(
+        self,
+        store: ObservationStore,
+        *,
+        clock: ImportClock,
+        observation_id_factory: Callable[[], UUID] = uuid4,
+    ) -> None:
+        self._store = store
+        self._clock = clock
+        self._observation_id_factory = observation_id_factory
+
+    def import_bars(self, payload: bytes, request: CsvBarImportRequest) -> CsvImportReceipt:
+        received_at = self._clock.now()
+        parsed = parse_csv_bars(payload, request, received_at=received_at)
+        source = SourceIdentity(name=request.source_name)
+        observations: list[ObservedMarketData] = []
+        for index, bar in enumerate(parsed.bars, start=1):
+            observation_id = self._observation_id_factory()
+            if not isinstance(observation_id, UUID) or observation_id.version != 4:
+                raise CsvImportError("observation ID factory must return UUID4")
+            observations.append(
+                ObservedMarketData(
+                    observation_id=observation_id,
+                    payload=bar,
+                    observed_at=parsed.received_at,
+                    source=source,
+                    source_record_id=f"{parsed.content_digest}:{index}",
+                )
+            )
+        complete = tuple(observations)
+        self._store.append_many(complete)
+        return CsvImportReceipt(
+            request=request,
+            received_at=parsed.received_at,
+            content_digest=parsed.content_digest,
+            observations=complete,
+        )
 
 
 def parse_csv_bars(
