@@ -135,7 +135,7 @@ def test_local_session_routes(app):
         assert status == 200
         assert b"function allBarsStale(report)" in javascript
         assert b"function openCsvImport()" in javascript
-        assert b"Choose your market-data path" in javascript
+        assert b"What can you safely do now?" in javascript
         assert b"CSV IMPORT AVAILABLE" in javascript
         assert b"Download CSV template" in javascript
         assert b"ALPACA CONFIGURED" in javascript
@@ -149,6 +149,9 @@ def test_local_session_routes(app):
         assert b'"technical-results"' in javascript
         assert b"Advanced settings" in javascript
         assert b'"advanced-setup"' in javascript
+        assert b"YOUR READINESS CHECKLIST" in javascript
+        assert b"function updateOperatorChecklist" in javascript
+        assert b"Paper plan eligible for review" in javascript
         assert b'window.scrollTo({top:0,behavior:"smooth"})' in javascript
         assert b"TRADE IDEAS" in html
         assert b'querySelectorAll("main > section")' in javascript

@@ -15,6 +15,13 @@ bars from the selected Alpaca feed and passes each symbol through RevMind's rece
 point-in-time materialization, technical evidence, setup and trend engines. The result cards show
 the latest close, trend, active setup, number of analyzed bars and a recent chart.
 
+Home now starts with **What can you safely do now?** Four rows show `DONE`, `NEXT`, or `LOCKED` for
+market-data setup, source verification, current analysis, and paper-plan eligibility. Follow the
+single `NEXT` row; locked rows cannot be skipped. A saved result from an earlier browser session is
+historical context and does not complete the current-analysis or paper-plan step. A local CSV import
+can complete local data and analysis steps, but its paper-plan step stays locked because imported
+symbols have no proven broker binding.
+
 Use the card labels as a decision queue:
 
 - **READY**: setup, broad-market context, relative strength, held-out evidence, and bar freshness
