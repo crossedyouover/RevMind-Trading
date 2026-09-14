@@ -7,9 +7,10 @@ this file and `README.md` before making changes.
 
 - Repository: `C:\Users\user\Documents\RevMind-Trading`
 - Canonical branch: `main` (`master` is the local tracking branch)
-- Frozen through: Phase 30 (provider-neutral local operations, guided UX, and approved brand asset; live deployment deferred)
-- Frozen commit: `aa02174c40640db0ee1f12efd051cb0f9eb340d8`
-- Frozen tag: `phase30-frozen` (peeled tag resolves to the frozen commit)
+- Frozen through: Phase 36 (provider-neutral local operations, guided UX, approved brand asset,
+  and bounded provider-neutral market news; live deployment deferred)
+- Frozen commit: `e28ea07ae4861c2fc866daf36b41287919cebced`
+- Frozen tag: `phase36-frozen` (peeled tag resolves to the frozen commit)
 - Last frozen gate: 1,087 tests passed, Ruff clean, mypy strict clean (107 source files), `git diff --check`
   clean, tracked worktree clean
 - Current capability: deterministic, point-in-time-safe flow from canonical market observations
@@ -32,16 +33,16 @@ Set-Location "C:\Users\user\Documents\RevMind-Trading"
 git status --short --branch
 git rev-parse HEAD
 git rev-parse origin/main
-git rev-parse "phase30-frozen^{}"
-git merge-base --is-ancestor "phase30-frozen^{}" HEAD
+git rev-parse "phase36-frozen^{}"
+git merge-base --is-ancestor "phase36-frozen^{}" HEAD
 .\.venv\Scripts\python.exe -m pytest -q --basetemp=.pytest_continuation_tmp
 .\.venv\Scripts\python.exe -m ruff check app tests
 .\.venv\Scripts\python.exe -m mypy app
 git diff --check
 ```
 
-`HEAD` and `origin/main` must match, the peeled Phase 30 tag must resolve to
-`aa02174c40640db0ee1f12efd051cb0f9eb340d8`, and the ancestry check must exit successfully. The
+`HEAD` and `origin/main` must match, the peeled Phase 36 tag must resolve to
+`e28ea07ae4861c2fc866daf36b41287919cebced`, and the ancestry check must exit successfully. The
 continuation-contract documentation may legitimately follow the frozen implementation tag.
 
 Phases 23–26 passed their feature-branch and merge gates with respectively 978, 985, 991, and
@@ -112,6 +113,12 @@ These rules survive every future phase:
 | 28 | Provider-neutral CSV operations, durable import research, capability separation, and practical UX | `phase28-frozen` |
 | 29 | Operator readiness checklist and guided workflow | `phase29-frozen` |
 | 30 | Approved RevMind brand lockup asset | `phase30-frozen` |
+| 31 | Official public-news fallback when Alpaca news is unavailable | `phase31-frozen` |
+| 32 | Provider-neutral news endpoint and explicit source mode | `phase32-frozen` |
+| 33 | Automatic first-visit market-news loading | `phase33-frozen` |
+| 34 | Visible news provenance and context classification | `phase34-frozen` |
+| 35 | Readable expandable market-news cards | `phase35-frozen` |
+| 36 | Expanded bounded official central-bank feed coverage | `phase36-frozen` |
 
 Latest frozen merge SHAs:
 
@@ -123,6 +130,12 @@ Latest frozen merge SHAs:
 - Phase 28: `02fb7025eb5ae9846d59ea76222d5f19c706aee6`
 - Phase 29: `76558b6068d1846bd48f84ef1a12d67c3a8ce850`
 - Phase 30: `aa02174c40640db0ee1f12efd051cb0f9eb340d8`
+- Phase 31: `6b1beed0b71e44a456e17ef49e0906e2f09e3d19`
+- Phase 32: `b4c96c6cc01ef5bd7db30da9455762765b5c8f52`
+- Phase 33: `f38b85644264b2a75927898aee83799e8b9ff1b1`
+- Phase 34: `a9bf31dc5435b3c8e087e340f819cd3cc7a0e21a`
+- Phase 35: `ac616685480e72f6ad9d5b3ae92cfda2b56def35`
+- Phase 36: `e28ea07ae4861c2fc866daf36b41287919cebced`
 
 Phases 1–6 predate the frozen-tag convention. Their commits are immutable historical foundations
 and must not be rewritten.
@@ -256,10 +269,12 @@ For Phase `N`, always:
 
 ## Exact next action
 
-Phase 30 is frozen on `phase30-frozen` from the verified Phase 29 merge. The approved PNG brand
-lockup is installed at `app/dashboard/static/revmind-logo-lockup.png` and hash-matches the source
-asset used for the approved brand. The next phase must begin from `phase30-frozen^{}` and define a
-narrow scope before implementation; do not alter frozen phases implicitly.
+Phase 36 is frozen on `phase36-frozen`. The local dashboard now has an approved brand lockup and a
+provider-neutral News workflow that uses Alpaca watchlist news when configured or bounded official
+Federal Reserve and ECB RSS feeds otherwise. News provenance is visible and the material remains
+context-only: it cannot affect readiness, ranking, risk, sizing, planning, or execution. The next
+phase must begin from `phase36-frozen^{}` and define a narrow scope before implementation; do not
+alter frozen phases implicitly.
 
 ## Historical continuation record (superseded)
 
@@ -289,7 +304,7 @@ operating policies and deployment activation decisions remain unset. The on-dema
 is not a live-shadow deployment and grants no external side-effect authority.
 First-slice verification: 28 focused tests and 1,031 total tests passed; Ruff clean, strict mypy
 clean (90 source files), and the offline CLI completed its three-bar example. All tests and the
-CLI use synthetic inputs. The frozen/main verification block above describes the current Phase 30 baseline.
+CLI use synthetic inputs. The frozen/main verification block above describes the current Phase 36 baseline.
 Paper-slice verification: 10 paper tests (38 combined Phase 27 tests) and 1,041 total tests passed;
 Ruff clean and strict mypy clean (91 source files). All three desk dispositions and a risk-vetoed
 QUIET path were exercised with synthetic inputs, including journal-before-checkpoint recovery.
@@ -301,4 +316,4 @@ entitlements, explicit operating/risk policies, any real alert destination, runt
 scheduler, and authenticated Angelo OS transport. Define backup/recovery, operational acceptance,
 and a sustained paper-only observation period before enabling external effects. Do not infer
 permission to obtain credentials, send live messages, deploy a network service, or place orders.
-Preserve all frozen boundaries and use Phase 30 ancestry; do not reopen frozen phases implicitly.
+Preserve all frozen boundaries and use Phase 36 ancestry; do not reopen frozen phases implicitly.
