@@ -122,6 +122,7 @@ def test_local_session_routes(app):
         assert b'id="run-market"' in html
         assert b'id="research-results"' in html
         assert b'id="paper-planner"' in html
+        assert b"US STOCKS AND ETFs TO CHECK" in html
         assert b'id="csv-import-form"' in html
         assert b'id="auto-scan"' in html
         assert b'id="desktop-alerts"' in html
@@ -143,6 +144,8 @@ def test_local_session_routes(app):
         assert b'"Download example CSV"' in javascript
         assert b"Show technical validation and past measurements" in javascript
         assert b'"technical-results"' in javascript
+        assert b"Advanced settings" in javascript
+        assert b'"advanced-setup"' in javascript
         assert b'window.scrollTo({top:0,behavior:"smooth"})' in javascript
         assert b"TRADE IDEAS" in html
         assert b'querySelectorAll("main > section")' in javascript
