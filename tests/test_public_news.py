@@ -63,3 +63,31 @@ async def test_public_rss_provider_reports_partial_source_availability() -> None
     assert len(batch.available_sources) == 6
     assert batch.unavailable_sources == ("FED_MONETARY_POLICY",)
     await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_public_rss_provider_balances_sources_deterministically() -> None:
+    def respond(request: httpx.Request) -> httpx.Response:
+        feed = request.url.path.rsplit("/", 1)[-1].replace(".", "-")
+        items = "".join(
+            "<item>"
+            f"<title>{feed} item {index}</title>"
+            f"<link>https://example.test/{feed}/{index}</link>"
+            f"<pubDate>Fri, 11 Sep 2026 12:{index:02d}:00 GMT</pubDate>"
+            "</item>"
+            for index in range(12)
+        )
+        return httpx.Response(200, content=f"<rss><channel>{items}</channel></rss>")
+
+    client = httpx.AsyncClient(
+        follow_redirects=False,
+        transport=httpx.MockTransport(respond),
+    )
+    provider = PublicRssNewsProvider(client=client)
+    batch = await provider.get_news(datetime(2026, 9, 12, tzinfo=UTC))
+    counts = {source: 0 for source in batch.available_sources}
+    for item in batch.headlines:
+        counts[item.source] += 1
+    assert len(batch.headlines) == 30
+    assert tuple(counts.values()) == (5, 5, 4, 4, 4, 4, 4)
+    await client.aclose()

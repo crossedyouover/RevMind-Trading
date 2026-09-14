@@ -12,6 +12,8 @@ import httpx
 from app.core.schemas import CanonicalModel, UtcDatetime
 
 _MAX_BYTES: Final = 300_000
+_MAX_PER_SOURCE: Final = 10
+_MAX_HEADLINES: Final = 30
 _FEEDS: Final = (
     ("FEDERAL_RESERVE", "https://www.federalreserve.gov/feeds/press_all.xml"),
     ("FED_MONETARY_POLICY", "https://www.federalreserve.gov/feeds/press_monetary.xml"),
@@ -72,10 +74,23 @@ class PublicRssNewsProvider:
         unique: dict[tuple[str, datetime], PublicHeadline] = {}
         for item in results:
             unique.setdefault((item.url, item.published_at), item)
+        by_source: dict[str, list[PublicHeadline]] = {source: [] for source, _ in _FEEDS}
+        for item in unique.values():
+            by_source[item.source].append(item)
+        for items in by_source.values():
+            items.sort(key=lambda item: (item.published_at, item.url), reverse=True)
+        selected: list[PublicHeadline] = []
+        for index in range(_MAX_PER_SOURCE):
+            for source, _ in _FEEDS:
+                items = by_source[source]
+                if index < len(items):
+                    selected.append(items[index])
+                    if len(selected) == _MAX_HEADLINES:
+                        break
+            if len(selected) == _MAX_HEADLINES:
+                break
         return PublicNewsBatch(
-            headlines=tuple(
-                sorted(unique.values(), key=lambda item: item.published_at, reverse=True)[:30]
-            ),
+            headlines=tuple(selected),
             available_sources=tuple(available),
             unavailable_sources=tuple(unavailable),
         )
