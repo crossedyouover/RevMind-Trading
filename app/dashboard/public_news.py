@@ -29,6 +29,12 @@ class PublicHeadline(CanonicalModel):
     url: str
 
 
+class PublicNewsBatch(CanonicalModel):
+    headlines: tuple[PublicHeadline, ...]
+    available_sources: tuple[str, ...]
+    unavailable_sources: tuple[str, ...]
+
+
 class PublicNewsError(RuntimeError):
     pass
 
@@ -45,36 +51,51 @@ class PublicRssNewsProvider:
         if self._owns_client:
             await self._client.aclose()
 
-    async def get_news(self, observed_at: datetime) -> tuple[PublicHeadline, ...]:
+    async def get_news(self, observed_at: datetime) -> PublicNewsBatch:
         if observed_at.tzinfo is None or observed_at.utcoffset() is None:
             raise PublicNewsError("receipt time must include timezone information")
         results: list[PublicHeadline] = []
+        available: list[str] = []
+        unavailable: list[str] = []
         for source, url in _FEEDS:
             try:
                 response = await self._client.get(url, headers={"Accept": "application/rss+xml"})
                 if response.status_code != 200 or len(response.content) > _MAX_BYTES:
+                    unavailable.append(source)
                     continue
-                results.extend(self._parse(source, response.content, observed_at))
+                parsed = self._parse(source, response.content, observed_at)
+                if parsed is None:
+                    unavailable.append(source)
+                    continue
+                available.append(source)
+                results.extend(parsed)
             except httpx.HTTPError:
+                unavailable.append(source)
                 continue
         if not results:
             raise PublicNewsError("official public news feeds are unavailable")
         unique: dict[tuple[str, datetime], PublicHeadline] = {}
         for item in results:
             unique.setdefault((item.url, item.published_at), item)
-        return tuple(
-            sorted(unique.values(), key=lambda item: item.published_at, reverse=True)[:30]
+        return PublicNewsBatch(
+            headlines=tuple(
+                sorted(unique.values(), key=lambda item: item.published_at, reverse=True)[:30]
+            ),
+            available_sources=tuple(available),
+            unavailable_sources=tuple(unavailable),
         )
 
     @staticmethod
-    def _parse(source: str, payload: bytes, observed_at: datetime) -> list[PublicHeadline]:
+    def _parse(
+        source: str, payload: bytes, observed_at: datetime
+    ) -> list[PublicHeadline] | None:
         upper = payload[:4096].upper()
         if b"<!DOCTYPE" in upper or b"<!ENTITY" in upper:
-            return []
+            return None
         try:
             root = ElementTree.fromstring(payload)
         except ElementTree.ParseError:
-            return []
+            return None
         cutoff = observed_at.astimezone(UTC) - timedelta(days=14)
         rows: list[PublicHeadline] = []
         for item in root.findall(".//item")[:50]:

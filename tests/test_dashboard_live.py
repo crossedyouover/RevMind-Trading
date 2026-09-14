@@ -558,6 +558,8 @@ async def test_news_refresh_is_independent_of_bar_provider(tmp_path: Path) -> No
     report = await service.news()
     assert report.observed_at == FixedClock().now()
     assert report.source_mode == "ALPACA_WATCHLIST"
+    assert report.available_sources == ("ALPACA_NEWS",)
+    assert report.unavailable_sources == ()
     assert report.rows[0].recent_news[0].headline == "Independent timestamped headline"
     assert all(len(row.recent_news) <= 10 for row in report.rows)
 
