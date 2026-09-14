@@ -116,6 +116,7 @@ class NewsDeskRow(CanonicalModel):
 class NewsDeskReport(CanonicalModel):
     schema_version: Literal[1] = 1
     observed_at: UtcDatetime
+    source_mode: Literal["ALPACA_WATCHLIST", "OFFICIAL_PUBLIC"]
     rows: tuple[NewsDeskRow, ...]
 
 
@@ -337,6 +338,7 @@ class DashboardLiveData:
                 public_headlines = await public_provider.get_news(observed_at)
                 return NewsDeskReport(
                     observed_at=observed_at,
+                    source_mode="OFFICIAL_PUBLIC",
                     rows=(
                         NewsDeskRow(
                             symbol="MACRO",
@@ -389,7 +391,11 @@ class DashboardLiveData:
                     ),
                 )
             )
-        return NewsDeskReport(observed_at=observed_at, rows=tuple(rows))
+        return NewsDeskReport(
+            observed_at=observed_at,
+            source_mode="ALPACA_WATCHLIST",
+            rows=tuple(rows),
+        )
 
     async def paper_account(self) -> PaperAccount:
         selected = self._settings.load()

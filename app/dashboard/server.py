@@ -319,6 +319,7 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                     "/api/alpaca/test",
                     "/api/alpaca/research",
                     "/api/alpaca/news",
+                    "/api/news",
                     "/api/alpaca/paper-account",
                     "/api/paper-plan",
                     "/api/paper-order",
@@ -355,7 +356,7 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                     if payload != b"{}":
                         raise ValueError("empty request required")
                     value = asyncio.run(app.live.research()).model_dump(mode="json")
-                elif self.path == "/api/alpaca/news":
+                elif self.path in {"/api/news", "/api/alpaca/news"}:
                     if payload != b"{}":
                         raise ValueError("empty request required")
                     value = asyncio.run(app.live.news()).model_dump(mode="json")
