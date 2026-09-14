@@ -43,4 +43,3 @@ eligibility.
 - READY without a successful server plan remains locked.
 - The checklist updates after settings, health checks, scans, imports, and plan calculation.
 - Focused tests, full pytest, Ruff, strict mypy, JavaScript syntax, and `git diff --check` pass.
-
