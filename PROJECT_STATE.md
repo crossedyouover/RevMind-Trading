@@ -7,9 +7,9 @@ this file and `README.md` before making changes.
 
 - Repository: `C:\Users\user\Documents\RevMind-Trading`
 - Canonical branch: `main` (`master` is the local tracking branch)
-- Frozen through: Phase 28 (provider-neutral local operations; live deployment deferred)
-- Frozen commit: `02fb7025eb5ae9846d59ea76222d5f19c706aee6`
-- Frozen tag: `phase28-frozen` (peeled tag resolves to the frozen commit)
+- Frozen through: Phase 30 (provider-neutral local operations, guided UX, and approved brand asset; live deployment deferred)
+- Frozen commit: `aa02174c40640db0ee1f12efd051cb0f9eb340d8`
+- Frozen tag: `phase30-frozen` (peeled tag resolves to the frozen commit)
 - Last frozen gate: 1,087 tests passed, Ruff clean, mypy strict clean (107 source files), `git diff --check`
   clean, tracked worktree clean
 - Current capability: deterministic, point-in-time-safe flow from canonical market observations
@@ -32,16 +32,16 @@ Set-Location "C:\Users\user\Documents\RevMind-Trading"
 git status --short --branch
 git rev-parse HEAD
 git rev-parse origin/main
-git rev-parse "phase28-frozen^{}"
-git merge-base --is-ancestor "phase28-frozen^{}" HEAD
+git rev-parse "phase30-frozen^{}"
+git merge-base --is-ancestor "phase30-frozen^{}" HEAD
 .\.venv\Scripts\python.exe -m pytest -q --basetemp=.pytest_continuation_tmp
 .\.venv\Scripts\python.exe -m ruff check app tests
 .\.venv\Scripts\python.exe -m mypy app
 git diff --check
 ```
 
-`HEAD` and `origin/main` must match, the peeled Phase 28 tag must resolve to
-`02fb7025eb5ae9846d59ea76222d5f19c706aee6`, and the ancestry check must exit successfully. The
+`HEAD` and `origin/main` must match, the peeled Phase 30 tag must resolve to
+`aa02174c40640db0ee1f12efd051cb0f9eb340d8`, and the ancestry check must exit successfully. The
 continuation-contract documentation may legitimately follow the frozen implementation tag.
 
 Phases 23–26 passed their feature-branch and merge gates with respectively 978, 985, 991, and
@@ -110,6 +110,8 @@ These rules survive every future phase:
 | 26 | Versioned host-granted local control contracts and CLI | `phase26-frozen` |
 | 27 | Bounded Alpaca paper research, readiness, planning, explicit paper orders, and local dashboard | `phase27-frozen` |
 | 28 | Provider-neutral CSV operations, durable import research, capability separation, and practical UX | `phase28-frozen` |
+| 29 | Operator readiness checklist and guided workflow | `phase29-frozen` |
+| 30 | Approved RevMind brand lockup asset | `phase30-frozen` |
 
 Latest frozen merge SHAs:
 
@@ -119,6 +121,8 @@ Latest frozen merge SHAs:
 - Phase 26: `f487a1d82caf2bb2c79dd43318dd780f05e44e24`
 - Phase 27: `02c41a377f91323f6a8a304f09d79dbbb49c05b4`
 - Phase 28: `02fb7025eb5ae9846d59ea76222d5f19c706aee6`
+- Phase 29: `76558b6068d1846bd48f84ef1a12d67c3a8ce850`
+- Phase 30: `aa02174c40640db0ee1f12efd051cb0f9eb340d8`
 
 Phases 1–6 predate the frozen-tag convention. Their commits are immutable historical foundations
 and must not be rewritten.
@@ -252,12 +256,10 @@ For Phase `N`, always:
 
 ## Exact next action
 
-Phase 29 is active on `codex/phase29-operator-onboarding` from the exact Phase 28 frozen merge.
-Its approved scope is the presentation-only operator readiness checklist in `PHASE29_DESIGN.md`.
-The first slice is implemented and has passed 11 focused dashboard tests and the complete 1,087-test
-suite, plus Ruff, strict mypy, JavaScript syntax, and `git diff --check`. Before freezing Phase 29,
-complete the dirty-scope review, update the operator guide for the checklist, merge to `master`,
-rerun the full gate on the merge commit, tag `phase29-frozen`, push, and verify remote refs.
+Phase 30 is frozen on `phase30-frozen` from the verified Phase 29 merge. The approved PNG brand
+lockup is installed at `app/dashboard/static/revmind-logo-lockup.png` and hash-matches the source
+asset used for the approved brand. The next phase must begin from `phase30-frozen^{}` and define a
+narrow scope before implementation; do not alter frozen phases implicitly.
 
 ## Historical continuation record (superseded)
 
