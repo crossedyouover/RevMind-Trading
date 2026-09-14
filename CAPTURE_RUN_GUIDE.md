@@ -56,4 +56,5 @@ live-shadow design. PAPER_RESEARCH is rejected by this capture CLI; a separate v
 interface is described in `PAPER_RESEARCH_GUIDE.md`. Live transport resource limits and deadlines,
 provider/entitlement qualification, calendar acquisition, supervised scheduling, backup/restore
 operational qualification and sustained paper trials remain unimplemented. Phase 25 runtime and
-Phase 26 control contracts remain unchanged. No Phase 27 implementation freeze is implied.
+The current Phase 30 baseline preserves the Phase 26 control contracts unchanged. This historical
+capture guide does not imply a new implementation freeze.

@@ -289,7 +289,7 @@ operating policies and deployment activation decisions remain unset. The on-dema
 is not a live-shadow deployment and grants no external side-effect authority.
 First-slice verification: 28 focused tests and 1,031 total tests passed; Ruff clean, strict mypy
 clean (90 source files), and the offline CLI completed its three-bar example. All tests and the
-CLI use synthetic inputs. The frozen/main verification block above still describes Phase 26.
+CLI use synthetic inputs. The frozen/main verification block above describes the current Phase 30 baseline.
 Paper-slice verification: 10 paper tests (38 combined Phase 27 tests) and 1,041 total tests passed;
 Ruff clean and strict mypy clean (91 source files). All three desk dispositions and a risk-vetoed
 QUIET path were exercised with synthetic inputs, including journal-before-checkpoint recovery.
@@ -301,4 +301,4 @@ entitlements, explicit operating/risk policies, any real alert destination, runt
 scheduler, and authenticated Angelo OS transport. Define backup/recovery, operational acceptance,
 and a sustained paper-only observation period before enabling external effects. Do not infer
 permission to obtain credentials, send live messages, deploy a network service, or place orders.
-Preserve all frozen boundaries and use Phase 26 ancestry; do not reopen frozen phases implicitly.
+Preserve all frozen boundaries and use Phase 30 ancestry; do not reopen frozen phases implicitly.
