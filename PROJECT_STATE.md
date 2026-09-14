@@ -7,10 +7,10 @@ this file and `README.md` before making changes.
 
 - Repository: `C:\Users\user\Documents\RevMind-Trading`
 - Canonical branch: `main` (`master` is the local tracking branch)
-- Frozen through: Phase 26 (offline/local implementation milestones; live deployment deferred)
-- Frozen commit: `f487a1d82caf2bb2c79dd43318dd780f05e44e24`
-- Frozen tag: `phase26-frozen` (peeled tag resolves to the frozen commit)
-- Last verified gate: 1,003 tests passed, Ruff clean, mypy strict clean (86 source files), `git diff --check`
+- Frozen through: Phase 28 (provider-neutral local operations; live deployment deferred)
+- Frozen commit: `02fb7025eb5ae9846d59ea76222d5f19c706aee6`
+- Frozen tag: `phase28-frozen` (peeled tag resolves to the frozen commit)
+- Last frozen gate: 1,087 tests passed, Ruff clean, mypy strict clean (107 source files), `git diff --check`
   clean, tracked worktree clean
 - Current capability: deterministic, point-in-time-safe flow from canonical market observations
   through technical analysis, market evidence, setup composition, and multi-instrument scanning,
@@ -32,16 +32,16 @@ Set-Location "C:\Users\user\Documents\RevMind-Trading"
 git status --short --branch
 git rev-parse HEAD
 git rev-parse origin/main
-git rev-parse "phase26-frozen^{}"
-git merge-base --is-ancestor "phase26-frozen^{}" HEAD
+git rev-parse "phase28-frozen^{}"
+git merge-base --is-ancestor "phase28-frozen^{}" HEAD
 .\.venv\Scripts\python.exe -m pytest -q --basetemp=.pytest_continuation_tmp
 .\.venv\Scripts\python.exe -m ruff check app tests
 .\.venv\Scripts\python.exe -m mypy app
 git diff --check
 ```
 
-`HEAD` and `origin/main` must match, the peeled Phase 26 tag must resolve to
-`f487a1d82caf2bb2c79dd43318dd780f05e44e24`, and the ancestry check must exit successfully. The
+`HEAD` and `origin/main` must match, the peeled Phase 28 tag must resolve to
+`02fb7025eb5ae9846d59ea76222d5f19c706aee6`, and the ancestry check must exit successfully. The
 continuation-contract documentation may legitimately follow the frozen implementation tag.
 
 Phases 23–26 passed their feature-branch and merge gates with respectively 978, 985, 991, and
@@ -108,6 +108,8 @@ These rules survive every future phase:
 | 24 | Append-only evaluation journal and reference-price outcome metric | `phase24-frozen` |
 | 25 | Restartable explicit-clock offline shadow runtime and CLI | `phase25-frozen` |
 | 26 | Versioned host-granted local control contracts and CLI | `phase26-frozen` |
+| 27 | Bounded Alpaca paper research, readiness, planning, explicit paper orders, and local dashboard | `phase27-frozen` |
+| 28 | Provider-neutral CSV operations, durable import research, capability separation, and practical UX | `phase28-frozen` |
 
 Latest frozen merge SHAs:
 
@@ -115,6 +117,8 @@ Latest frozen merge SHAs:
 - Phase 24: `4ede6311a72bb69f3082067fabad1610e9f3a3f1`
 - Phase 25: `e24c3e99a93b46f61f006b4229df27f9ed04353e`
 - Phase 26: `f487a1d82caf2bb2c79dd43318dd780f05e44e24`
+- Phase 27: `02c41a377f91323f6a8a304f09d79dbbb49c05b4`
+- Phase 28: `02fb7025eb5ae9846d59ea76222d5f19c706aee6`
 
 Phases 1–6 predate the frozen-tag convention. Their commits are immutable historical foundations
 and must not be rewritten.
@@ -247,6 +251,15 @@ For Phase `N`, always:
 13. Use `git ls-remote` to verify remote `main` and the peeled remote tag resolve to the same SHA.
 
 ## Exact next action
+
+Phase 29 is active on `codex/phase29-operator-onboarding` from the exact Phase 28 frozen merge.
+Its approved scope is the presentation-only operator readiness checklist in `PHASE29_DESIGN.md`.
+The first slice is implemented and has passed 11 focused dashboard tests and the complete 1,087-test
+suite, plus Ruff, strict mypy, JavaScript syntax, and `git diff --check`. Before freezing Phase 29,
+complete the dirty-scope review, update the operator guide for the checklist, merge to `master`,
+rerun the full gate on the merge commit, tag `phase29-frozen`, push, and verify remote refs.
+
+## Historical continuation record (superseded)
 
 The local offline dashboard is available via `Start-RevMind.cmd` and `DASHBOARD_GUIDE.md`.
 It reads the existing PowerShell demo and runs isolated synthetic captures, with chart/evidence,
