@@ -1,5 +1,6 @@
 """Bounded allowlisted ingestion for official public RSS feeds."""
 
+import asyncio
 from datetime import UTC, datetime, timedelta
 from email.utils import parsedate_to_datetime
 from typing import Final
@@ -57,21 +58,15 @@ class PublicRssNewsProvider:
         results: list[PublicHeadline] = []
         available: list[str] = []
         unavailable: list[str] = []
-        for source, url in _FEEDS:
-            try:
-                response = await self._client.get(url, headers={"Accept": "application/rss+xml"})
-                if response.status_code != 200 or len(response.content) > _MAX_BYTES:
-                    unavailable.append(source)
-                    continue
-                parsed = self._parse(source, response.content, observed_at)
-                if parsed is None:
-                    unavailable.append(source)
-                    continue
-                available.append(source)
-                results.extend(parsed)
-            except httpx.HTTPError:
+        fetched = await asyncio.gather(
+            *(self._fetch(source, url, observed_at) for source, url in _FEEDS)
+        )
+        for source, parsed in fetched:
+            if parsed is None:
                 unavailable.append(source)
                 continue
+            available.append(source)
+            results.extend(parsed)
         if not results:
             raise PublicNewsError("official public news feeds are unavailable")
         unique: dict[tuple[str, datetime], PublicHeadline] = {}
@@ -84,6 +79,19 @@ class PublicRssNewsProvider:
             available_sources=tuple(available),
             unavailable_sources=tuple(unavailable),
         )
+
+    async def _fetch(
+        self, source: str, url: str, observed_at: datetime
+    ) -> tuple[str, list[PublicHeadline] | None]:
+        try:
+            response = await self._client.get(
+                url, headers={"Accept": "application/rss+xml"}
+            )
+        except httpx.HTTPError:
+            return source, None
+        if response.status_code != 200 or len(response.content) > _MAX_BYTES:
+            return source, None
+        return source, self._parse(source, response.content, observed_at)
 
     @staticmethod
     def _parse(
