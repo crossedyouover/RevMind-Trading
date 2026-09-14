@@ -315,14 +315,14 @@ class DashboardLiveData:
     async def news(self) -> NewsDeskReport:
         """Fetch bounded factual news independently of historical price availability."""
         selected = self._settings.load()
-        if selected.data_mode is not DataMode.ALPACA:
-            raise LiveProbeError("Select Alpaca and save settings first.")
-        if self._news_provider_factory is None:
-            raise LiveProbeError("No news provider is configured.")
         observed_at = self._receipt_time()
         instruments = tuple(item.to_instrument() for item in selected.watchlist)
         provider: CatalystProvider | None = None
         try:
+            if selected.data_mode is not DataMode.ALPACA or self._news_provider_factory is None:
+                raise CatalystProviderError(
+                    "Alpaca news is not configured; use official public feeds."
+                )
             key, secret = self._settings.alpaca_credentials()
             provider = self._news_provider_factory(key, secret)
             facts = await provider.get_news(
