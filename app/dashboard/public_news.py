@@ -13,7 +13,12 @@ from app.core.schemas import CanonicalModel, UtcDatetime
 _MAX_BYTES: Final = 300_000
 _FEEDS: Final = (
     ("FEDERAL_RESERVE", "https://www.federalreserve.gov/feeds/press_all.xml"),
-    ("ECB", "https://mid.ecb.europa.eu/rss/mid.xml"),
+    ("FED_MONETARY_POLICY", "https://www.federalreserve.gov/feeds/press_monetary.xml"),
+    ("FED_SPEECHES", "https://www.federalreserve.gov/feeds/speeches.xml"),
+    ("FED_TESTIMONY", "https://www.federalreserve.gov/feeds/testimony.xml"),
+    ("ECB_PRESS", "https://www.ecb.europa.eu/rss/press.html"),
+    ("ECB_STATISTICS", "https://www.ecb.europa.eu/rss/statpress.html"),
+    ("ECB_MARKET_INFORMATION", "https://mid.ecb.europa.eu/rss/mid.xml"),
 )
 
 
@@ -54,7 +59,9 @@ class PublicRssNewsProvider:
                 continue
         if not results:
             raise PublicNewsError("official public news feeds are unavailable")
-        unique = {(item.source, item.url, item.published_at): item for item in results}
+        unique: dict[tuple[str, datetime], PublicHeadline] = {}
+        for item in results:
+            unique.setdefault((item.url, item.published_at), item)
         return tuple(
             sorted(unique.values(), key=lambda item: item.published_at, reverse=True)[:30]
         )

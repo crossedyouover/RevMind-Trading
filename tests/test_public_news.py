@@ -19,8 +19,8 @@ async def test_public_rss_provider_is_bounded_timestamped_and_deduplicated() -> 
     )
     provider = PublicRssNewsProvider(client=client)
     items = await provider.get_news(datetime(2026, 9, 12, tzinfo=UTC))
-    assert len(items) == 2
-    assert {item.source for item in items} == {"FEDERAL_RESERVE", "ECB"}
+    assert len(items) == 1
+    assert items[0].source == "FEDERAL_RESERVE"
     assert all(item.published_at.tzinfo is UTC for item in items)
     await client.aclose()
 
