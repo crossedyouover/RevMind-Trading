@@ -141,6 +141,8 @@ def test_local_session_routes(app):
         assert b'id="page-guide-action"' in javascript
         assert b'"Check prices now"' in javascript
         assert b'"Download example CSV"' in javascript
+        assert b"Show technical validation and past measurements" in javascript
+        assert b'"technical-results"' in javascript
         assert b'window.scrollTo({top:0,behavior:"smooth"})' in javascript
         assert b"TRADE IDEAS" in html
         assert b'querySelectorAll("main > section")' in javascript
