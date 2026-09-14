@@ -320,7 +320,9 @@ class DashboardLiveData:
         provider: CatalystProvider | None = None
         try:
             if selected.data_mode is not DataMode.ALPACA or self._news_provider_factory is None:
-                raise CatalystProviderError("Alpaca news is not configured; use official public feeds.")
+                raise CatalystProviderError(
+                    "Alpaca news is not configured; use official public feeds."
+                )
             key, secret = self._settings.alpaca_credentials()
             provider = self._news_provider_factory(key, secret)
             facts = await provider.get_news(
