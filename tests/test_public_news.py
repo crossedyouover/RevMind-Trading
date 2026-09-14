@@ -18,10 +18,12 @@ async def test_public_rss_provider_is_bounded_timestamped_and_deduplicated() -> 
         transport=httpx.MockTransport(lambda _request: httpx.Response(200, content=payload)),
     )
     provider = PublicRssNewsProvider(client=client)
-    items = await provider.get_news(datetime(2026, 9, 12, tzinfo=UTC))
-    assert len(items) == 1
-    assert items[0].source == "FEDERAL_RESERVE"
-    assert all(item.published_at.tzinfo is UTC for item in items)
+    batch = await provider.get_news(datetime(2026, 9, 12, tzinfo=UTC))
+    assert len(batch.headlines) == 1
+    assert batch.headlines[0].source == "FEDERAL_RESERVE"
+    assert len(batch.available_sources) == 7
+    assert batch.unavailable_sources == ()
+    assert all(item.published_at.tzinfo is UTC for item in batch.headlines)
     await client.aclose()
 
 
@@ -35,4 +37,29 @@ async def test_public_rss_provider_rejects_entity_payloads() -> None:
     provider = PublicRssNewsProvider(client=client)
     with pytest.raises(RuntimeError, match="unavailable"):
         await provider.get_news(datetime(2026, 9, 12, tzinfo=UTC))
+    await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_public_rss_provider_reports_partial_source_availability() -> None:
+    payload = b"""<?xml version="1.0"?><rss><channel><item>
+    <title>Central bank publishes a policy update</title>
+    <link>https://www.federalreserve.gov/example.htm</link>
+    <pubDate>Fri, 11 Sep 2026 12:00:00 GMT</pubDate>
+    </item></channel></rss>"""
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("press_monetary.xml"):
+            return httpx.Response(503)
+        return httpx.Response(200, content=payload)
+
+    client = httpx.AsyncClient(
+        follow_redirects=False,
+        transport=httpx.MockTransport(respond),
+    )
+    provider = PublicRssNewsProvider(client=client)
+    batch = await provider.get_news(datetime(2026, 9, 12, tzinfo=UTC))
+    assert len(batch.headlines) == 1
+    assert len(batch.available_sources) == 6
+    assert batch.unavailable_sources == ("FED_MONETARY_POLICY",)
     await client.aclose()

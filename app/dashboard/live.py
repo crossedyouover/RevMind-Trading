@@ -117,6 +117,8 @@ class NewsDeskReport(CanonicalModel):
     schema_version: Literal[1] = 1
     observed_at: UtcDatetime
     source_mode: Literal["ALPACA_WATCHLIST", "OFFICIAL_PUBLIC"]
+    available_sources: tuple[str, ...]
+    unavailable_sources: tuple[str, ...]
     rows: tuple[NewsDeskRow, ...]
 
 
@@ -335,10 +337,12 @@ class DashboardLiveData:
         except (CatalystProviderError, ValidationError, ValueError, TypeError, OSError):
             public_provider = PublicRssNewsProvider()
             try:
-                public_headlines = await public_provider.get_news(observed_at)
+                public_news = await public_provider.get_news(observed_at)
                 return NewsDeskReport(
                     observed_at=observed_at,
                     source_mode="OFFICIAL_PUBLIC",
+                    available_sources=public_news.available_sources,
+                    unavailable_sources=public_news.unavailable_sources,
                     rows=(
                         NewsDeskRow(
                             symbol="MACRO",
@@ -349,7 +353,7 @@ class DashboardLiveData:
                                     published_at=item.published_at,
                                     url=item.url,
                                 )
-                                for item in public_headlines
+                                for item in public_news.headlines
                             ),
                         ),
                     ),
@@ -394,6 +398,8 @@ class DashboardLiveData:
         return NewsDeskReport(
             observed_at=observed_at,
             source_mode="ALPACA_WATCHLIST",
+            available_sources=("ALPACA_NEWS",),
+            unavailable_sources=(),
             rows=tuple(rows),
         )
 
