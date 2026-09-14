@@ -123,6 +123,9 @@ def test_local_session_routes(app):
         assert b'id="research-results"' in html
         assert b'id="paper-planner"' in html
         assert b"US STOCKS AND ETFs TO CHECK" in html
+        assert b"Connected feed:" in html
+        assert b"Bloomberg" not in html
+        assert b"Benzinga Pro" not in html
         assert b'id="csv-import-form"' in html
         assert b'id="auto-scan"' in html
         assert b'id="desktop-alerts"' in html
