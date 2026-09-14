@@ -138,6 +138,9 @@ def test_local_session_routes(app):
         assert b'plainNav={desk:"Home"' in javascript
         assert b"READY means the checks passed" in javascript
         assert b'id="page-guide-title"' in javascript
+        assert b'id="page-guide-action"' in javascript
+        assert b'"Check prices now"' in javascript
+        assert b'"Download example CSV"' in javascript
         assert b'window.scrollTo({top:0,behavior:"smooth"})' in javascript
         assert b"TRADE IDEAS" in html
         assert b'querySelectorAll("main > section")' in javascript
