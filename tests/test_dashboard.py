@@ -123,7 +123,7 @@ def test_local_session_routes(app):
         assert b'id="research-results"' in html
         assert b'id="paper-planner"' in html
         assert b"US STOCKS AND ETFs TO CHECK" in html
-        assert b"Connected feed:" in html
+        assert b"Automatic source:" in html
         assert b"Bloomberg" not in html
         assert b"Benzinga Pro" not in html
         assert b'id="csv-import-form"' in html
@@ -213,6 +213,7 @@ def test_local_session_routes(app):
         assert call("/api/alpaca/test", "POST", headers, '{"symbols":["AAPL"]}')[0] == 400
         assert call("/api/alpaca/research", "POST", headers, '{"days":30}')[0] == 400
         assert call("/api/alpaca/news", "POST", headers, '{"days":30}')[0] == 400
+        assert call("/api/news", "POST", headers, '{"days":30}')[0] == 400
         assert call("/api/alpaca/paper-account", "POST", headers, '{"live":true}')[0] == 400
         import_envelope = {
             "request": {
