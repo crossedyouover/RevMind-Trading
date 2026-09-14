@@ -4,6 +4,7 @@ const token = document.querySelector('meta[name="session"]').content;
 let selected = null;
 let scanRunning=false,monitoring=false,monitorTimer=null,scanTimer=null,lastResearchReport=null,providerReady=false,providerVerified=false;
 let lastReadiness=new Map(),newReadySymbols=new Set();
+const pageGuide=document.createElement("section");pageGuide.id="page-guide";pageGuide.className="page-guide";pageGuide.innerHTML='<div><span class="eyebrow" id="page-guide-step">YOUR NEXT STEP</span><h2 id="page-guide-title">Start here</h2><p id="page-guide-copy">Choose how you want to give RevMind market prices.</p></div>';
 const startHere=document.createElement("section");startHere.id="start-here";startHere.className="start-here";startHere.innerHTML='<div><span class="eyebrow">START HERE</span><h2>Choose your market-data path</h2><p id="start-here-copy">Connect Alpaca for current US stock and ETF research, or import completed bars for other supported markets.</p></div><div class="start-actions"><button id="start-connect" class="secondary" type="button">Connect Alpaca</button><button id="start-import" class="secondary" type="button">Import market data</button><button id="start-demo" class="secondary" type="button">See engine example</button></div><div class="start-steps"><span><strong>1</strong> Supply real market data</span><span><strong>2</strong> Validate its identity and timing</span><span><strong>3</strong> Review evidence and blockers</span><span><strong>4</strong> Use paper execution only when eligible</span></div></section>';
 async function api(path, method="GET", body=null) {
   const r = await fetch(path, {method, headers:{"X-RevMind-Token":token, ...(method==="POST"?{"Content-Type":"application/json"}:{})}, ...(method==="POST"?{body:JSON.stringify(body??{})}:{})});
@@ -144,14 +145,17 @@ loadSettings();
 loadHealth();
 restoreLatestResearch();
 const navLinks=[...document.querySelectorAll("aside a[data-section]")];
+const plainNav={desk:"Home",opportunities:"Trade Ideas",markets:"Choose Markets",import:"Upload Prices",news:"Market News",providers:"Set Up",history:"History"};for(const link of navLinks)link.textContent=plainNav[link.dataset.section]||link.textContent;
+document.querySelector("main > header").after(pageGuide);
+document.querySelector(".intro h1").innerHTML="Understand the market.<br>Practice safely.";document.querySelector(".intro p").textContent="RevMind checks price history, explains what it sees, and blocks weak or unsafe paper-trade ideas.";const workflowCopy=[["1. Check prices","RevMind reads completed candles."],["2. Read the explanation","See the trend, setup, missing proof, and risks."],["3. Practice only","You must approve any Alpaca paper order. Real money is blocked."]];document.querySelectorAll(".workflow article").forEach((card,index)=>{card.querySelector("strong").textContent=workflowCopy[index][0];card.querySelector("small").textContent=workflowCopy[index][1];});document.querySelector(".paper-account h2").textContent="Your practice account";document.querySelector("#opportunities h2").textContent="Is there an idea worth checking?";
 function highlightNav(section=(location.hash||"#desk").slice(1)){
   const valid=new Set(["desk","opportunities","markets","import","news","providers","history"]);
   if(!valid.has(section))section="desk";
   for(const link of navLinks){const selected=link.dataset.section===section;link.classList.toggle("active",selected);if(selected)link.setAttribute("aria-current","page");else link.removeAttribute("aria-current");}
   const direct=[...document.querySelectorAll("main > section")];
   direct.forEach(panel=>panel.hidden=true);
-  const show=[];
-  if(section==="desk")show.push(startHere,document.querySelector(".intro"),document.querySelector(".workflow"),document.querySelector(".paper-account"));
+  const show=section==="desk"?[]:[pageGuide];
+  if(section==="desk"){show.push(startHere,document.querySelector(".intro"));if(providerReady)show.push(document.querySelector(".workflow"),document.querySelector(".paper-account"));}
   else if(section==="opportunities")show.push($("opportunities"));
   else if(section==="markets")show.push($("markets"));
   else if(section==="import"){show.push($("csv-import-form").closest("section"));loadImportHistory();}
@@ -159,8 +163,9 @@ function highlightNav(section=(location.hash||"#desk").slice(1)){
   else if(section==="providers")show.push($("providers"));
   else if(section==="history")show.push(...direct.filter(panel=>panel.classList.contains("stats")||panel.classList.contains("grid")||(!panel.id&&panel.classList.contains("panel")&&!panel.classList.contains("csv-import"))));
   show.filter(Boolean).forEach(panel=>panel.hidden=false);
-  const titles={desk:"WORKSPACE / TODAY",opportunities:"WORKSPACE / OPPORTUNITIES",markets:"WORKSPACE / MARKETS",import:"WORKSPACE / IMPORT DATA",news:"WORKSPACE / NEWS",providers:"WORKSPACE / CONNECTIONS",history:"WORKSPACE / JOURNAL & AUDIT"};
+  const titles={desk:"REVMIND / HOME",opportunities:"REVMIND / TRADE IDEAS",markets:"REVMIND / CHOOSE MARKETS",import:"REVMIND / UPLOAD PRICES",news:"REVMIND / MARKET NEWS",providers:"REVMIND / SET UP",history:"REVMIND / HISTORY"};
   document.querySelector("main > header span").textContent=titles[section];
+  const guides={desk:["START HERE","What do you want to do?","Use Alpaca for current US stock prices, or upload a CSV file for another market."],opportunities:["STEP 2","Do the numbers show an idea?","READY means the checks passed. CAUTION means important proof is missing. WAIT means there is no valid idea now."],markets:["STEP 1","Choose a market","Pick what interests you. This does not buy anything—it only chooses what you want to study."],import:["UPLOAD PRICES","Analyze a market-price file","Download the example, replace its row with completed candles from your data source, then upload it here."],news:["BACKGROUND ONLY","What is happening in the world?","Read recent headlines for context. News never creates a trade or changes RevMind's safety checks."],providers:["ONE-TIME SETUP","Connect market data safely","For Alpaca, paste the Key ID and Secret from Paper Trading, save them, then test the read-only connection."],history:["CHECK YOUR WORK","What happened before?","Review saved imports, paper-order status, and the exact evidence RevMind used."]};const guide=guides[section];$("page-guide-step").textContent=guide[0];$("page-guide-title").textContent=guide[1];$("page-guide-copy").textContent=guide[2];
 }
 for(const link of navLinks)link.addEventListener("click",()=>highlightNav(link.dataset.section));
 window.addEventListener("hashchange",()=>highlightNav());

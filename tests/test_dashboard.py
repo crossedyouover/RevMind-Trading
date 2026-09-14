@@ -135,8 +135,11 @@ def test_local_session_routes(app):
         assert b"CSV IMPORT AVAILABLE" in javascript
         assert b"Download CSV template" in javascript
         assert b"ALPACA CONFIGURED" in javascript
+        assert b'plainNav={desk:"Home"' in javascript
+        assert b"READY means the checks passed" in javascript
+        assert b'id="page-guide-title"' in javascript
         assert b'querySelectorAll("main > section")' in javascript
-        assert b'WORKSPACE / IMPORT DATA' in javascript
+        assert b'REVMIND / UPLOAD PRICES' in javascript
         status, stylesheet, _ = call("/style.css")
         assert status == 200 and b"[hidden]{display:none!important}" in stylesheet
         assert (
