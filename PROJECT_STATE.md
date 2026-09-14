@@ -248,6 +248,37 @@ For Phase `N`, always:
 
 ## Exact next action
 
+The local offline dashboard is available via `Start-RevMind.cmd` and `DASHBOARD_GUIDE.md`.
+It reads the existing PowerShell demo and runs isolated synthetic captures, with chart/evidence,
+history, audit and JSON export. It binds only to loopback with local-session request checks.
+This separate user-facing utility does not change frozen engines or enable continuous live-market
+operation, paper-account UI controls, external alerts, broker execution or Angelo OS integration.
+The dashboard now exposes validated local choices for offline/Alpaca, IEX/SIP, exact watchlist
+instrument identities, timeframe, session policy and optional locally stored credentials.
+An explicit on-demand connection test can now request one read-only snapshot per configured identity
+from the fixed Alpaca market-data origin. It maps through the frozen provider-neutral boundaries,
+persists canonical observations with their actual receipt time, and exposes only redacted health
+state. It does not enable streaming, scheduling, historical-bar research, account access or orders.
+Dashboard/live verification: 14 focused dashboard tests, 68 combined Alpaca/dashboard tests and
+1,056 total tests passed; Ruff clean and strict mypy clean (96 source files). A real bounded
+IEX test returned three snapshots as `CONNECTED_READ_ONLY`; no credential values were printed.
+
+Phase 27 first-slice implementation is on `codex/phase27-live-shadow-design`, with the broader
+design in `PHASE27_DESIGN.md`. `app/capture` supplies a mock-only bounded capture-to-research
+coordinator, durable sealed PIT inputs and an offline CLI; see `CAPTURE_RUN_GUIDE.md`.
+This feature branch legitimately follows the canonical main baseline above. It is not a full
+Phase 27 freeze. A separate PAPER_RESEARCH_V1 library now integrates explicit paper account,
+proposal and policies with frozen risk/desk engines and durable journaling; see
+`PAPER_RESEARCH_GUIDE.md`. Continuous live integration remains unimplemented; historical-bar
+operating policies and deployment activation decisions remain unset. The on-demand dashboard probe
+is not a live-shadow deployment and grants no external side-effect authority.
+First-slice verification: 28 focused tests and 1,031 total tests passed; Ruff clean, strict mypy
+clean (90 source files), and the offline CLI completed its three-bar example. All tests and the
+CLI use synthetic inputs. The frozen/main verification block above still describes Phase 26.
+Paper-slice verification: 10 paper tests (38 combined Phase 27 tests) and 1,041 total tests passed;
+Ruff clean and strict mypy clean (91 source files). All three desk dispositions and a risk-vetoed
+QUIET path were exercised with synthetic inputs, including journal-before-checkpoint recovery.
+
 The authorized Phase 23–26 offline/local implementation sequence is frozen and published.
 Use `SHADOW_RUN_GUIDE.md` to run and inspect the synthetic demonstration without credentials.
 Next work is a separate live-shadow deployment design: select authorized data sources and

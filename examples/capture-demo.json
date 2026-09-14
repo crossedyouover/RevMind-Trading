@@ -1,0 +1,136 @@
+{
+  "schema_version": "CAPTURE_V1",
+  "mode": "CAPTURE_RESEARCH",
+  "cycle_id": "00000000-0000-4000-8000-000000000100",
+  "policy": {
+    "version": "synthetic-v1",
+    "source": {
+      "name": "offline-test"
+    },
+    "instrument": {
+      "symbol": "TEST",
+      "asset_class": "EQUITY",
+      "exchange": "TEST",
+      "currency": "USD"
+    },
+    "provider_binding": "OFFLINE_BATCH_V1",
+    "timeframe": "ONE_MINUTE",
+    "calendar_version": "explicit-test-intervals-v1",
+    "sessions": [
+      {
+        "start": "2025-02-03T14:30:00Z",
+        "end": "2025-02-03T14:33:00Z"
+      }
+    ],
+    "require_every_interval": true,
+    "finalization_delay_us": 0,
+    "max_bar_age_us": 600000000,
+    "max_range_minutes": 10,
+    "max_observations": 20,
+    "page_size": 2,
+    "max_pages": 20,
+    "max_artifact_bytes": 1000000,
+    "technical_config": {
+      "sma_periods": [
+        20
+      ],
+      "ema_periods": [
+        20
+      ],
+      "rsi_periods": [
+        14
+      ],
+      "atr_periods": [
+        14
+      ],
+      "rolling_high_periods": [
+        20
+      ],
+      "rolling_low_periods": [
+        20
+      ],
+      "return_periods": [
+        1
+      ],
+      "volume_mean_periods": [
+        20
+      ],
+      "volume_stddev_periods": [
+        20
+      ],
+      "volume_zscore_periods": [
+        20
+      ]
+    },
+    "evidence_config": {
+      "price_sma_period": 20,
+      "trend_ema_period": 20,
+      "trend_sma_period": 20,
+      "return_period": 1,
+      "rsi_period": 14,
+      "breakout_high_period": 20,
+      "breakdown_low_period": 20,
+      "volume_mean_period": 20,
+      "volume_zscore_period": 20,
+      "rsi_overbought": "70",
+      "rsi_oversold": "30",
+      "volume_zscore_high": "2",
+      "volume_zscore_low": "-2"
+    },
+    "trend_config": {
+      "sma_period": 2,
+      "return_period": 1
+    }
+  },
+  "policy_digest": "2bfebfe92eb5b76469b6da94b8f49714147cf85bc0cb12bbacaf77b66edbbeae",
+  "scheduled_at": "2025-02-03T14:33:10Z",
+  "start": "2025-02-03T14:30:00Z",
+  "end": "2025-02-03T14:33:00Z",
+  "bars": [
+    {
+      "instrument": {
+        "symbol": "TEST",
+        "asset_class": "EQUITY",
+        "exchange": "TEST",
+        "currency": "USD"
+      },
+      "timeframe": "ONE_MINUTE",
+      "timestamp": "2025-02-03T14:30:00Z",
+      "open": "100",
+      "high": "102",
+      "low": "99",
+      "close": "101",
+      "volume": "10"
+    },
+    {
+      "instrument": {
+        "symbol": "TEST",
+        "asset_class": "EQUITY",
+        "exchange": "TEST",
+        "currency": "USD"
+      },
+      "timeframe": "ONE_MINUTE",
+      "timestamp": "2025-02-03T14:31:00Z",
+      "open": "101",
+      "high": "103",
+      "low": "100",
+      "close": "102",
+      "volume": "10"
+    },
+    {
+      "instrument": {
+        "symbol": "TEST",
+        "asset_class": "EQUITY",
+        "exchange": "TEST",
+        "currency": "USD"
+      },
+      "timeframe": "ONE_MINUTE",
+      "timestamp": "2025-02-03T14:32:00Z",
+      "open": "102",
+      "high": "104",
+      "low": "101",
+      "close": "103",
+      "volume": "10"
+    }
+  ]
+}

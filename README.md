@@ -2,7 +2,15 @@
 
 Provider-agnostic AI-assisted market intelligence and paper-trading research platform.
 
-> **Current status: Phases 23–26 — Local Delivery, Evaluation, Offline Shadow Runtime, and Control Contracts. RevMind Trading DOES NOT execute trades.**
+## Open the local dashboard
+
+Double-click **Start-RevMind.cmd** to open the local research dashboard in your browser.
+It can check Alpaca historical bars, read an Alpaca Paper Trading account, build deterministic
+risk-vetted plans, and submit an explicitly approved paper bracket order. See
+[DASHBOARD_GUIDE.md](DASHBOARD_GUIDE.md). Optional polling exists only while the browser page is
+open; server-side continuous ingestion and real-money trading remain disabled.
+
+> **Current status: local Alpaca research and explicitly approved paper orders are available. Automatic and real-money execution do not exist.**
 
 ## Purpose
 
@@ -20,7 +28,10 @@ RevMind Trading is intended to become an AI-assisted market-intelligence, tradin
 
 ## Market-data and knowledge-time foundation
 
-External market data must be adapted into canonical `Instrument`, `MarketSnapshot`, and `MarketBar` models before downstream use. The current fake provider is deterministic and offline; no live market provider or broker is connected.
+External market data must be adapted into canonical `Instrument`, `MarketSnapshot`, and `MarketBar`
+models before downstream use. Synthetic verification remains deterministic and offline. The local
+dashboard also has a strict Alpaca market-data adapter and an independently bounded Alpaca Paper
+Trading adapter; the latter has no configurable or live-money base URL.
 
 RevMind Trading distinguishes **event time** from **observation time**. Event time (`payload.timestamp`) records when the market/source event occurred. `ObservedMarketData.observed_at` records when RevMind Trading received or became aware of that information.
 
@@ -270,6 +281,17 @@ command outcomes are not automatically retried. Control grants bind caller, run,
 and allowed actions; they cannot override domain or risk rules.
 
 See [SHADOW_RUN_GUIDE.md](SHADOW_RUN_GUIDE.md) for a synthetic demo and local control invocation.
+The Phase 27 first-slice [CAPTURE_RUN_GUIDE.md](CAPTURE_RUN_GUIDE.md) adds a separate mock-only
+capture-to-research demo with durable sealed PIT inputs. The frozen shadow runtime itself remains
+offline and deterministic; the local dashboard now composes separate bounded Alpaca adapters around
+those frozen boundaries for on-demand market research and explicitly approved paper orders.
+The separate [PAPER_RESEARCH_GUIDE.md](PAPER_RESEARCH_GUIDE.md) describes explicit paper inputs,
+frozen risk/desk composition and crash-safe decision journaling over sealed capture evidence.
+The local dashboard performs explicit bounded Alpaca snapshot and historical-bar requests for its
+saved watchlist. Results cross the frozen adapter and ingestion boundaries and retain their actual
+receipt time. It can separately read an Alpaca paper account and submit only an eligible, one-time,
+explicitly confirmed paper bracket order through the fixed paper host; see
+[DASHBOARD_GUIDE.md](DASHBOARD_GUIDE.md). This is not continuous ingestion or live-money execution.
 The 1,440-step synthetic replay is software verification, not a sustained live-market trial.
 Live ingestion orchestration, external alert adapters, real Angelo transport/authentication,
 extended operational trials, and real-money execution are not enabled by these foundations.
@@ -336,6 +358,10 @@ Market Data
 → Evaluation & Learning
 ```
 
-No strategy engine, full backtesting engine, LLM intelligence, portfolio optimizer, execution
-integration, REST/WebSocket control server, web UI, or live Angelo OS connection is implemented.
-The local control contract is an integration seam, not a deployed authenticated network service.
+No autonomous strategy engine, production-grade backtesting system, LLM trade authority, portfolio
+optimizer, general-purpose REST/WebSocket control server, live-money execution, or live Angelo OS
+connection is implemented. The local dashboard is an on-demand research and Alpaca Paper Trading
+desk: it can read bounded data, rank deterministic evidence, enforce freshness/readiness/risk gates,
+and submit a bracket order only after explicit one-time user approval. Its browser-session monitoring
+is local polling, stops on stale markets, and never places an order automatically. The local control
+contract remains an integration seam, not a deployed authenticated network service.

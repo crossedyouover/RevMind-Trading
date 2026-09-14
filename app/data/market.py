@@ -33,6 +33,14 @@ class MarketDataUnavailableError(MarketDataError):
     """Raised when a provider cannot currently supply requested data."""
 
 
+class ProviderAuthenticationError(MarketDataUnavailableError):
+    """Raised when a provider rejects the configured credentials."""
+
+
+class ProviderEntitlementError(MarketDataUnavailableError):
+    """Raised when credentials are valid but cannot access the requested feed."""
+
+
 class InvalidMarketDataRequestError(MarketDataError):
     """Raised when a provider-neutral market-data request is invalid."""
 

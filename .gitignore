@@ -6,6 +6,7 @@ venv/
 .uv-cache/
 __pycache__/
 .pytest_cache/
+.test-tmp-*/
 .mypy_cache/
 .ruff_cache/
 *.db
@@ -15,3 +16,4 @@ logs/
 .DS_Store
 .idea/
 .vscode/
+.revmind/
