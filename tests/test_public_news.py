@@ -21,7 +21,7 @@ async def test_public_rss_provider_is_bounded_timestamped_and_deduplicated() -> 
     batch = await provider.get_news(datetime(2026, 9, 12, tzinfo=UTC))
     assert len(batch.headlines) == 1
     assert batch.headlines[0].source == "FEDERAL_RESERVE"
-    assert len(batch.available_sources) == 7
+    assert len(batch.available_sources) == 10
     assert batch.unavailable_sources == ()
     assert all(item.published_at.tzinfo is UTC for item in batch.headlines)
     await client.aclose()
@@ -60,7 +60,7 @@ async def test_public_rss_provider_reports_partial_source_availability() -> None
     provider = PublicRssNewsProvider(client=client)
     batch = await provider.get_news(datetime(2026, 9, 12, tzinfo=UTC))
     assert len(batch.headlines) == 1
-    assert len(batch.available_sources) == 6
+    assert len(batch.available_sources) == 9
     assert batch.unavailable_sources == ("FED_MONETARY_POLICY",)
     await client.aclose()
 
@@ -89,5 +89,5 @@ async def test_public_rss_provider_balances_sources_deterministically() -> None:
     for item in batch.headlines:
         counts[item.source] += 1
     assert len(batch.headlines) == 30
-    assert tuple(counts.values()) == (5, 5, 4, 4, 4, 4, 4)
+    assert tuple(counts.values()) == (3, 3, 3, 3, 3, 3, 3, 3, 3, 3)
     await client.aclose()
