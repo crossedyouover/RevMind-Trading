@@ -14,6 +14,10 @@ from app.core.schemas import CanonicalModel, UtcDatetime
 _MAX_BYTES: Final = 300_000
 _MAX_PER_SOURCE: Final = 10
 _MAX_HEADLINES: Final = 30
+_REQUEST_HEADERS: Final = {
+    "Accept": "application/rss+xml",
+    "User-Agent": "RevMind/1.0 (local research dashboard)",
+}
 _FEEDS: Final = (
     ("FEDERAL_RESERVE", "https://www.federalreserve.gov/feeds/press_all.xml"),
     ("FED_MONETARY_POLICY", "https://www.federalreserve.gov/feeds/press_monetary.xml"),
@@ -22,6 +26,9 @@ _FEEDS: Final = (
     ("ECB_PRESS", "https://www.ecb.europa.eu/rss/press.html"),
     ("ECB_STATISTICS", "https://www.ecb.europa.eu/rss/statpress.html"),
     ("ECB_MARKET_INFORMATION", "https://mid.ecb.europa.eu/rss/mid.xml"),
+    ("BOE_NEWS", "https://www.bankofengland.co.uk/rss/news"),
+    ("BOE_SPEECHES", "https://www.bankofengland.co.uk/rss/speeches"),
+    ("BOE_STATISTICS", "https://www.bankofengland.co.uk/rss/statistics"),
 )
 
 
@@ -99,9 +106,7 @@ class PublicRssNewsProvider:
         self, source: str, url: str, observed_at: datetime
     ) -> tuple[str, list[PublicHeadline] | None]:
         try:
-            response = await self._client.get(
-                url, headers={"Accept": "application/rss+xml"}
-            )
+            response = await self._client.get(url, headers=_REQUEST_HEADERS)
         except httpx.HTTPError:
             return source, None
         if response.status_code != 200 or len(response.content) > _MAX_BYTES:
