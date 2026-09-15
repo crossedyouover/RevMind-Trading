@@ -181,4 +181,4 @@ function highlightNav(section=(location.hash||"#desk").slice(1)){
 for(const link of navLinks)link.addEventListener("click",()=>{highlightNav(link.dataset.section);window.scrollTo({top:0,behavior:"smooth"});});
 window.addEventListener("hashchange",()=>highlightNav());
 highlightNav();
-const _renderNewsWithHealth=renderNews;renderNews=report=>{updateAutomaticSourceHealth(report);_renderNewsWithHealth(report);};
+const newsLastRefresh=node("small","Not refreshed yet","news-last-refresh");$("news-status")?.parentElement.append(newsLastRefresh);const _renderNewsWithHealth=renderNews;renderNews=report=>{updateAutomaticSourceHealth(report);_renderNewsWithHealth(report);newsLastRefresh.textContent="Last refreshed: "+new Date().toLocaleString();};
