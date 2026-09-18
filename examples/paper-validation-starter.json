@@ -1,0 +1,22 @@
+{
+  "mode": "PAPER_SHADOW",
+  "universe": [
+    "AAPL:XNAS",
+    "MSFT:XNAS",
+    "SPY:ARCX:ETF"
+  ],
+  "timeframe": "FIVE_MINUTES",
+  "session_rule": "REGULAR",
+  "feed": "IEX",
+  "validation_depth": "EXTENDED",
+  "risk_policy": {
+    "max_loss_per_trade": 100.0,
+    "max_trade_notional": 1000.0,
+    "max_gross_exposure": 3000.0,
+    "max_symbol_exposure": 1500.0,
+    "minimum_cash_after_trade": 0.0
+  },
+  "news_mode": "CONTEXT_ONLY",
+  "orders": "EXPLICIT_PAPER_APPROVAL_ONLY",
+  "live_money": false
+}
