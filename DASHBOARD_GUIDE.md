@@ -10,6 +10,23 @@ Alternatively, from the repository in PowerShell:
 .\.venv\Scripts\python.exe -m app.dashboard --open-browser
 ```
 
+## Five-minute first use
+
+1. Open **Connections** and choose **Offline demonstration** first. This lets you learn the
+   workflow without credentials.
+2. Open **Markets** and select a small universe, or choose the liquid US starter set.
+3. Return to **Today** and click **Check opportunities**. Read each card's comments and blockers.
+   `READY` means the evidence gate passed; it is not a promise or a command to trade.
+4. When you are ready to use Alpaca Paper Trading, switch the source to **Alpaca**, enter exact
+   symbols and credentials locally, save, then use **Test read-only connection** before scanning.
+5. A paper plan can only be reviewed after a current `READY` result and a successful paper-account
+   sync. You must explicitly approve any paper order; live-money trading is unavailable.
+
+The **News** page is a context screen, not a signal screen. `Automatic now` shows feeds RevMind
+actually retrieves; `Open manually` contains links that open publisher websites but are not ingested.
+After refresh, each automatic source shows its own availability and the page shows the last refresh
+time. News cannot create, rank, resize, approve, or submit a trade.
+
 The main action is **Check opportunities**. It retrieves a bounded window of completed historical
 bars from the selected Alpaca feed and passes each symbol through RevMind's receipt-aware ingestion,
 point-in-time materialization, technical evidence, setup and trend engines. The result cards show
