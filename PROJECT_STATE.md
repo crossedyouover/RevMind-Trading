@@ -7,12 +7,12 @@ this file and `README.md` before making changes.
 
 - Repository: `C:\Users\user\Documents\RevMind-Trading`
 - Canonical branch: `main` (`master` is the local tracking branch)
-- Frozen through: Phase 47 (provider-neutral local operations, guided UX, approved brand asset,
+- Frozen through: Phase 48 (provider-neutral local operations, guided UX, approved brand asset,
   bounded provider-neutral market news, truthful source health, refresh recency, in-app Help, and
-  stable Help routing, and actionable Help shortcuts;
+  stable Help routing, actionable Help shortcuts, and a starter paper-validation setup;
   live deployment deferred)
-- Frozen commit: `6417c2efeadfc19d1a2344bc595dfb98a2983e1c`
-- Frozen tag: `phase47-frozen` (peeled tag resolves to the frozen commit)
+- Frozen commit: `c50b70247ac87201c66ce5632d16b6e4cde36803`
+- Frozen tag: `phase48-frozen` (peeled tag resolves to the frozen commit)
 - Last frozen gate: 1,089 tests passed, Ruff clean, mypy strict clean (107 source files), `git diff --check`
   clean, tracked worktree clean
 - Current capability: deterministic, point-in-time-safe flow from canonical market observations
@@ -132,6 +132,7 @@ These rules survive every future phase:
 | 45 | In-app plain-language workflow Help panel | `phase45-frozen` |
 | 46 | Stable Help route on direct navigation and refresh | `phase46-frozen` |
 | 47 | Actionable Help shortcuts to core workflow sections | `phase47-frozen` |
+| 48 | Starter paper-validation setup loaded from Help | `phase48-frozen` |
 
 Latest frozen merge SHAs:
 
@@ -156,6 +157,7 @@ Latest frozen merge SHAs:
 - Phase 45: `f79e0512a60b30774b28c2ef9892bd79d5e66268`
 - Phase 46: `06550538a783d1678042b6f604da3fbac2cf80a8`
 - Phase 47: `6417c2efeadfc19d1a2344bc595dfb98a2983e1c`
+- Phase 48: `c50b70247ac87201c66ce5632d16b6e4cde36803`
 
 Phases 1–6 predate the frozen-tag convention. Their commits are immutable historical foundations
 and must not be rewritten.
@@ -289,14 +291,15 @@ For Phase `N`, always:
 
 ## Exact next action
 
-Phase 47 is frozen on `phase47-frozen`. The local dashboard now has an approved brand lockup and a
+Phase 48 is frozen on `phase48-frozen`. The local dashboard now has an approved brand lockup and a
 provider-neutral News workflow that uses Alpaca watchlist news when configured or bounded official
 Federal Reserve, ECB, and Bank of England feeds otherwise. Source mode, per-source availability,
 and refresh recency are visible; manual publisher links are clearly not ingested. An in-app Help
 panel explains the four-step paper-only workflow and remains stable on direct navigation and
-refresh, plus direct Help shortcuts into setup, markets, and opportunity review. News remains
+refresh, plus direct Help shortcuts into setup, markets, and opportunity review. Help can load a
+conservative paper-validation starter configuration without changing credentials. News remains
 context-only and cannot affect readiness, ranking, risk, sizing, planning, or execution. The next
-phase must begin from `phase47-frozen^{}` and define a narrow scope before implementation; do not
+phase must begin from `phase48-frozen^{}` and define a narrow scope before implementation; do not
 alter frozen phases implicitly.
 
 ## Historical continuation record (superseded)
