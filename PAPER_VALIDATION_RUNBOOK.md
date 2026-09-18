@@ -2,6 +2,10 @@
 
 This runbook is for paper/shadow validation only. It does not enable live-money trading.
 
+The recommended starting configuration is [examples/paper-validation-starter.json](examples/paper-validation-starter.json).
+It contains the conservative AAPL/MSFT/SPY universe, M5/IEX/regular-session settings, and the
+paper risk limits used by the starter workflow.
+
 ## Start
 
 1. Launch RevMind with `Start-RevMind.cmd`.
