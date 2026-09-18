@@ -7,11 +7,11 @@ this file and `README.md` before making changes.
 
 - Repository: `C:\Users\user\Documents\RevMind-Trading`
 - Canonical branch: `main` (`master` is the local tracking branch)
-- Frozen through: Phase 36 (provider-neutral local operations, guided UX, approved brand asset,
-  and bounded provider-neutral market news; live deployment deferred)
-- Frozen commit: `e28ea07ae4861c2fc866daf36b41287919cebced`
-- Frozen tag: `phase36-frozen` (peeled tag resolves to the frozen commit)
-- Last frozen gate: 1,087 tests passed, Ruff clean, mypy strict clean (107 source files), `git diff --check`
+- Frozen through: Phase 44 (provider-neutral local operations, guided UX, approved brand asset,
+  bounded provider-neutral market news, truthful source health, and refresh recency; live deployment deferred)
+- Frozen commit: `429d25ca02ebdc21514dc6a517a82fcf376548b2`
+- Frozen tag: `phase44-frozen` (peeled tag resolves to the frozen commit)
+- Last frozen gate: 1,089 tests passed, Ruff clean, mypy strict clean (107 source files), `git diff --check`
   clean, tracked worktree clean
 - Current capability: deterministic, point-in-time-safe flow from canonical market observations
   through technical analysis, market evidence, setup composition, and multi-instrument scanning,
@@ -119,6 +119,14 @@ These rules survive every future phase:
 | 34 | Visible news provenance and context classification | `phase34-frozen` |
 | 35 | Readable expandable market-news cards | `phase35-frozen` |
 | 36 | Expanded bounded official central-bank feed coverage | `phase36-frozen` |
+| 37 | Truthful feed health and partial availability | `phase37-frozen` |
+| 38 | Concurrent bounded official-feed retrieval | `phase38-frozen` |
+| 39 | Deterministic balanced feed selection | `phase39-frozen` |
+| 40 | Friendly source names in the News Desk | `phase40-frozen` |
+| 41 | Official Bank of England feed coverage | `phase41-frozen` |
+| 42 | Clear automatic-versus-manual source presentation | `phase42-frozen` |
+| 43 | Per-source availability health badges | `phase43-frozen` |
+| 44 | Visible News Desk refresh recency | `phase44-frozen` |
 
 Latest frozen merge SHAs:
 
@@ -136,6 +144,10 @@ Latest frozen merge SHAs:
 - Phase 34: `a9bf31dc5435b3c8e087e340f819cd3cc7a0e21a`
 - Phase 35: `ac616685480e72f6ad9d5b3ae92cfda2b56def35`
 - Phase 36: `e28ea07ae4861c2fc866daf36b41287919cebced`
+- Phase 41: `6f5882774db887fa58dfae970ef1f0d0a64d7f64`
+- Phase 42: `a9877bdffdb6507d7c91f5d12432b871c8c0610f`
+- Phase 43: `ecb813f328487f1fdb812b9d40afe037666519f1`
+- Phase 44: `429d25ca02ebdc21514dc6a517a82fcf376548b2`
 
 Phases 1–6 predate the frozen-tag convention. Their commits are immutable historical foundations
 and must not be rewritten.
@@ -269,11 +281,12 @@ For Phase `N`, always:
 
 ## Exact next action
 
-Phase 36 is frozen on `phase36-frozen`. The local dashboard now has an approved brand lockup and a
+Phase 44 is frozen on `phase44-frozen`. The local dashboard now has an approved brand lockup and a
 provider-neutral News workflow that uses Alpaca watchlist news when configured or bounded official
-Federal Reserve and ECB RSS feeds otherwise. News provenance is visible and the material remains
-context-only: it cannot affect readiness, ranking, risk, sizing, planning, or execution. The next
-phase must begin from `phase36-frozen^{}` and define a narrow scope before implementation; do not
+Federal Reserve, ECB, and Bank of England feeds otherwise. Source mode, per-source availability,
+and refresh recency are visible; manual publisher links are clearly not ingested. News remains
+context-only and cannot affect readiness, ranking, risk, sizing, planning, or execution. The next
+phase must begin from `phase44-frozen^{}` and define a narrow scope before implementation; do not
 alter frozen phases implicitly.
 
 ## Historical continuation record (superseded)
