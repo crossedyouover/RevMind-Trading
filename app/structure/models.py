@@ -27,6 +27,17 @@ class LiquiditySide(StrEnum):
     BELOW_LOW = "BELOW_LOW"
 
 
+class GapDirection(StrEnum):
+    UPWARD = "UPWARD"
+    DOWNWARD = "DOWNWARD"
+
+
+class GapStatus(StrEnum):
+    ACTIVE = "ACTIVE"
+    PARTIALLY_FILLED = "PARTIALLY_FILLED"
+    FILLED = "FILLED"
+
+
 class StructureConfig(CanonicalModel):
     left_span: Span
     right_span: Span
@@ -120,3 +131,45 @@ class LiquidityResult(CanonicalModel):
     evaluation_at: UtcDatetime
     levels: tuple[LiquidityLevel, ...]
     sweeps: tuple[LiquiditySweep, ...]
+
+
+class FairValueGap(CanonicalModel):
+    gap_id: UUID
+    instrument: Instrument
+    timeframe: Timeframe
+    direction: GapDirection
+    lower: Decimal
+    upper: Decimal
+    occurred_at: UtcDatetime
+    evaluation_at: UtcDatetime
+    first_bar_at: UtcDatetime
+    middle_bar_at: UtcDatetime
+    third_bar_at: UtcDatetime
+    status: GapStatus
+    partial_at: UtcDatetime | None = None
+    filled_at: UtcDatetime | None = None
+
+    @model_validator(mode="after")
+    def validate_gap(self) -> "FairValueGap":
+        if self.lower >= self.upper:
+            raise ValueError("gap lower boundary must be below upper boundary")
+        if not self.first_bar_at < self.middle_bar_at < self.third_bar_at:
+            raise ValueError("formation bars must be strictly chronological")
+        if self.occurred_at != self.third_bar_at or self.occurred_at > self.evaluation_at:
+            raise ValueError("gap occurrence contradicts formation or evaluation")
+        if self.status is GapStatus.ACTIVE and (self.partial_at or self.filled_at):
+            raise ValueError("active gap cannot have transition times")
+        if self.status is GapStatus.PARTIALLY_FILLED and self.partial_at is None:
+            raise ValueError("partially filled gap requires partial time")
+        if self.status is GapStatus.FILLED and self.filled_at is None:
+            raise ValueError("filled gap requires fill time")
+        if self.partial_at and self.partial_at < self.occurred_at:
+            raise ValueError("partial fill cannot predate formation")
+        if self.filled_at and self.filled_at < self.occurred_at:
+            raise ValueError("fill cannot predate formation")
+        return self
+
+
+class FairValueGapResult(CanonicalModel):
+    evaluation_at: UtcDatetime
+    gaps: tuple[FairValueGap, ...]
