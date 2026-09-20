@@ -7,11 +7,10 @@ this file and `README.md` before making changes.
 
 - Repository: `C:\Users\user\Documents\RevMind-Trading`
 - Canonical branch: `main` (`master` is the local tracking branch)
-- Frozen through: Phase 52 (deterministic confirmed swing pivots/BOS, liquidity levels and sweeps,
-  fair-value-gap lifecycle evidence, and fixed-width support/resistance zone lifecycles)
-- Frozen commit: `7e23409dd25324c4aaf1b82b86a3bb38b63a5c07`
-- Frozen tag: `phase52-frozen` (peeled tag resolves to the frozen commit)
-- Last frozen gate: 1,111 tests passed, Ruff clean, mypy strict clean (113 source files), `git diff --check`
+- Frozen through: Phase 53 (bounded fixed-origin read-only Myfxbook account-summary adapter)
+- Frozen commit: `f5c403f4e2226e58f9aa2cf4f789d795f6e35ad6`
+- Frozen tag: `phase53-frozen` (peeled tag resolves to the frozen commit)
+- Last frozen gate: 1,118 tests passed, Ruff clean, mypy strict clean (114 source files), `git diff --check`
   clean, tracked worktree clean
 - Current capability: deterministic, point-in-time-safe flow from canonical market observations
   through technical analysis, market evidence, setup composition, and multi-instrument scanning,
@@ -135,6 +134,7 @@ These rules survive every future phase:
 | 50 | Deterministic liquidity levels and wick-sweep evidence | `phase50-frozen` |
 | 51 | Deterministic fair-value-gap lifecycle evidence | `phase51-frozen` |
 | 52 | Deterministic fixed-width support/resistance zone lifecycle evidence | `phase52-frozen` |
+| 53 | Bounded read-only Myfxbook account-summary adapter | `phase53-frozen` |
 
 Latest frozen merge SHAs:
 
@@ -164,6 +164,7 @@ Latest frozen merge SHAs:
 - Phase 50: `8c2c6fa6bd1bf192c2edc9b722528753d1b0e226`
 - Phase 51: `f583351d40923873c0c159e9a3d2acf43401493d`
 - Phase 52: `7e23409dd25324c4aaf1b82b86a3bb38b63a5c07`
+- Phase 53: `f5c403f4e2226e58f9aa2cf4f789d795f6e35ad6`
 
 Phases 1–6 predate the frozen-tag convention. Their commits are immutable historical foundations
 and must not be rewritten.
@@ -297,13 +298,11 @@ For Phase `N`, always:
 
 ## Exact next action
 
-Phase 52 is frozen on `phase52-frozen`. A separately published provider-neutral external-account
-fact foundation now exists for the requested Myfxbook integration, but no Myfxbook network adapter,
-credentials, session, dashboard connection, or execution authority exists yet. The next narrow
-phase is a bounded read-only Myfxbook adapter with a fixed HTTPS origin, injected clock/client,
-explicit broker-timezone conversion, redacted failures, strict response limits, and no execution
-surface. See `MYFXBOOK_INTEGRATION_DESIGN.md`. Community sentiment remains context-only and cannot
-affect readiness, ranking, risk, sizing, planning, or execution.
+Phase 53 is frozen on `phase53-frozen`. RevMind can authenticate against the fixed official
+Myfxbook origin and materialize one selected account summary through immutable provider-neutral
+facts. It has no dashboard connection, stored credentials, positions, history, reconciliation, or
+execution authority. Phase 54 adds read-only open-position facts only, with explicit IANA broker
+timezone conversion and unmapped provider symbols. See `PHASE54_DESIGN.md`.
 
 ## Historical continuation record (superseded)
 
