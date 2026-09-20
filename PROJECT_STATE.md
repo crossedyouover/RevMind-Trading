@@ -7,13 +7,11 @@ this file and `README.md` before making changes.
 
 - Repository: `C:\Users\user\Documents\RevMind-Trading`
 - Canonical branch: `main` (`master` is the local tracking branch)
-- Frozen through: Phase 48 (provider-neutral local operations, guided UX, approved brand asset,
-  bounded provider-neutral market news, truthful source health, refresh recency, in-app Help, and
-  stable Help routing, actionable Help shortcuts, and a starter paper-validation setup;
-  live deployment deferred)
-- Frozen commit: `c50b70247ac87201c66ce5632d16b6e4cde36803`
-- Frozen tag: `phase48-frozen` (peeled tag resolves to the frozen commit)
-- Last frozen gate: 1,089 tests passed, Ruff clean, mypy strict clean (107 source files), `git diff --check`
+- Frozen through: Phase 52 (deterministic confirmed swing pivots/BOS, liquidity levels and sweeps,
+  fair-value-gap lifecycle evidence, and fixed-width support/resistance zone lifecycles)
+- Frozen commit: `7e23409dd25324c4aaf1b82b86a3bb38b63a5c07`
+- Frozen tag: `phase52-frozen` (peeled tag resolves to the frozen commit)
+- Last frozen gate: 1,111 tests passed, Ruff clean, mypy strict clean (113 source files), `git diff --check`
   clean, tracked worktree clean
 - Current capability: deterministic, point-in-time-safe flow from canonical market observations
   through technical analysis, market evidence, setup composition, and multi-instrument scanning,
@@ -133,6 +131,10 @@ These rules survive every future phase:
 | 46 | Stable Help route on direct navigation and refresh | `phase46-frozen` |
 | 47 | Actionable Help shortcuts to core workflow sections | `phase47-frozen` |
 | 48 | Starter paper-validation setup loaded from Help | `phase48-frozen` |
+| 49 | Deterministic confirmed swing pivots and break-of-structure evidence | `phase49-frozen` |
+| 50 | Deterministic liquidity levels and wick-sweep evidence | `phase50-frozen` |
+| 51 | Deterministic fair-value-gap lifecycle evidence | `phase51-frozen` |
+| 52 | Deterministic fixed-width support/resistance zone lifecycle evidence | `phase52-frozen` |
 
 Latest frozen merge SHAs:
 
@@ -158,6 +160,10 @@ Latest frozen merge SHAs:
 - Phase 46: `06550538a783d1678042b6f604da3fbac2cf80a8`
 - Phase 47: `6417c2efeadfc19d1a2344bc595dfb98a2983e1c`
 - Phase 48: `c50b70247ac87201c66ce5632d16b6e4cde36803`
+- Phase 49: `9ddccb940238e53f24a83d472dbad4e7fc727046`
+- Phase 50: `8c2c6fa6bd1bf192c2edc9b722528753d1b0e226`
+- Phase 51: `f583351d40923873c0c159e9a3d2acf43401493d`
+- Phase 52: `7e23409dd25324c4aaf1b82b86a3bb38b63a5c07`
 
 Phases 1–6 predate the frozen-tag convention. Their commits are immutable historical foundations
 and must not be rewritten.
@@ -291,16 +297,13 @@ For Phase `N`, always:
 
 ## Exact next action
 
-Phase 48 is frozen on `phase48-frozen`. The local dashboard now has an approved brand lockup and a
-provider-neutral News workflow that uses Alpaca watchlist news when configured or bounded official
-Federal Reserve, ECB, and Bank of England feeds otherwise. Source mode, per-source availability,
-and refresh recency are visible; manual publisher links are clearly not ingested. An in-app Help
-panel explains the four-step paper-only workflow and remains stable on direct navigation and
-refresh, plus direct Help shortcuts into setup, markets, and opportunity review. Help can load a
-conservative paper-validation starter configuration without changing credentials. News remains
-context-only and cannot affect readiness, ranking, risk, sizing, planning, or execution. The next
-phase must begin from `phase48-frozen^{}` and define a narrow scope before implementation; do not
-alter frozen phases implicitly.
+Phase 52 is frozen on `phase52-frozen`. A separately published provider-neutral external-account
+fact foundation now exists for the requested Myfxbook integration, but no Myfxbook network adapter,
+credentials, session, dashboard connection, or execution authority exists yet. The next narrow
+phase is a bounded read-only Myfxbook adapter with a fixed HTTPS origin, injected clock/client,
+explicit broker-timezone conversion, redacted failures, strict response limits, and no execution
+surface. See `MYFXBOOK_INTEGRATION_DESIGN.md`. Community sentiment remains context-only and cannot
+affect readiness, ranking, risk, sizing, planning, or execution.
 
 ## Historical continuation record (superseded)
 
