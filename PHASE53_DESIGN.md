@@ -2,27 +2,28 @@
 
 ## Scope
 
-Implement only the transport adapter that converts selected Myfxbook account responses into the
-frozen provider-neutral external-account facts. No dashboard, persistence, credential UI,
-reconciliation engine, or trade execution is included.
+Implement the first transport slice that authenticates and converts one selected Myfxbook account
+summary into the frozen provider-neutral account snapshot. Open trades, open orders, history,
+daily data, dashboard, persistence, credential UI, reconciliation, and execution remain later
+independent slices.
 
 ## Fixed boundary
 
 - Fixed HTTPS origin: `https://www.myfxbook.com`.
 - Injected asynchronous HTTP client and injected UTC clock.
 - Login session is secret, IP-bound provider state and never enters canonical models.
-- Explicit selected account ID and explicit IANA broker timezone are required.
-- Supported calls: account list/summary, open trades, open orders, recent history, and daily data.
+- Explicit selected account ID is required.
+- Supported calls: login and account list/summary only.
+- Broker timezone becomes mandatory in the later trade/history slice where local wall times exist.
 - Community outlook is deferred to a later isolated slice.
 
 ## Deterministic mapping
 
 - One complete sync receives one `observed_at` after all required payloads validate.
-- Provider-local event timestamps are converted with the configured IANA timezone; ambiguous and
-  nonexistent wall times fail closed.
-- Provider symbols remain unmapped in this slice; no instrument identity is invented.
-- Results use stable explicit ordering and reject conflicting duplicate identities.
-- History is always labelled `RECENT_INCOMPLETE` because the provider caps it at 50 records.
+- No provider event timestamps or symbols enter this slice.
+- Exactly one matching account identity is required; absent or duplicate identities fail closed.
+- The canonical batch declares history `NOT_REQUESTED` and contains no fabricated positions,
+  orders, transactions, or performance observations.
 
 ## Security and failure behavior
 
@@ -38,8 +39,7 @@ reconciliation engine, or trade execution is included.
 - fixed origin and redirect rejection;
 - secret redaction through every success and failure surface;
 - injected clock called only after complete validation;
-- strict timezone conversion including DST ambiguity/nonexistence rejection;
-- malformed, partial, oversized, duplicate, and reordered provider payloads;
+- malformed, partial, oversized, absent, and duplicate account payloads;
 - deterministic canonical serialization and ordering;
-- 50-record history label and no completeness claim;
+- explicit empty facts and `NOT_REQUESTED` history scope;
 - no network in model/protocol tests and no execution/broker dependency.
