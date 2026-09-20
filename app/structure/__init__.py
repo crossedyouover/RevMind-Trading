@@ -1,6 +1,11 @@
 """Deterministic point-in-time-safe market-structure evidence."""
 
-from app.structure.engine import evaluate_fair_value_gaps, evaluate_liquidity, evaluate_structure
+from app.structure.engine import (
+    evaluate_fair_value_gaps,
+    evaluate_liquidity,
+    evaluate_structure,
+    evaluate_support_resistance,
+)
 from app.structure.models import (
     BreakDirection,
     BreakOfStructure,
@@ -15,7 +20,12 @@ from app.structure.models import (
     PivotKind,
     StructureConfig,
     StructureResult,
+    SupportResistanceResult,
+    SupportResistanceZone,
     SwingPivot,
+    ZoneConfig,
+    ZoneKind,
+    ZoneStatus,
 )
 
 __all__ = [
@@ -33,7 +43,13 @@ __all__ = [
     "StructureConfig",
     "StructureResult",
     "SwingPivot",
+    "SupportResistanceResult",
+    "SupportResistanceZone",
+    "ZoneConfig",
+    "ZoneKind",
+    "ZoneStatus",
     "evaluate_fair_value_gaps",
     "evaluate_liquidity",
     "evaluate_structure",
+    "evaluate_support_resistance",
 ]
