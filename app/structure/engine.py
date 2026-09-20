@@ -7,6 +7,10 @@ from app.core.schemas import MarketBar
 from app.structure.models import (
     BreakDirection,
     BreakOfStructure,
+    LiquidityLevel,
+    LiquidityResult,
+    LiquiditySide,
+    LiquiditySweep,
     PivotKind,
     StructureConfig,
     StructureResult,
@@ -111,3 +115,67 @@ def evaluate_structure(
     return StructureResult(
         config=config, evaluation_at=evaluation_at, pivots=tuple(pivots), breaks=tuple(breaks)
     )
+
+
+def evaluate_liquidity(
+    bars: tuple[MarketBar, ...], structure: StructureResult, evaluation_at: datetime
+) -> LiquidityResult:
+    """Derive independent pivot levels and one descriptive wick sweep per level."""
+    if evaluation_at.tzinfo is None or evaluation_at.utcoffset() is None:
+        raise ValueError("evaluation time must include timezone information")
+    for index, bar in enumerate(bars):
+        if bar.timestamp > evaluation_at:
+            raise ValueError("bar timestamp exceeds evaluation cutoff")
+        if index and bar.timestamp <= bars[index - 1].timestamp:
+            raise ValueError("bars must be strictly chronological")
+    levels = tuple(
+        LiquidityLevel(
+            level_id=_identity("LEVEL", pivot.pivot_id),
+            pivot_id=pivot.pivot_id,
+            instrument=pivot.instrument,
+            timeframe=pivot.timeframe,
+            side=(
+                LiquiditySide.ABOVE_HIGH
+                if pivot.kind is PivotKind.HIGH
+                else LiquiditySide.BELOW_LOW
+            ),
+            price=pivot.price,
+            occurred_at=pivot.occurred_at,
+            confirmed_at=pivot.confirmed_at,
+        )
+        for pivot in structure.pivots
+    )
+    sweeps: list[LiquiditySweep] = []
+    swept: set[UUID] = set()
+    for index, bar in enumerate(bars):
+        for level in levels:
+            if level.level_id in swept or level.confirmed_at > bar.timestamp:
+                continue
+            if bar.instrument != level.instrument or bar.timeframe != level.timeframe:
+                raise ValueError("bars and levels must share instrument and timeframe")
+            above = level.side is LiquiditySide.ABOVE_HIGH
+            extreme = bar.high if above else bar.low
+            qualifies = (
+                extreme > level.price and bar.close <= level.price
+                if above
+                else extreme < level.price and bar.close >= level.price
+            )
+            if qualifies:
+                swept.add(level.level_id)
+                sweeps.append(
+                    LiquiditySweep(
+                        sweep_id=_identity("SWEEP", level.level_id, bar.timestamp),
+                        level_id=level.level_id,
+                        pivot_id=level.pivot_id,
+                        instrument=bar.instrument,
+                        timeframe=bar.timeframe,
+                        side=level.side,
+                        level=level.price,
+                        extreme=extreme,
+                        close=bar.close,
+                        occurred_at=bar.timestamp,
+                        evaluation_at=evaluation_at,
+                        bar_index=index,
+                    )
+                )
+    return LiquidityResult(evaluation_at=evaluation_at, levels=levels, sweeps=tuple(sweeps))
