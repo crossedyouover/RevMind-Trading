@@ -38,6 +38,17 @@ class GapStatus(StrEnum):
     FILLED = "FILLED"
 
 
+class ZoneKind(StrEnum):
+    SUPPORT = "SUPPORT"
+    RESISTANCE = "RESISTANCE"
+
+
+class ZoneStatus(StrEnum):
+    UNTESTED = "UNTESTED"
+    TESTED = "TESTED"
+    BROKEN = "BROKEN"
+
+
 class StructureConfig(CanonicalModel):
     left_span: Span
     right_span: Span
@@ -173,3 +184,52 @@ class FairValueGap(CanonicalModel):
 class FairValueGapResult(CanonicalModel):
     evaluation_at: UtcDatetime
     gaps: tuple[FairValueGap, ...]
+
+
+class ZoneConfig(CanonicalModel):
+    half_width: Decimal = Field(gt=0, allow_inf_nan=False)
+
+
+class SupportResistanceZone(CanonicalModel):
+    zone_id: UUID
+    pivot_id: UUID
+    instrument: Instrument
+    timeframe: Timeframe
+    kind: ZoneKind
+    center: Decimal
+    lower: Decimal = Field(ge=0, allow_inf_nan=False)
+    upper: Decimal = Field(ge=0, allow_inf_nan=False)
+    half_width: Decimal = Field(gt=0, allow_inf_nan=False)
+    confirmed_at: UtcDatetime
+    evaluation_at: UtcDatetime
+    status: ZoneStatus
+    tested_at: UtcDatetime | None = None
+    tested_bar_index: int | None = Field(default=None, strict=True, ge=0)
+    broken_at: UtcDatetime | None = None
+    broken_bar_index: int | None = Field(default=None, strict=True, ge=0)
+
+    @model_validator(mode="after")
+    def validate_zone(self) -> "SupportResistanceZone":
+        if self.lower >= self.upper or self.center - self.lower != self.half_width:
+            raise ValueError("zone boundaries contradict center and half_width")
+        if self.upper - self.center != self.half_width:
+            raise ValueError("zone boundaries contradict center and half_width")
+        if self.confirmed_at > self.evaluation_at:
+            raise ValueError("zone cannot be confirmed after evaluation")
+        if (self.tested_at is None) != (self.tested_bar_index is None):
+            raise ValueError("test time and index must appear together")
+        if (self.broken_at is None) != (self.broken_bar_index is None):
+            raise ValueError("break time and index must appear together")
+        if self.status is ZoneStatus.UNTESTED and (self.tested_at or self.broken_at):
+            raise ValueError("untested zone cannot contain lifecycle events")
+        if self.status is ZoneStatus.TESTED and self.tested_at is None:
+            raise ValueError("tested zone requires a test event")
+        if self.status is ZoneStatus.BROKEN and self.broken_at is None:
+            raise ValueError("broken zone requires a break event")
+        return self
+
+
+class SupportResistanceResult(CanonicalModel):
+    config: ZoneConfig
+    evaluation_at: UtcDatetime
+    zones: tuple[SupportResistanceZone, ...]

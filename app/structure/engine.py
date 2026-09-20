@@ -18,7 +18,12 @@ from app.structure.models import (
     PivotKind,
     StructureConfig,
     StructureResult,
+    SupportResistanceResult,
+    SupportResistanceZone,
     SwingPivot,
+    ZoneConfig,
+    ZoneKind,
+    ZoneStatus,
 )
 
 _NAMESPACE = UUID("a67722dd-bb52-4e4e-a39c-96bdd75a1b07")
@@ -254,3 +259,77 @@ def evaluate_fair_value_gaps(
             )
         )
     return FairValueGapResult(evaluation_at=evaluation_at, gaps=tuple(gaps))
+
+
+def evaluate_support_resistance(
+    bars: tuple[MarketBar, ...],
+    structure: StructureResult,
+    config: ZoneConfig,
+    evaluation_at: datetime,
+) -> SupportResistanceResult:
+    """Derive independent fixed-width zones and forward-only lifecycle evidence."""
+    if evaluation_at.tzinfo is None or evaluation_at.utcoffset() is None:
+        raise ValueError("evaluation time must include timezone information")
+    if structure.evaluation_at > evaluation_at:
+        raise ValueError("structure result exceeds evaluation cutoff")
+    if bars:
+        first = bars[0]
+        for index, bar in enumerate(bars):
+            if bar.instrument != first.instrument or bar.timeframe != first.timeframe:
+                raise ValueError("bars must share instrument and timeframe")
+            if bar.timestamp > evaluation_at:
+                raise ValueError("bar timestamp exceeds evaluation cutoff")
+            if index and bar.timestamp <= bars[index - 1].timestamp:
+                raise ValueError("bars must be strictly chronological")
+    zones: list[SupportResistanceZone] = []
+    for pivot in structure.pivots:
+        if pivot.confirmed_at > evaluation_at:
+            raise ValueError("pivot confirmation exceeds evaluation cutoff")
+        if bars and (
+            pivot.instrument != bars[0].instrument or pivot.timeframe != bars[0].timeframe
+        ):
+            raise ValueError("bars and pivots must share instrument and timeframe")
+        lower, upper = pivot.price - config.half_width, pivot.price + config.half_width
+        if lower < 0:
+            raise ValueError("zone lower boundary cannot be negative")
+        tested_at = broken_at = None
+        tested_index = broken_index = None
+        for index, bar in enumerate(bars):
+            if bar.timestamp <= pivot.confirmed_at:
+                continue
+            if tested_at is None and bar.high >= lower and bar.low <= upper:
+                tested_at, tested_index = bar.timestamp, index
+            broken = bar.close > upper if pivot.kind is PivotKind.HIGH else bar.close < lower
+            if broken:
+                broken_at, broken_index = bar.timestamp, index
+                break
+        status = (
+            ZoneStatus.BROKEN
+            if broken_at
+            else ZoneStatus.TESTED
+            if tested_at
+            else ZoneStatus.UNTESTED
+        )
+        kind = ZoneKind.RESISTANCE if pivot.kind is PivotKind.HIGH else ZoneKind.SUPPORT
+        zones.append(
+            SupportResistanceZone(
+                zone_id=_identity("ZONE", pivot.pivot_id, config.half_width),
+                pivot_id=pivot.pivot_id,
+                instrument=pivot.instrument,
+                timeframe=pivot.timeframe,
+                kind=kind,
+                center=pivot.price,
+                lower=lower,
+                upper=upper,
+                half_width=config.half_width,
+                confirmed_at=pivot.confirmed_at,
+                evaluation_at=evaluation_at,
+                status=status,
+                tested_at=tested_at,
+                tested_bar_index=tested_index,
+                broken_at=broken_at,
+                broken_bar_index=broken_index,
+            )
+        )
+    zones.sort(key=lambda item: (item.confirmed_at, str(item.pivot_id)))
+    return SupportResistanceResult(config=config, evaluation_at=evaluation_at, zones=tuple(zones))
