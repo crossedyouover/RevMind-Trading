@@ -22,6 +22,11 @@ class BreakDirection(StrEnum):
     DOWNWARD = "DOWNWARD"
 
 
+class LiquiditySide(StrEnum):
+    ABOVE_HIGH = "ABOVE_HIGH"
+    BELOW_LOW = "BELOW_LOW"
+
+
 class StructureConfig(CanonicalModel):
     left_span: Span
     right_span: Span
@@ -72,3 +77,46 @@ class StructureResult(CanonicalModel):
     evaluation_at: UtcDatetime
     pivots: tuple[SwingPivot, ...]
     breaks: tuple[BreakOfStructure, ...]
+
+
+class LiquidityLevel(CanonicalModel):
+    level_id: UUID
+    pivot_id: UUID
+    instrument: Instrument
+    timeframe: Timeframe
+    side: LiquiditySide
+    price: Decimal
+    occurred_at: UtcDatetime
+    confirmed_at: UtcDatetime
+
+
+class LiquiditySweep(CanonicalModel):
+    sweep_id: UUID
+    level_id: UUID
+    pivot_id: UUID
+    instrument: Instrument
+    timeframe: Timeframe
+    side: LiquiditySide
+    level: Decimal
+    extreme: Decimal
+    close: Decimal
+    occurred_at: UtcDatetime
+    evaluation_at: UtcDatetime
+    bar_index: int = Field(strict=True, ge=0)
+
+    @model_validator(mode="after")
+    def validate_sweep(self) -> "LiquiditySweep":
+        if self.occurred_at > self.evaluation_at:
+            raise ValueError("sweep cannot occur after evaluation")
+        if self.side is LiquiditySide.ABOVE_HIGH:
+            if self.extreme <= self.level or self.close > self.level:
+                raise ValueError("above-high sweep contradicts prices")
+        elif self.extreme >= self.level or self.close < self.level:
+            raise ValueError("below-low sweep contradicts prices")
+        return self
+
+
+class LiquidityResult(CanonicalModel):
+    evaluation_at: UtcDatetime
+    levels: tuple[LiquidityLevel, ...]
+    sweeps: tuple[LiquiditySweep, ...]
