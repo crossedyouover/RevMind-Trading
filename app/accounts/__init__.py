@@ -9,6 +9,7 @@ from app.accounts.models import (
     ExternalTransactionFact,
     TradingAccountSnapshot,
 )
+from app.accounts.myfxbook import MyfxbookAdapter, MyfxbookAuthenticationError, MyfxbookError
 from app.accounts.protocol import ReadOnlyTradingAccountProvider
 
 __all__ = [
@@ -18,6 +19,9 @@ __all__ = [
     "ExternalPerformanceObservation",
     "ExternalSentimentContext",
     "ExternalTransactionFact",
+    "MyfxbookAdapter",
+    "MyfxbookAuthenticationError",
+    "MyfxbookError",
     "ReadOnlyTradingAccountProvider",
     "TradingAccountSnapshot",
 ]
