@@ -7,6 +7,10 @@ from app.core.schemas import MarketBar
 from app.structure.models import (
     BreakDirection,
     BreakOfStructure,
+    FairValueGap,
+    FairValueGapResult,
+    GapDirection,
+    GapStatus,
     LiquidityLevel,
     LiquidityResult,
     LiquiditySide,
@@ -179,3 +183,74 @@ def evaluate_liquidity(
                     )
                 )
     return LiquidityResult(evaluation_at=evaluation_at, levels=levels, sweeps=tuple(sweeps))
+
+
+def evaluate_fair_value_gaps(
+    bars: tuple[MarketBar, ...], evaluation_at: datetime
+) -> FairValueGapResult:
+    """Evaluate strict three-bar gaps and their forward-only fill lifecycle."""
+    if evaluation_at.tzinfo is None or evaluation_at.utcoffset() is None:
+        raise ValueError("evaluation time must include timezone information")
+    if bars:
+        first = bars[0]
+        for index, bar in enumerate(bars):
+            if bar.instrument != first.instrument or bar.timeframe != first.timeframe:
+                raise ValueError("bars must share instrument and timeframe")
+            if bar.timestamp > evaluation_at:
+                raise ValueError("bar timestamp exceeds evaluation cutoff")
+            if index and bar.timestamp <= bars[index - 1].timestamp:
+                raise ValueError("bars must be strictly chronological")
+    gaps: list[FairValueGap] = []
+    for index in range(2, len(bars)):
+        first, middle, third = bars[index - 2], bars[index - 1], bars[index]
+        if third.low > first.high:
+            direction = GapDirection.UPWARD
+            lower, upper = first.high, third.low
+        elif third.high < first.low:
+            direction = GapDirection.DOWNWARD
+            lower, upper = third.high, first.low
+        else:
+            continue
+        partial_at = None
+        filled_at = None
+        for later in bars[index + 1 :]:
+            if direction is GapDirection.UPWARD:
+                if filled_at is None and later.low <= lower:
+                    filled_at = later.timestamp
+                elif partial_at is None and later.low < upper:
+                    partial_at = later.timestamp
+            else:
+                if filled_at is None and later.high >= upper:
+                    filled_at = later.timestamp
+                elif partial_at is None and later.high > lower:
+                    partial_at = later.timestamp
+            if filled_at is not None:
+                break
+        status = (
+            GapStatus.FILLED
+            if filled_at is not None
+            else GapStatus.PARTIALLY_FILLED
+            if partial_at is not None
+            else GapStatus.ACTIVE
+        )
+        gaps.append(
+            FairValueGap(
+                gap_id=_identity(
+                    "FVG", direction, first.timestamp, middle.timestamp, third.timestamp
+                ),
+                instrument=first.instrument,
+                timeframe=first.timeframe,
+                direction=direction,
+                lower=lower,
+                upper=upper,
+                occurred_at=third.timestamp,
+                evaluation_at=evaluation_at,
+                first_bar_at=first.timestamp,
+                middle_bar_at=middle.timestamp,
+                third_bar_at=third.timestamp,
+                status=status,
+                partial_at=partial_at,
+                filled_at=filled_at,
+            )
+        )
+    return FairValueGapResult(evaluation_at=evaluation_at, gaps=tuple(gaps))
