@@ -4,13 +4,18 @@ import json
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Protocol
+from typing import Literal, Protocol
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import httpx
 from pydantic import SecretStr
 
-from app.accounts.models import AccountFactBatch, ExternalOpenPositionFact, TradingAccountSnapshot
+from app.accounts.models import (
+    AccountFactBatch,
+    ExternalOpenOrderFact,
+    ExternalOpenPositionFact,
+    TradingAccountSnapshot,
+)
 
 _ORIGIN = "https://www.myfxbook.com"
 _MAX_RESPONSE_BYTES = 1_000_000
@@ -93,6 +98,9 @@ class MyfxbookAdapter:
         trade_payload = await self._get(
             "/api/get-open-trades.json", {"session": session, "id": provider_account_id}
         )
+        order_payload = await self._get(
+            "/api/get-open-orders.json", {"session": session, "id": provider_account_id}
+        )
         accounts = payload.get("accounts")
         if not isinstance(accounts, list):
             raise MyfxbookError("Myfxbook returned malformed account data")
@@ -155,7 +163,49 @@ class MyfxbookAdapter:
         except (KeyError, ValueError, TypeError) as exc:
             raise MyfxbookError("Myfxbook returned invalid open-trade data") from exc
         positions.sort(key=lambda item: (item.opened_at, item.provider_record_id))
-        return AccountFactBatch(account=account, positions=tuple(positions))
+        raw_orders = order_payload.get("openOrders")
+        if not isinstance(raw_orders, list):
+            raise MyfxbookError("Myfxbook returned malformed open-order data")
+        orders: list[ExternalOpenOrderFact] = []
+        seen_orders: set[str] = set()
+        try:
+            for raw in raw_orders:
+                if not isinstance(raw, Mapping):
+                    raise ValueError
+                record_id = str(raw["id"]).strip()
+                if not record_id or record_id in seen_orders:
+                    raise ValueError
+                seen_orders.add(record_id)
+                action = str(raw["action"]).strip()
+                side: Literal["BUY", "SELL"] | None = (
+                    "BUY"
+                    if action.lower().startswith("buy")
+                    else "SELL"
+                    if action.lower().startswith("sell")
+                    else None
+                )
+                sizing = raw["sizing"]
+                if side is None or not isinstance(sizing, Mapping):
+                    raise ValueError
+                orders.append(
+                    ExternalOpenOrderFact(
+                        provider="myfxbook",
+                        provider_account_id=provider_account_id,
+                        provider_record_id=record_id,
+                        provider_symbol=str(raw["symbol"]),
+                        instrument=None,
+                        side=side,
+                        order_type=action,
+                        quantity=Decimal(str(sizing["value"])),
+                        declared_price=Decimal(str(raw["openPrice"])),
+                        created_at=self._parse_local_time(str(raw["openTime"])),
+                        observed_at=observed_at,
+                    )
+                )
+        except (KeyError, ValueError, TypeError) as exc:
+            raise MyfxbookError("Myfxbook returned invalid open-order data") from exc
+        orders.sort(key=lambda item: (item.created_at, item.provider_record_id))
+        return AccountFactBatch(account=account, positions=tuple(positions), orders=tuple(orders))
 
     async def aclose(self) -> None:
         if self._closed:
