@@ -5,11 +5,12 @@ from collections.abc import Mapping
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Protocol
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import httpx
 from pydantic import SecretStr
 
-from app.accounts.models import AccountFactBatch, TradingAccountSnapshot
+from app.accounts.models import AccountFactBatch, ExternalOpenPositionFact, TradingAccountSnapshot
 
 _ORIGIN = "https://www.myfxbook.com"
 _MAX_RESPONSE_BYTES = 1_000_000
@@ -36,6 +37,7 @@ class MyfxbookAdapter:
         password: SecretStr,
         clock: AccountClock,
         *,
+        broker_timezone: str,
         client: httpx.AsyncClient | None = None,
     ) -> None:
         if not email.get_secret_value() or not password.get_secret_value():
@@ -43,6 +45,10 @@ class MyfxbookAdapter:
         self._email = email
         self._password = password
         self._clock = clock
+        try:
+            self._broker_timezone = ZoneInfo(broker_timezone)
+        except (ZoneInfoNotFoundError, ValueError, TypeError) as exc:
+            raise ValueError("invalid IANA broker timezone") from exc
         self._session: SecretStr | None = None
         self._closed = False
         self._owns_client = client is None
@@ -61,12 +67,32 @@ class MyfxbookAdapter:
             raise ValueError("injected Myfxbook client is not security-safe")
         self._client = client
 
+    def _parse_local_time(self, value: str) -> datetime:
+        """Convert an unambiguous broker-local wall time without machine-timezone inference."""
+        try:
+            naive = datetime.strptime(value, "%m/%d/%Y %H:%M")
+        except ValueError as exc:
+            raise MyfxbookError("Myfxbook returned invalid local time") from exc
+        candidates: list[datetime] = []
+        for fold in (0, 1):
+            aware = naive.replace(tzinfo=self._broker_timezone, fold=fold)
+            roundtrip = aware.astimezone(UTC).astimezone(self._broker_timezone)
+            if roundtrip.replace(tzinfo=None) == naive:
+                candidates.append(aware)
+        offsets = {candidate.utcoffset() for candidate in candidates}
+        if not candidates or len(offsets) != 1:
+            raise MyfxbookError("Myfxbook local time is ambiguous or nonexistent")
+        return candidates[0].astimezone(UTC)
+
     async def sync_account(self, provider_account_id: str) -> AccountFactBatch:
         """Return one atomic account snapshot; trading endpoints do not exist."""
         if not provider_account_id.strip():
             raise ValueError("provider account id must be non-empty")
         session = await self._ensure_session()
         payload = await self._get("/api/get-my-accounts.json", {"session": session})
+        trade_payload = await self._get(
+            "/api/get-open-trades.json", {"session": session, "id": provider_account_id}
+        )
         accounts = payload.get("accounts")
         if not isinstance(accounts, list):
             raise MyfxbookError("Myfxbook returned malformed account data")
@@ -93,7 +119,43 @@ class MyfxbookAdapter:
             )
         except (KeyError, ValueError, TypeError) as exc:
             raise MyfxbookError("Myfxbook returned invalid account data") from exc
-        return AccountFactBatch(account=account)
+        raw_trades = trade_payload.get("openTrades")
+        if not isinstance(raw_trades, list):
+            raise MyfxbookError("Myfxbook returned malformed open-trade data")
+        positions: list[ExternalOpenPositionFact] = []
+        seen: set[str] = set()
+        try:
+            for raw in raw_trades:
+                if not isinstance(raw, Mapping):
+                    raise ValueError
+                record_id = str(raw["id"]).strip()
+                if not record_id or record_id in seen:
+                    raise ValueError
+                seen.add(record_id)
+                action = str(raw["action"]).lower()
+                if action not in {"buy", "sell"}:
+                    raise ValueError
+                sizing = raw["sizing"]
+                if not isinstance(sizing, Mapping):
+                    raise ValueError
+                positions.append(
+                    ExternalOpenPositionFact(
+                        provider="myfxbook",
+                        provider_account_id=provider_account_id,
+                        provider_record_id=record_id,
+                        provider_symbol=str(raw["symbol"]),
+                        instrument=None,
+                        side="LONG" if action == "buy" else "SHORT",
+                        quantity=Decimal(str(sizing["value"])),
+                        open_price=Decimal(str(raw["openPrice"])),
+                        opened_at=self._parse_local_time(str(raw["openTime"])),
+                        observed_at=observed_at,
+                    )
+                )
+        except (KeyError, ValueError, TypeError) as exc:
+            raise MyfxbookError("Myfxbook returned invalid open-trade data") from exc
+        positions.sort(key=lambda item: (item.opened_at, item.provider_record_id))
+        return AccountFactBatch(account=account, positions=tuple(positions))
 
     async def aclose(self) -> None:
         if self._closed:
