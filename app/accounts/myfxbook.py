@@ -14,6 +14,7 @@ from app.accounts.models import (
     AccountFactBatch,
     ExternalOpenOrderFact,
     ExternalOpenPositionFact,
+    ExternalTransactionFact,
     TradingAccountSnapshot,
 )
 
@@ -100,6 +101,9 @@ class MyfxbookAdapter:
         )
         order_payload = await self._get(
             "/api/get-open-orders.json", {"session": session, "id": provider_account_id}
+        )
+        history_payload = await self._get(
+            "/api/get-history.json", {"session": session, "id": provider_account_id}
         )
         accounts = payload.get("accounts")
         if not isinstance(accounts, list):
@@ -205,7 +209,57 @@ class MyfxbookAdapter:
         except (KeyError, ValueError, TypeError) as exc:
             raise MyfxbookError("Myfxbook returned invalid open-order data") from exc
         orders.sort(key=lambda item: (item.created_at, item.provider_record_id))
-        return AccountFactBatch(account=account, positions=tuple(positions), orders=tuple(orders))
+        raw_history = history_payload.get("history")
+        if not isinstance(raw_history, list) or len(raw_history) > 50:
+            raise MyfxbookError("Myfxbook returned invalid recent history")
+        transactions: list[ExternalTransactionFact] = []
+        seen_history: set[str] = set()
+        try:
+            for raw in raw_history:
+                if not isinstance(raw, Mapping):
+                    raise ValueError
+                record_id = str(raw["id"]).strip()
+                transaction_type = str(raw["action"]).strip()
+                if not record_id or record_id in seen_history or not transaction_type:
+                    raise ValueError
+                seen_history.add(record_id)
+                sizing = raw.get("sizing")
+                quantity = None
+                if sizing is not None:
+                    if not isinstance(sizing, Mapping):
+                        raise ValueError
+                    quantity = Decimal(str(sizing["value"]))
+                symbol_value = raw.get("symbol")
+                symbol = str(symbol_value).strip() if symbol_value is not None else None
+                transactions.append(
+                    ExternalTransactionFact(
+                        provider="myfxbook",
+                        provider_account_id=provider_account_id,
+                        provider_record_id=record_id,
+                        provider_symbol=symbol or None,
+                        instrument=None,
+                        transaction_type=transaction_type,
+                        quantity=quantity,
+                        price=Decimal(str(raw["closePrice"]))
+                        if raw.get("closePrice") is not None
+                        else None,
+                        profit_loss=Decimal(str(raw["profit"]))
+                        if raw.get("profit") is not None
+                        else None,
+                        event_at=self._parse_local_time(str(raw["closeTime"])),
+                        observed_at=observed_at,
+                    )
+                )
+        except (KeyError, ValueError, TypeError) as exc:
+            raise MyfxbookError("Myfxbook returned invalid recent history") from exc
+        transactions.sort(key=lambda item: (item.event_at, item.provider_record_id))
+        return AccountFactBatch(
+            account=account,
+            positions=tuple(positions),
+            orders=tuple(orders),
+            transactions=tuple(transactions),
+            history_scope="RECENT_INCOMPLETE",
+        )
 
     async def aclose(self) -> None:
         if self._closed:
