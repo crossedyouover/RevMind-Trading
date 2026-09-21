@@ -7,12 +7,15 @@ from app.accounts.models import (
     AccountFactBatch,
     ExternalPerformanceObservation,
     ExternalSentimentContext,
+    TradingAccountSnapshot,
 )
 from app.core.schemas import Instrument
 
 
 class ReadOnlyTradingAccountProvider(Protocol):
     """Retrieve facts only; execution methods intentionally do not exist."""
+
+    async def list_accounts(self) -> tuple[TradingAccountSnapshot, ...]: ...
 
     async def sync_account(self, provider_account_id: str) -> AccountFactBatch: ...
 
