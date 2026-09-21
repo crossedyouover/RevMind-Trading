@@ -6,6 +6,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Annotated, Literal, Self
 from uuid import uuid4
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import ConfigDict, Field, SecretStr, field_validator, model_validator
 
@@ -77,6 +78,40 @@ class DashboardSettings(CanonicalModel):
         return self
 
 
+class MyfxbookConnectionProfile(CanonicalModel):
+    """Non-secret local selection required to construct a read-only adapter."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, revalidate_instances="always")
+    schema_version: Literal[1] = 1
+    provider_account_id: Annotated[str, Field(strict=True, min_length=1, max_length=128)]
+    broker_timezone: Annotated[str, Field(strict=True, min_length=1, max_length=128)]
+
+    @field_validator("schema_version", mode="before")
+    @classmethod
+    def strict_profile_version(cls, value: object) -> object:
+        if type(value) is not int or value != 1:
+            raise ValueError("schema version must be integer 1")
+        return value
+
+    @field_validator("provider_account_id")
+    @classmethod
+    def valid_account_id(cls, value: str) -> str:
+        if value != value.strip() or any(ord(character) < 32 for character in value):
+            raise ValueError("invalid Myfxbook account id")
+        return value
+
+    @field_validator("broker_timezone")
+    @classmethod
+    def valid_timezone(cls, value: str) -> str:
+        if value != value.strip() or any(ord(character) < 32 for character in value):
+            raise ValueError("invalid IANA broker timezone")
+        try:
+            ZoneInfo(value)
+        except (ZoneInfoNotFoundError, ValueError, TypeError) as exc:
+            raise ValueError("invalid IANA broker timezone") from exc
+        return value
+
+
 DEFAULT_SETTINGS = DashboardSettings(
     data_mode=DataMode.OFFLINE,
     alpaca_feed=AlpacaFeed.IEX,
@@ -96,6 +131,8 @@ class SettingsStore:
         self.directory = directory
         self.settings_path = directory / "settings.json"
         self.secret_path = directory / "alpaca.env"
+        self.myfxbook_profile_path = directory / "myfxbook.json"
+        self.myfxbook_secret_path = directory / "myfxbook.env"
 
     def load(self) -> DashboardSettings:
         if not self.settings_path.exists():
@@ -129,6 +166,86 @@ class SettingsStore:
         if not key or not secret:
             raise ValueError("Alpaca credentials are not configured")
         return SecretStr(key), SecretStr(secret)
+
+    def load_myfxbook_profile(self) -> MyfxbookConnectionProfile | None:
+        if not self.myfxbook_profile_path.exists():
+            return None
+        payload = self.myfxbook_profile_path.read_bytes()
+        if len(payload) > 4_096:
+            raise ValueError("Myfxbook profile file is too large")
+        return MyfxbookConnectionProfile.model_validate_json(payload)
+
+    def myfxbook_credentials(self) -> tuple[SecretStr, SecretStr]:
+        values = self._read_myfxbook_secrets() if self.myfxbook_secret_path.exists() else {}
+        email = values.get("MYFXBOOK_EMAIL")
+        password = values.get("MYFXBOOK_PASSWORD")
+        if not email or not password:
+            raise ValueError("Myfxbook credentials are not configured")
+        return SecretStr(email), SecretStr(password)
+
+    def myfxbook_public(self) -> dict[str, object]:
+        profile = self.load_myfxbook_profile()
+        credentials_configured = False
+        if self.myfxbook_secret_path.exists():
+            values = self._read_myfxbook_secrets()
+            credentials_configured = bool(
+                values.get("MYFXBOOK_EMAIL") and values.get("MYFXBOOK_PASSWORD")
+            )
+        profile_configured = profile is not None
+        return {
+            "profile_configured": profile_configured,
+            "credentials_configured": credentials_configured,
+            "provider_account_id": profile.provider_account_id if profile is not None else None,
+            "broker_timezone": profile.broker_timezone if profile is not None else None,
+            "integration_status": (
+                "CONFIGURED_NOT_ACTIVE"
+                if profile_configured and credentials_configured
+                else "INCOMPLETE_CONFIGURATION"
+                if profile_configured or credentials_configured
+                else "NOT_CONFIGURED"
+            ),
+        }
+
+    def save_myfxbook(
+        self,
+        profile: MyfxbookConnectionProfile | None,
+        email: str | None,
+        password: str | None,
+        clear_connection: bool,
+    ) -> dict[str, object]:
+        if type(clear_connection) is not bool:
+            raise ValueError("clear_connection must be a strict boolean")
+        if (email is None) != (password is None):
+            raise ValueError("both Myfxbook credential fields are required together")
+        validated_profile = (
+            MyfxbookConnectionProfile.model_validate(profile) if profile is not None else None
+        )
+        if email is not None:
+            for value in (email, password):
+                if (
+                    not isinstance(value, str)
+                    or not value
+                    or value != value.strip()
+                    or len(value) > 512
+                    or any(ord(character) < 32 for character in value)
+                ):
+                    raise ValueError("invalid Myfxbook credential value")
+        if clear_connection and (validated_profile is not None or email is not None):
+            raise ValueError("cannot set and clear Myfxbook connection together")
+        self.directory.mkdir(parents=True, exist_ok=True)
+        if clear_connection:
+            self.myfxbook_profile_path.unlink(missing_ok=True)
+            self.myfxbook_secret_path.unlink(missing_ok=True)
+        else:
+            if validated_profile is not None:
+                self._replace(
+                    self.myfxbook_profile_path,
+                    validated_profile.model_dump_json(indent=2).encode(),
+                )
+            if email is not None and password is not None:
+                body = f"MYFXBOOK_EMAIL={email}\nMYFXBOOK_PASSWORD={password}\n".encode()
+                self._replace(self.myfxbook_secret_path, body)
+        return self.myfxbook_public()
 
     def public(self) -> dict[str, object]:
         settings = self.load()
@@ -201,5 +318,23 @@ class SettingsStore:
             key, value = line.split("=", 1)
             if key in values:
                 raise ValueError("duplicate credential field")
+            values[key] = value
+        return values
+
+    def _read_myfxbook_secrets(self) -> dict[str, str]:
+        payload = self.myfxbook_secret_path.read_bytes()
+        if len(payload) > 2_048:
+            raise ValueError("Myfxbook credential file is too large")
+        try:
+            lines = payload.decode("utf-8").splitlines()
+        except UnicodeDecodeError as exc:
+            raise ValueError("Myfxbook credential file is malformed") from exc
+        values: dict[str, str] = {}
+        for line in lines:
+            if not re.fullmatch(r"MYFXBOOK_(?:EMAIL|PASSWORD)=[^\r\n]{1,512}", line):
+                raise ValueError("Myfxbook credential file is malformed")
+            key, value = line.split("=", 1)
+            if key in values or value != value.strip() or any(ord(char) < 32 for char in value):
+                raise ValueError("Myfxbook credential file is malformed")
             values[key] = value
         return values
