@@ -1,10 +1,11 @@
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 
 import httpx
 import pytest
 from pydantic import SecretStr
 
 from app.accounts.myfxbook import MyfxbookAdapter, MyfxbookAuthenticationError, MyfxbookError
+from app.accounts.protocol import ReadOnlyTradingAccountProvider
 
 NOW = datetime(2026, 9, 20, 21, tzinfo=UTC)
 
@@ -219,6 +220,149 @@ def test_broker_timezone_is_explicit_and_dst_ambiguity_fails_closed() -> None:
         adapter._parse_local_time("10/25/2026 02:30")
     with pytest.raises(MyfxbookError, match="nonexistent"):
         adapter._parse_local_time("03/29/2026 02:30")
+
+
+@pytest.mark.asyncio
+async def test_daily_performance_is_explicit_exact_and_deterministic() -> None:
+    requests: list[httpx.Request] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if request.url.path == "/api/login.json":
+            return httpx.Response(200, json={"error": False, "session": "session"})
+        return httpx.Response(
+            200,
+            json={
+                "error": False,
+                "dailyGain": [[
+                    {"date": "09/20/2026", "value": "0.123456789", "profit": "999"},
+                    {"date": "09/19/2026", "value": "-0.2", "profit": "-1"},
+                ]],
+            },
+        )
+
+    clock = Clock()
+    adapter = MyfxbookAdapter(
+        SecretStr("e"),
+        SecretStr("p"),
+        clock,
+        broker_timezone="UTC",
+        client=client(httpx.MockTransport(respond)),
+    )
+    result = await adapter.daily_performance("7", date(2026, 9, 19), date(2026, 9, 20))
+    assert [item.effective_date for item in result] == [date(2026, 9, 19), date(2026, 9, 20)]
+    assert result[1].gain_percent is not None
+    assert result[1].gain_percent.as_tuple().exponent == -9
+    assert result[0].balance is result[0].equity is None
+    assert all(item.observed_at == NOW for item in result)
+    query = requests[-1].url.params
+    assert query["id"] == "7"
+    assert query["start"] == "2026-09-19"
+    assert query["end"] == "2026-09-20"
+    assert clock.calls == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "daily_gain",
+    [
+        None,
+        [[[]]],
+        [[], []],
+        [[{"date": "09/19/2026"}]],
+        [[{"date": "09/18/2026", "value": "1"}]],
+        [[{"date": "09/19/2026", "value": "NaN"}]],
+        [[
+            {"date": "09/19/2026", "value": "1"},
+            {"date": "09/19/2026", "value": "2"},
+        ]],
+    ],
+)
+async def test_daily_performance_rejects_malformed_data_without_observing(
+    daily_gain: object,
+) -> None:
+    clock = Clock()
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/login.json":
+            return httpx.Response(200, json={"error": False, "session": "session"})
+        return httpx.Response(200, json={"error": False, "dailyGain": daily_gain})
+
+    adapter = MyfxbookAdapter(
+        SecretStr("e"),
+        SecretStr("p"),
+        clock,
+        broker_timezone="UTC",
+        client=client(httpx.MockTransport(respond)),
+    )
+    with pytest.raises(MyfxbookError, match="daily performance"):
+        await adapter.daily_performance("7", date(2026, 9, 19), date(2026, 9, 20))
+    assert clock.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_daily_performance_empty_flat_response_and_future_date_rules() -> None:
+    responses: list[object] = [[], [{"date": "09/21/2026", "value": "1"}]]
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/login.json":
+            return httpx.Response(200, json={"error": False, "session": "session"})
+        return httpx.Response(200, json={"error": False, "dailyGain": responses.pop(0)})
+
+    adapter = MyfxbookAdapter(
+        SecretStr("e"),
+        SecretStr("p"),
+        Clock(),
+        broker_timezone="UTC",
+        client=client(httpx.MockTransport(respond)),
+    )
+    assert await adapter.daily_performance("7", date(2026, 9, 20), date(2026, 9, 20)) == ()
+    with pytest.raises(MyfxbookError, match="daily performance"):
+        await adapter.daily_performance("7", date(2026, 9, 21), date(2026, 9, 21))
+
+
+@pytest.mark.asyncio
+async def test_daily_performance_range_and_response_bounds() -> None:
+    adapter = MyfxbookAdapter(
+        SecretStr("e"),
+        SecretStr("p"),
+        Clock(),
+        broker_timezone="UTC",
+        client=client(httpx.MockTransport(lambda _request: httpx.Response(200, json={}))),
+    )
+    with pytest.raises(ValueError, match="after"):
+        await adapter.daily_performance("7", date(2026, 9, 2), date(2026, 9, 1))
+    with pytest.raises(ValueError, match="366"):
+        await adapter.daily_performance("7", date(2025, 9, 19), date(2026, 9, 20))
+    with pytest.raises(ValueError, match="non-empty"):
+        await adapter.daily_performance(" ", date(2026, 9, 20), date(2026, 9, 20))
+
+    records = [
+        {"date": (date(2025, 9, 20) + timedelta(days=index)).strftime("%m/%d/%Y"), "value": 0}
+        for index in range(367)
+    ]
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/login.json":
+            return httpx.Response(200, json={"error": False, "session": "session"})
+        return httpx.Response(200, json={"error": False, "dailyGain": records})
+
+    bounded = MyfxbookAdapter(
+        SecretStr("e"),
+        SecretStr("p"),
+        Clock(),
+        broker_timezone="UTC",
+        client=client(httpx.MockTransport(respond)),
+    )
+    with pytest.raises(MyfxbookError, match="too much"):
+        await bounded.daily_performance("7", date(2025, 9, 21), date(2026, 9, 21))
+
+
+def test_read_only_protocol_declares_explicit_daily_performance_range() -> None:
+    import inspect
+
+    parameters = inspect.signature(ReadOnlyTradingAccountProvider.daily_performance).parameters
+    assert list(parameters) == ["self", "provider_account_id", "start", "end"]
 
 
 @pytest.mark.asyncio
