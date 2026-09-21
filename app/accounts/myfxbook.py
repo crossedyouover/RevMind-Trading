@@ -2,7 +2,7 @@
 
 import json
 from collections.abc import Mapping
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Literal, Protocol
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -14,6 +14,7 @@ from app.accounts.models import (
     AccountFactBatch,
     ExternalOpenOrderFact,
     ExternalOpenPositionFact,
+    ExternalPerformanceObservation,
     ExternalTransactionFact,
     TradingAccountSnapshot,
 )
@@ -260,6 +261,71 @@ class MyfxbookAdapter:
             transactions=tuple(transactions),
             history_scope="RECENT_INCOMPLETE",
         )
+
+    async def daily_performance(
+        self, provider_account_id: str, start: date, end: date
+    ) -> tuple[ExternalPerformanceObservation, ...]:
+        """Return provider-reported daily gain for one explicit inclusive date range."""
+        if not provider_account_id.strip():
+            raise ValueError("provider account id must be non-empty")
+        if start > end:
+            raise ValueError("performance start date cannot be after end date")
+        if (end - start).days >= 366:
+            raise ValueError("performance range cannot exceed 366 inclusive dates")
+        session = await self._ensure_session()
+        payload = await self._get(
+            "/api/get-daily-gain.json",
+            {
+                "session": session,
+                "id": provider_account_id,
+                "start": start.isoformat(),
+                "end": end.isoformat(),
+            },
+        )
+        raw_collection = payload.get("dailyGain")
+        if not isinstance(raw_collection, list):
+            raise MyfxbookError("Myfxbook returned malformed daily performance data")
+        raw_records: list[object]
+        if len(raw_collection) == 1 and isinstance(raw_collection[0], list):
+            raw_records = raw_collection[0]
+        elif any(isinstance(item, list) for item in raw_collection):
+            raise MyfxbookError("Myfxbook returned malformed daily performance data")
+        else:
+            raw_records = raw_collection
+        if len(raw_records) > 366:
+            raise MyfxbookError("Myfxbook returned too much daily performance data")
+        parsed: list[tuple[date, Decimal]] = []
+        seen_dates: set[date] = set()
+        try:
+            for raw in raw_records:
+                if not isinstance(raw, Mapping):
+                    raise ValueError
+                effective_date = datetime.strptime(str(raw["date"]), "%m/%d/%Y").date()
+                if effective_date in seen_dates or not start <= effective_date <= end:
+                    raise ValueError
+                seen_dates.add(effective_date)
+                gain_percent = Decimal(str(raw["value"]))
+                if not gain_percent.is_finite():
+                    raise ValueError
+                parsed.append((effective_date, gain_percent))
+        except (KeyError, ValueError, TypeError) as exc:
+            raise MyfxbookError("Myfxbook returned invalid daily performance data") from exc
+        observed_at = self._utc_now()
+        try:
+            observations = [
+                ExternalPerformanceObservation(
+                    provider="myfxbook",
+                    provider_account_id=provider_account_id,
+                    effective_date=effective_date,
+                    gain_percent=gain_percent,
+                    observed_at=observed_at,
+                )
+                for effective_date, gain_percent in parsed
+            ]
+        except ValueError as exc:
+            raise MyfxbookError("Myfxbook returned invalid daily performance data") from exc
+        observations.sort(key=lambda item: item.effective_date)
+        return tuple(observations)
 
     async def aclose(self) -> None:
         if self._closed:

@@ -139,5 +139,10 @@ def test_provider_protocol_exposes_no_execution_surface() -> None:
         for name, member in inspect.getmembers(ReadOnlyTradingAccountProvider)
         if inspect.isfunction(member) and not name.startswith("_")
     }
-    assert public_methods == {"sync_account", "sentiment_context", "aclose"}
+    assert public_methods == {
+        "sync_account",
+        "daily_performance",
+        "sentiment_context",
+        "aclose",
+    }
     assert not public_methods & {"place_order", "cancel_order", "modify_order", "execute"}
