@@ -31,6 +31,31 @@ async def test_sync_maps_account_and_observes_only_after_validation() -> None:
             return httpx.Response(200, json={"error": False, "session": "secret-session"})
         if request.url.path == "/api/get-open-trades.json":
             return httpx.Response(200, json={"error": False, "openTrades": []})
+        if request.url.path == "/api/get-open-orders.json":
+            return httpx.Response(
+                200,
+                json={
+                    "error": False,
+                    "openOrders": [
+                        {
+                            "id": "o2",
+                            "symbol": "EURUSD",
+                            "action": "Sell Limit",
+                            "sizing": {"value": "0.20"},
+                            "openPrice": "1.200000001",
+                            "openTime": "09/20/2026 14:00",
+                        },
+                        {
+                            "id": "o1",
+                            "symbol": "XAUUSD",
+                            "action": "Buy Stop",
+                            "sizing": {"value": "0.10"},
+                            "openPrice": "2700.01",
+                            "openTime": "09/20/2026 13:00",
+                        },
+                    ],
+                },
+            )
         return httpx.Response(
             200,
             json={
@@ -57,11 +82,19 @@ async def test_sync_maps_account_and_observes_only_after_validation() -> None:
         client=client(httpx.MockTransport(respond)),
     )
     result = await adapter.sync_account("7")
-    assert seen == ["/api/login.json", "/api/get-my-accounts.json", "/api/get-open-trades.json"]
+    assert seen == [
+        "/api/login.json",
+        "/api/get-my-accounts.json",
+        "/api/get-open-trades.json",
+        "/api/get-open-orders.json",
+    ]
     assert result.account.balance.as_tuple().exponent == -2
     assert result.account.observed_at == NOW
     assert result.history_scope == "NOT_REQUESTED"
-    assert result.positions == result.orders == result.transactions == result.performance == ()
+    assert result.positions == result.transactions == result.performance == ()
+    assert [item.provider_record_id for item in result.orders] == ["o1", "o2"]
+    assert result.orders[0].side == "BUY" and result.orders[0].instrument is None
+    assert result.orders[1].declared_price.as_tuple().exponent == -9
     assert clock.calls == 1
     assert "secret-session" not in result.model_dump_json()
 
@@ -127,6 +160,8 @@ async def test_selected_account_must_exist_exactly_once(accounts: list[dict[str,
             return httpx.Response(200, json={"error": False, "session": "session"})
         if request.url.path == "/api/get-open-trades.json":
             return httpx.Response(200, json={"error": False, "openTrades": []})
+        if request.url.path == "/api/get-open-orders.json":
+            return httpx.Response(200, json={"error": False, "openOrders": []})
         return httpx.Response(200, json={"error": False, "accounts": accounts})
 
     adapter = MyfxbookAdapter(
@@ -179,6 +214,8 @@ async def test_open_positions_are_unmapped_exact_and_deterministically_ordered()
                     "accounts": [{"id": 7, "currency": "USD", "balance": "1000", "equity": "990"}],
                 },
             )
+        if request.url.path == "/api/get-open-orders.json":
+            return httpx.Response(200, json={"error": False, "openOrders": []})
         return httpx.Response(
             200,
             json={
