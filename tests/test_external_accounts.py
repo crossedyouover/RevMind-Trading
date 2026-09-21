@@ -140,6 +140,7 @@ def test_provider_protocol_exposes_no_execution_surface() -> None:
         if inspect.isfunction(member) and not name.startswith("_")
     }
     assert public_methods == {
+        "list_accounts",
         "sync_account",
         "daily_performance",
         "sentiment_context",

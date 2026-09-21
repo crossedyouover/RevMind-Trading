@@ -91,6 +91,64 @@ class MyfxbookAdapter:
             raise MyfxbookError("Myfxbook local time is ambiguous or nonexistent")
         return candidates[0].astimezone(UTC)
 
+    async def list_accounts(self) -> tuple[TradingAccountSnapshot, ...]:
+        """Return the bounded account choices visible to the authenticated user."""
+        session = await self._ensure_session()
+        payload = await self._get("/api/get-my-accounts.json", {"session": session})
+        raw_accounts = payload.get("accounts")
+        if not isinstance(raw_accounts, list):
+            raise MyfxbookError("Myfxbook returned malformed account data")
+        if len(raw_accounts) > 100:
+            raise MyfxbookError("Myfxbook returned too many accounts")
+        parsed: list[tuple[str, str | None, str, Decimal, Decimal, Decimal | None]] = []
+        seen_ids: set[str] = set()
+        try:
+            for raw in raw_accounts:
+                if not isinstance(raw, Mapping) or raw.get("id") is None:
+                    raise ValueError
+                account_id = str(raw["id"]).strip()
+                currency = str(raw["currency"]).strip()
+                if not account_id or account_id in seen_ids or not currency:
+                    raise ValueError
+                seen_ids.add(account_id)
+                name_value = raw.get("name")
+                account_name = str(name_value).strip() if name_value is not None else None
+                account_name = account_name or None
+                balance = Decimal(str(raw["balance"]))
+                equity = Decimal(str(raw["equity"]))
+                margin = (
+                    Decimal(str(raw["margin"])) if raw.get("margin") is not None else None
+                )
+                if (
+                    not balance.is_finite()
+                    or not equity.is_finite()
+                    or (margin is not None and (not margin.is_finite() or margin < 0))
+                ):
+                    raise ValueError
+                parsed.append((account_id, account_name, currency, balance, equity, margin))
+        except (KeyError, ValueError, TypeError) as exc:
+            raise MyfxbookError("Myfxbook returned invalid account data") from exc
+        observed_at = self._utc_now()
+        try:
+            accounts = [
+                TradingAccountSnapshot(
+                    provider="myfxbook",
+                    provider_account_id=account_id,
+                    account_name=account_name,
+                    currency=currency,
+                    balance=balance,
+                    equity=equity,
+                    margin=margin,
+                    free_margin=None,
+                    observed_at=observed_at,
+                )
+                for account_id, account_name, currency, balance, equity, margin in parsed
+            ]
+        except ValueError as exc:
+            raise MyfxbookError("Myfxbook returned invalid account data") from exc
+        accounts.sort(key=lambda item: (item.provider_account_id, item.account_name or ""))
+        return tuple(accounts)
+
     async def sync_account(self, provider_account_id: str) -> AccountFactBatch:
         """Return one atomic account snapshot; trading endpoints do not exist."""
         if not provider_account_id.strip():

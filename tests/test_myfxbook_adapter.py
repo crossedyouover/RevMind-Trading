@@ -460,6 +460,159 @@ async def test_disconnect_transport_failure_is_terminal_and_redacted() -> None:
 
 
 @pytest.mark.asyncio
+async def test_list_accounts_is_bounded_exact_atomic_and_ordered() -> None:
+    seen: list[httpx.Request] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        if request.url.path == "/api/login.json":
+            return httpx.Response(200, json={"error": False, "session": "secret-session"})
+        return httpx.Response(
+            200,
+            json={
+                "error": False,
+                "accounts": [
+                    {
+                        "id": 20,
+                        "name": "Second",
+                        "currency": "eur",
+                        "balance": "100.123456789",
+                        "equity": "99.000000001",
+                        "margin": "2.5",
+                        "invitationUrl": "https://secret.invalid/invite",
+                    },
+                    {
+                        "id": "10",
+                        "name": " ",
+                        "currency": "usd",
+                        "balance": "0",
+                        "equity": "0",
+                    },
+                ],
+            },
+        )
+
+    clock = Clock()
+    adapter = MyfxbookAdapter(
+        SecretStr("e"),
+        SecretStr("p"),
+        clock,
+        broker_timezone="UTC",
+        client=client(httpx.MockTransport(respond)),
+    )
+    accounts = await adapter.list_accounts()
+    assert [item.provider_account_id for item in accounts] == ["10", "20"]
+    assert accounts[0].account_name is None
+    assert accounts[0].currency == "USD"
+    assert accounts[1].balance.as_tuple().exponent == -9
+    assert accounts[1].equity.as_tuple().exponent == -9
+    assert all(item.observed_at == NOW for item in accounts)
+    assert clock.calls == 1
+    assert [request.url.path for request in seen] == [
+        "/api/login.json",
+        "/api/get-my-accounts.json",
+    ]
+    serialized = "".join(item.model_dump_json() for item in accounts)
+    assert "secret-session" not in serialized
+    assert "invitationUrl" not in serialized
+
+
+@pytest.mark.asyncio
+async def test_list_accounts_accepts_empty_and_one_hundred_records() -> None:
+    payloads: list[list[dict[str, object]]] = [
+        [],
+        [
+            {
+                "id": f"id-{index:03d}",
+                "currency": "USD",
+                "balance": index,
+                "equity": index,
+            }
+            for index in reversed(range(100))
+        ],
+    ]
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/login.json":
+            return httpx.Response(200, json={"error": False, "session": "session"})
+        return httpx.Response(200, json={"error": False, "accounts": payloads.pop(0)})
+
+    adapter = MyfxbookAdapter(
+        SecretStr("e"),
+        SecretStr("p"),
+        Clock(),
+        broker_timezone="UTC",
+        client=client(httpx.MockTransport(respond)),
+    )
+    assert await adapter.list_accounts() == ()
+    accounts = await adapter.list_accounts()
+    assert len(accounts) == 100
+    assert accounts[0].provider_account_id == "id-000"
+    assert accounts[-1].provider_account_id == "id-099"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "accounts",
+    [
+        None,
+        [
+            {"id": "same", "currency": "USD", "balance": 1, "equity": 1},
+            {"id": "same", "currency": "USD", "balance": 1, "equity": 1},
+        ],
+        [{"id": " ", "currency": "USD", "balance": 1, "equity": 1}],
+        [{"id": "1", "currency": " ", "balance": 1, "equity": 1}],
+        [{"id": "1", "currency": "USD", "balance": "NaN", "equity": 1}],
+        [{"id": "1", "currency": "USD", "balance": 1, "equity": "Infinity"}],
+        [{"id": "1", "currency": "USD", "balance": 1, "equity": 1, "margin": -1}],
+    ],
+)
+async def test_list_accounts_rejects_invalid_data_before_observing(accounts: object) -> None:
+    clock = Clock()
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/login.json":
+            return httpx.Response(200, json={"error": False, "session": "session"})
+        return httpx.Response(200, json={"error": False, "accounts": accounts})
+
+    adapter = MyfxbookAdapter(
+        SecretStr("e"),
+        SecretStr("p"),
+        clock,
+        broker_timezone="UTC",
+        client=client(httpx.MockTransport(respond)),
+    )
+    with pytest.raises(MyfxbookError, match="account data"):
+        await adapter.list_accounts()
+    assert clock.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_list_accounts_rejects_more_than_one_hundred_before_observing() -> None:
+    records = [
+        {"id": index, "currency": "USD", "balance": 0, "equity": 0}
+        for index in range(101)
+    ]
+    clock = Clock()
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/login.json":
+            return httpx.Response(200, json={"error": False, "session": "session"})
+        return httpx.Response(200, json={"error": False, "accounts": records})
+
+    adapter = MyfxbookAdapter(
+        SecretStr("e"),
+        SecretStr("p"),
+        clock,
+        broker_timezone="UTC",
+        client=client(httpx.MockTransport(respond)),
+    )
+    with pytest.raises(MyfxbookError, match="too many"):
+        await adapter.list_accounts()
+    assert clock.calls == 0
+
+
+@pytest.mark.asyncio
 async def test_open_positions_are_unmapped_exact_and_deterministically_ordered() -> None:
     def respond(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/api/login.json":
