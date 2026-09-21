@@ -178,6 +178,17 @@ def test_myfxbook_oversized_files_and_conflicting_clear_fail_closed(tmp_path):
         store.save_myfxbook(profile, None, None, True)
 
 
+def test_myfxbook_settings_routes_have_no_provider_or_execution_dependency():
+    import inspect
+
+    import app.dashboard.server as server_module
+
+    source = inspect.getsource(server_module)
+    assert "MyfxbookAdapter" not in source
+    assert "app.accounts" not in source
+    assert "get-my-accounts" not in source
+
+
 @pytest.mark.parametrize(
     "changes",
     [
@@ -290,6 +301,9 @@ def test_local_session_routes(app):
         settings = json.loads(call("/api/settings", headers=token)[1])
         assert settings["data_mode"] == "OFFLINE"
         assert "api_secret" not in json.dumps(settings)
+        myfxbook = json.loads(call("/api/myfxbook/settings", headers=token)[1])
+        assert myfxbook["integration_status"] == "NOT_CONFIGURED"
+        assert call("/api/myfxbook/settings")[0] == 403
         health = json.loads(call("/api/health", headers=token)[1])
         assert health["dashboard"] == "READY"
         assert health["live_data"] == "DISABLED"
@@ -329,6 +343,80 @@ def test_local_session_routes(app):
         assert status == 200 and b"route-secret" not in saved
         assert json.loads(saved)["integration_status"] == "CONFIGURED_NOT_ACTIVE"
         assert call("/api/settings", "POST", headers, '{"settings":{}}')[0] == 400
+        myfxbook_envelope = {
+            "schema_version": 1,
+            "provider_account_id": "account-7",
+            "broker_timezone": "Europe/Madrid",
+            "email": "mail@example.test",
+            "password": "route-password-secret",
+            "clear_connection": False,
+        }
+        status, myfxbook_saved, _ = call(
+            "/api/myfxbook/settings", "POST", headers, json.dumps(myfxbook_envelope)
+        )
+        assert status == 200
+        assert b"route-password-secret" not in myfxbook_saved
+        assert b"mail@example.test" not in myfxbook_saved
+        assert json.loads(myfxbook_saved)["integration_status"] == "CONFIGURED_NOT_ACTIVE"
+        preserved = {**myfxbook_envelope, "email": None, "password": None}
+        status, preserved_body, _ = call(
+            "/api/myfxbook/settings", "POST", headers, json.dumps(preserved)
+        )
+        assert status == 200
+        assert json.loads(preserved_body)["credentials_configured"] is True
+        assert call(
+            "/api/myfxbook/settings",
+            "POST",
+            headers,
+            json.dumps({**myfxbook_envelope, "unexpected": True}),
+        )[0] == 400
+        assert call(
+            "/api/myfxbook/settings",
+            "POST",
+            headers,
+            json.dumps({**myfxbook_envelope, "broker_timezone": "Not/AZone"}),
+        )[0] == 400
+        assert call(
+            "/api/myfxbook/settings",
+            "POST",
+            headers,
+            json.dumps({**myfxbook_envelope, "password": None}),
+        )[0] == 400
+        assert call("/api/myfxbook/settings", "POST", headers, "not-json")[0] == 400
+        assert call(
+            "/api/myfxbook/settings",
+            "POST",
+            headers,
+            json.dumps({**myfxbook_envelope, "schema_version": "1"}),
+        )[0] == 400
+        assert call(
+            "/api/myfxbook/settings",
+            "POST",
+            headers,
+            json.dumps({**myfxbook_envelope, "clear_connection": True}),
+        )[0] == 400
+        assert call(
+            "/api/myfxbook/settings",
+            "POST",
+            headers,
+            json.dumps({**myfxbook_envelope, "padding": "x" * 33_000}),
+        )[0] == 400
+        assert json.loads(call("/api/myfxbook/settings", headers=token)[1])[
+            "integration_status"
+        ] == "CONFIGURED_NOT_ACTIVE"
+        clear_myfxbook = {
+            "schema_version": 1,
+            "provider_account_id": None,
+            "broker_timezone": None,
+            "email": None,
+            "password": None,
+            "clear_connection": True,
+        }
+        status, cleared_body, _ = call(
+            "/api/myfxbook/settings", "POST", headers, json.dumps(clear_myfxbook)
+        )
+        assert status == 200
+        assert json.loads(cleared_body)["integration_status"] == "NOT_CONFIGURED"
         assert call("/api/alpaca/test", "POST", headers, '{"symbols":["AAPL"]}')[0] == 400
         assert call("/api/alpaca/research", "POST", headers, '{"days":30}')[0] == 400
         assert call("/api/alpaca/news", "POST", headers, '{"days":30}')[0] == 400

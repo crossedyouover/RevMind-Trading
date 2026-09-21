@@ -30,7 +30,7 @@ from app.dashboard.live import (
     PaperCancelInput,
     PaperPlanInput,
 )
-from app.dashboard.settings import DashboardSettings, SettingsStore
+from app.dashboard.settings import DashboardSettings, MyfxbookSettingsRequest, SettingsStore
 from app.data.csv_import import CsvBarImportCoordinator, CsvBarImportRequest
 from app.data.ingestion import SystemUtcClock
 from app.data.observation_store import SQLiteObservationStore
@@ -259,6 +259,12 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                     self.reply(200, body, "application/json")
                 elif path == "/api/settings":
                     self.reply(200, json.dumps(app.settings.public()).encode(), "application/json")
+                elif path == "/api/myfxbook/settings":
+                    self.reply(
+                        200,
+                        json.dumps(app.settings.myfxbook_public()).encode(),
+                        "application/json",
+                    )
                 elif path == "/api/health":
                     self.reply(200, json.dumps(app.health()).encode(), "application/json")
                 elif path == "/api/providers":
@@ -316,6 +322,7 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                 not in {
                     "/api/demo",
                     "/api/settings",
+                    "/api/myfxbook/settings",
                     "/api/alpaca/test",
                     "/api/alpaca/research",
                     "/api/alpaca/news",
@@ -379,6 +386,14 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                 elif self.path == "/api/paper-order/cancel":
                     value = asyncio.run(
                         app.live.cancel_paper_order(PaperCancelInput.model_validate_json(payload))
+                    )
+                elif self.path == "/api/myfxbook/settings":
+                    request = MyfxbookSettingsRequest.model_validate_json(payload)
+                    value = app.settings.save_myfxbook(
+                        request.profile(),
+                        request.email,
+                        request.password,
+                        request.clear_connection,
                     )
                 else:
                     body = json.loads(payload)
