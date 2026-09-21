@@ -7,10 +7,10 @@ this file and `README.md` before making changes.
 
 - Repository: `C:\Users\user\Documents\RevMind-Trading`
 - Canonical branch: `main` (`master` is the local tracking branch)
-- Frozen through: Phase 53 (bounded fixed-origin read-only Myfxbook account-summary adapter)
-- Frozen commit: `f5c403f4e2226e58f9aa2cf4f789d795f6e35ad6`
-- Frozen tag: `phase53-frozen` (peeled tag resolves to the frozen commit)
-- Last frozen gate: 1,118 tests passed, Ruff clean, mypy strict clean (114 source files), `git diff --check`
+- Frozen through: Phase 54 (read-only Myfxbook open-position facts with explicit broker timezone)
+- Frozen commit: `ac8cacfeeefa4ef5f872c8840be9fb1d81b635d9`
+- Frozen tag: `phase54-frozen` (peeled tag resolves to the frozen commit)
+- Last frozen gate: 1,120 tests passed, Ruff clean, mypy strict clean (114 source files), `git diff --check`
   clean, tracked worktree clean
 - Current capability: deterministic, point-in-time-safe flow from canonical market observations
   through technical analysis, market evidence, setup composition, and multi-instrument scanning,
@@ -135,6 +135,7 @@ These rules survive every future phase:
 | 51 | Deterministic fair-value-gap lifecycle evidence | `phase51-frozen` |
 | 52 | Deterministic fixed-width support/resistance zone lifecycle evidence | `phase52-frozen` |
 | 53 | Bounded read-only Myfxbook account-summary adapter | `phase53-frozen` |
+| 54 | Read-only Myfxbook open-position facts and IANA-time conversion | `phase54-frozen` |
 
 Latest frozen merge SHAs:
 
@@ -165,6 +166,7 @@ Latest frozen merge SHAs:
 - Phase 51: `f583351d40923873c0c159e9a3d2acf43401493d`
 - Phase 52: `7e23409dd25324c4aaf1b82b86a3bb38b63a5c07`
 - Phase 53: `f5c403f4e2226e58f9aa2cf4f789d795f6e35ad6`
+- Phase 54: `ac8cacfeeefa4ef5f872c8840be9fb1d81b635d9`
 
 Phases 1–6 predate the frozen-tag convention. Their commits are immutable historical foundations
 and must not be rewritten.
@@ -298,11 +300,10 @@ For Phase `N`, always:
 
 ## Exact next action
 
-Phase 53 is frozen on `phase53-frozen`. RevMind can authenticate against the fixed official
-Myfxbook origin and materialize one selected account summary through immutable provider-neutral
-facts. It has no dashboard connection, stored credentials, positions, history, reconciliation, or
-execution authority. Phase 54 adds read-only open-position facts only, with explicit IANA broker
-timezone conversion and unmapped provider symbols. See `PHASE54_DESIGN.md`.
+Phase 54 is frozen on `phase54-frozen`. RevMind materializes one selected Myfxbook account and its
+unmapped open-position facts at one receipt boundary with explicit IANA broker-time conversion.
+It has no dashboard connection, stored credentials, pending orders, history, reconciliation, or
+execution authority. Phase 55 adds read-only pending-order facts only. See `PHASE55_DESIGN.md`.
 
 ## Historical continuation record (superseded)
 
