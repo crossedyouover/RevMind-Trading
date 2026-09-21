@@ -328,12 +328,26 @@ class MyfxbookAdapter:
         return tuple(observations)
 
     async def aclose(self) -> None:
+        await self.disconnect()
+
+    async def disconnect(self) -> None:
+        """Invalidate a created provider session and make this adapter terminally closed."""
         if self._closed:
             return
-        self._closed = True
+        session = self._session.get_secret_value() if self._session is not None else None
         self._session = None
-        if self._owns_client:
-            await self._client.aclose()
+        failure: MyfxbookError | None = None
+        try:
+            if session is not None:
+                await self._get("/api/logout.json", {"session": session})
+        except MyfxbookError as exc:
+            failure = exc
+        finally:
+            self._closed = True
+            if self._owns_client:
+                await self._client.aclose()
+        if failure is not None:
+            raise MyfxbookError("Myfxbook disconnect failed") from failure
 
     async def _ensure_session(self) -> str:
         self._require_open()

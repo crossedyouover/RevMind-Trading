@@ -366,6 +366,100 @@ def test_read_only_protocol_declares_explicit_daily_performance_range() -> None:
 
 
 @pytest.mark.asyncio
+async def test_disconnect_logs_out_once_and_is_terminal() -> None:
+    seen: list[httpx.Request] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        if request.url.path == "/api/login.json":
+            return httpx.Response(200, json={"error": False, "session": "secret-session"})
+        return httpx.Response(200, json={"error": False, "message": "Logged out"})
+
+    transport = client(httpx.MockTransport(respond))
+    adapter = MyfxbookAdapter(
+        SecretStr("e"), SecretStr("p"), Clock(), broker_timezone="UTC", client=transport
+    )
+    await adapter._ensure_session()
+    await adapter.disconnect()
+    await adapter.disconnect()
+    assert [request.url.path for request in seen] == ["/api/login.json", "/api/logout.json"]
+    assert seen[-1].url.params["session"] == "secret-session"
+    assert adapter._session is None
+    assert not transport.is_closed
+    with pytest.raises(MyfxbookError, match="closed"):
+        await adapter.daily_performance("7", date(2026, 9, 20), date(2026, 9, 20))
+    await transport.aclose()
+
+
+@pytest.mark.asyncio
+async def test_disconnect_without_session_skips_logout_and_owned_client_closes() -> None:
+    adapter = MyfxbookAdapter(
+        SecretStr("e"), SecretStr("p"), Clock(), broker_timezone="UTC"
+    )
+    await adapter.aclose()
+    assert adapter._client.is_closed
+    await adapter.aclose()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "logout_response",
+    [
+        httpx.Response(302, headers={"location": "https://example.com"}),
+        httpx.Response(403, json={"message": "secret-session"}),
+        httpx.Response(200, json={"error": True, "message": "secret-session"}),
+        httpx.Response(200, content=b"not-json"),
+    ],
+)
+async def test_failed_disconnect_clears_session_closes_and_redacts(
+    logout_response: httpx.Response,
+) -> None:
+    def respond(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/login.json":
+            return httpx.Response(200, json={"error": False, "session": "secret-session"})
+        assert adapter._session is None
+        return logout_response
+
+    transport = client(httpx.MockTransport(respond))
+    adapter = MyfxbookAdapter(
+        SecretStr("email-secret"),
+        SecretStr("password-secret"),
+        Clock(),
+        broker_timezone="UTC",
+        client=transport,
+    )
+    await adapter._ensure_session()
+    with pytest.raises(MyfxbookError, match="disconnect failed") as caught:
+        await adapter.disconnect()
+    assert adapter._session is None
+    assert "secret-session" not in str(caught.value)
+    with pytest.raises(MyfxbookError, match="closed"):
+        await adapter._ensure_session()
+    await transport.aclose()
+
+
+@pytest.mark.asyncio
+async def test_disconnect_transport_failure_is_terminal_and_redacted() -> None:
+    def respond(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/login.json":
+            return httpx.Response(200, json={"error": False, "session": "secret-session"})
+        raise httpx.ConnectError("secret-session transport detail", request=request)
+
+    transport = client(httpx.MockTransport(respond))
+    adapter = MyfxbookAdapter(
+        SecretStr("e"), SecretStr("p"), Clock(), broker_timezone="UTC", client=transport
+    )
+    await adapter._ensure_session()
+    with pytest.raises(MyfxbookError, match="disconnect failed") as caught:
+        await adapter.disconnect()
+    assert "secret-session" not in str(caught.value)
+    assert adapter._session is None
+    with pytest.raises(MyfxbookError, match="closed"):
+        await adapter._ensure_session()
+    await transport.aclose()
+
+
+@pytest.mark.asyncio
 async def test_open_positions_are_unmapped_exact_and_deterministically_ordered() -> None:
     def respond(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/api/login.json":
