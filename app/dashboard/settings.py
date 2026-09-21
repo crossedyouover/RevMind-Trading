@@ -112,6 +112,47 @@ class MyfxbookConnectionProfile(CanonicalModel):
         return value
 
 
+class MyfxbookSettingsRequest(CanonicalModel):
+    """Strict browser request; secrets are accepted only for local persistence."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, revalidate_instances="always")
+    schema_version: Literal[1] = 1
+    provider_account_id: Annotated[str | None, Field(strict=True)] = None
+    broker_timezone: Annotated[str | None, Field(strict=True)] = None
+    email: Annotated[str | None, Field(strict=True)] = None
+    password: Annotated[str | None, Field(strict=True)] = None
+    clear_connection: Annotated[bool, Field(strict=True)] = False
+
+    @field_validator("schema_version", mode="before")
+    @classmethod
+    def strict_request_version(cls, value: object) -> object:
+        if type(value) is not int or value != 1:
+            raise ValueError("schema version must be integer 1")
+        return value
+
+    @model_validator(mode="after")
+    def coherent_operation(self) -> Self:
+        supplied_profile = self.provider_account_id is not None or self.broker_timezone is not None
+        supplied_secrets = self.email is not None or self.password is not None
+        if self.clear_connection:
+            if supplied_profile or supplied_secrets:
+                raise ValueError("clear request cannot contain profile or credentials")
+        elif self.provider_account_id is None or self.broker_timezone is None:
+            raise ValueError("profile fields are required")
+        if (self.email is None) != (self.password is None):
+            raise ValueError("credential fields are required together")
+        return self
+
+    def profile(self) -> MyfxbookConnectionProfile | None:
+        if self.clear_connection:
+            return None
+        if self.provider_account_id is None or self.broker_timezone is None:
+            raise ValueError("profile fields are required")
+        return MyfxbookConnectionProfile(
+            provider_account_id=self.provider_account_id,
+            broker_timezone=self.broker_timezone,
+        )
+
 DEFAULT_SETTINGS = DashboardSettings(
     data_mode=DataMode.OFFLINE,
     alpaca_feed=AlpacaFeed.IEX,
