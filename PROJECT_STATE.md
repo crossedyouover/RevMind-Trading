@@ -7,10 +7,10 @@ this file and `README.md` before making changes.
 
 - Repository: `C:\Users\user\Documents\RevMind-Trading`
 - Canonical branch: `main` (`master` is the local tracking branch)
-- Frozen through: Phase 56 (bounded read-only Myfxbook recent transaction facts)
-- Frozen commit: `cd5c25a31094a64d242c9468305a086f553ce258`
-- Frozen tag: `phase56-frozen` (peeled tag resolves to the frozen commit)
-- Last frozen gate: 1,120 tests passed, Ruff clean, mypy strict clean (114 source files), `git diff --check`
+- Frozen through: Phase 57 (explicitly ranged Myfxbook daily performance observations)
+- Frozen commit: `bee660e9097b40c0fb2131cd09f868fd5cb3847f`
+- Frozen tag: `phase57-frozen` (peeled tag resolves to the frozen commit)
+- Last frozen gate: 1,131 tests passed, Ruff clean, mypy strict clean (114 source files), `git diff --check`
   clean, tracked worktree clean
 - Current capability: deterministic, point-in-time-safe flow from canonical market observations
   through technical analysis, market evidence, setup composition, and multi-instrument scanning,
@@ -138,6 +138,7 @@ These rules survive every future phase:
 | 54 | Read-only Myfxbook open-position facts and IANA-time conversion | `phase54-frozen` |
 | 55 | Read-only Myfxbook pending-order facts | `phase55-frozen` |
 | 56 | Bounded explicitly incomplete Myfxbook recent transaction facts | `phase56-frozen` |
+| 57 | Explicitly ranged Myfxbook daily performance observations | `phase57-frozen` |
 
 Latest frozen merge SHAs:
 
@@ -171,6 +172,7 @@ Latest frozen merge SHAs:
 - Phase 54: `ac8cacfeeefa4ef5f872c8840be9fb1d81b635d9`
 - Phase 55: `ad1c0b25a13d144b02abc37dd7ac44eb04e31a52`
 - Phase 56: `cd5c25a31094a64d242c9468305a086f553ce258`
+- Phase 57: `bee660e9097b40c0fb2131cd09f868fd5cb3847f`
 
 Phases 1–6 predate the frozen-tag convention. Their commits are immutable historical foundations
 and must not be rewritten.
@@ -304,11 +306,11 @@ For Phase `N`, always:
 
 ## Exact next action
 
-Phase 56 is frozen on `phase56-frozen`. RevMind materializes one selected Myfxbook account, open
-positions, pending orders, and at most 50 explicitly incomplete recent transactions at one receipt
-boundary. It has no dashboard connection, stored credentials, reconciliation, or execution
-authority. Phase 57 adds only explicitly ranged daily performance observations. See
-`PHASE57_DESIGN.md`.
+Phase 57 is frozen on `phase57-frozen`. RevMind materializes one selected Myfxbook account, open
+positions, pending orders, at most 50 explicitly incomplete recent transactions, and explicitly
+ranged provider-reported daily gain observations. It has no dashboard connection, stored
+credentials, reconciliation, or execution authority. Phase 58 adds only an explicit secure
+provider-session disconnect boundary. See `PHASE58_DESIGN.md`.
 
 ## Historical continuation record (superseded)
 
