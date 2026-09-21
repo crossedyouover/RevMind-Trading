@@ -143,6 +143,7 @@ def test_provider_protocol_exposes_no_execution_surface() -> None:
         "sync_account",
         "daily_performance",
         "sentiment_context",
+        "disconnect",
         "aclose",
     }
     assert not public_methods & {"place_order", "cancel_order", "modify_order", "execute"}
