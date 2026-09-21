@@ -11,7 +11,11 @@ from threading import Thread
 import pytest
 
 from app.dashboard.server import Dashboard, handler
-from app.dashboard.settings import DashboardSettings, SettingsStore
+from app.dashboard.settings import (
+    DashboardSettings,
+    MyfxbookConnectionProfile,
+    SettingsStore,
+)
 
 
 @pytest.fixture
@@ -59,6 +63,119 @@ def test_settings_and_credentials_are_local_validated_and_never_returned(tmp_pat
     assert store.settings_path.is_file()
     store.save(settings, None, None, True)
     assert store.credentials_configured() is False
+
+
+def test_myfxbook_profile_secret_and_clear_lifecycle_is_redacted(tmp_path):
+    store = SettingsStore(tmp_path / ".revmind")
+    profile = MyfxbookConnectionProfile(
+        provider_account_id="account-7", broker_timezone="Europe/Madrid"
+    )
+    saved = store.save_myfxbook(profile, "mail@example.test", "password-secret", False)
+    assert saved == {
+        "profile_configured": True,
+        "credentials_configured": True,
+        "provider_account_id": "account-7",
+        "broker_timezone": "Europe/Madrid",
+        "integration_status": "CONFIGURED_NOT_ACTIVE",
+    }
+    assert "mail@example.test" not in json.dumps(saved)
+    assert "password-secret" not in json.dumps(saved)
+    assert store.load_myfxbook_profile() == profile
+    email, password = store.myfxbook_credentials()
+    assert email.get_secret_value() == "mail@example.test"
+    assert password.get_secret_value() == "password-secret"
+    alpaca_before = (store.settings_path.exists(), store.secret_path.exists())
+    cleared = store.save_myfxbook(None, None, None, True)
+    assert cleared["integration_status"] == "NOT_CONFIGURED"
+    assert not store.myfxbook_profile_path.exists() and not store.myfxbook_secret_path.exists()
+    assert (store.settings_path.exists(), store.secret_path.exists()) == alpaca_before
+
+
+def test_myfxbook_partial_state_is_truthful_and_alpaca_is_untouched(tmp_path):
+    from app.dashboard.settings import DEFAULT_SETTINGS
+
+    store = SettingsStore(tmp_path / ".revmind")
+    store.save(DEFAULT_SETTINGS, "alpaca-id", "alpaca-secret", False)
+    alpaca_settings = store.settings_path.read_bytes()
+    alpaca_secret = store.secret_path.read_bytes()
+    profile = MyfxbookConnectionProfile(provider_account_id="7", broker_timezone="UTC")
+    result = store.save_myfxbook(profile, None, None, False)
+    assert result["integration_status"] == "INCOMPLETE_CONFIGURATION"
+    assert result["credentials_configured"] is False
+    assert store.settings_path.read_bytes() == alpaca_settings
+    assert store.secret_path.read_bytes() == alpaca_secret
+
+
+@pytest.mark.parametrize(
+    "profile",
+    [
+        {"schema_version": "1", "provider_account_id": "7", "broker_timezone": "UTC"},
+        {"provider_account_id": "", "broker_timezone": "UTC"},
+        {"provider_account_id": " 7", "broker_timezone": "UTC"},
+        {"provider_account_id": "7\n8", "broker_timezone": "UTC"},
+        {"provider_account_id": "7", "broker_timezone": "Not/AZone"},
+        {"provider_account_id": "7", "broker_timezone": " UTC"},
+    ],
+)
+def test_myfxbook_profile_rejects_invalid_values(profile):
+    with pytest.raises(ValueError):
+        MyfxbookConnectionProfile.model_validate(profile)
+
+
+@pytest.mark.parametrize(
+    ("email", "password"),
+    [
+        ("mail@example.test", None),
+        (None, "secret"),
+        ("", "secret"),
+        (" mail@example.test", "secret"),
+        ("mail@example.test", "secret\nvalue"),
+        ("mail@example.test", "x" * 513),
+    ],
+)
+def test_myfxbook_save_rejects_credentials_without_changing_files(tmp_path, email, password):
+    store = SettingsStore(tmp_path / ".revmind")
+    profile = MyfxbookConnectionProfile(provider_account_id="7", broker_timezone="UTC")
+    with pytest.raises(ValueError) as caught:
+        store.save_myfxbook(profile, email, password, False)
+    assert str(caught.value) in {
+        "both Myfxbook credential fields are required together",
+        "invalid Myfxbook credential value",
+    }
+    assert not store.myfxbook_profile_path.exists()
+    assert not store.myfxbook_secret_path.exists()
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        b"MYFXBOOK_EMAIL=a\nMYFXBOOK_EMAIL=b\nMYFXBOOK_PASSWORD=c\n",
+        b"MYFXBOOK_EMAIL=a\n",
+        b"MYFXBOOK_EMAIL= a\nMYFXBOOK_PASSWORD=c\n",
+        b"OTHER=value\n",
+        b"\xff\xfe",
+    ],
+)
+def test_myfxbook_secret_file_fails_closed(tmp_path, payload):
+    store = SettingsStore(tmp_path / ".revmind")
+    store.directory.mkdir()
+    store.myfxbook_secret_path.write_bytes(payload)
+    with pytest.raises(ValueError, match="malformed|not configured"):
+        store.myfxbook_credentials()
+
+
+def test_myfxbook_oversized_files_and_conflicting_clear_fail_closed(tmp_path):
+    store = SettingsStore(tmp_path / ".revmind")
+    store.directory.mkdir()
+    store.myfxbook_profile_path.write_bytes(b"{" + b"x" * 4096)
+    with pytest.raises(ValueError, match="too large"):
+        store.load_myfxbook_profile()
+    store.myfxbook_secret_path.write_bytes(b"x" * 2049)
+    with pytest.raises(ValueError, match="too large"):
+        store.myfxbook_credentials()
+    profile = MyfxbookConnectionProfile(provider_account_id="7", broker_timezone="UTC")
+    with pytest.raises(ValueError, match="set and clear"):
+        store.save_myfxbook(profile, None, None, True)
 
 
 @pytest.mark.parametrize(
