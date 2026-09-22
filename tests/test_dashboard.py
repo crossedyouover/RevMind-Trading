@@ -222,6 +222,19 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     )[0]
     assert "setInterval" not in summary_handler
     assert "setTimeout" not in summary_handler
+    assert 'id="refresh-myfxbook-facts"' in html
+    assert 'api("/api/myfxbook/facts","POST")' in javascript
+    assert "function renderMyfxbookFacts(report)" in javascript
+    assert "RECENT TRANSACTIONS ARE BOUNDED AND INCOMPLETE" in javascript
+    facts_before_click = javascript.split('$("refresh-myfxbook-facts").onclick=', 1)[0]
+    assert 'api("/api/myfxbook/facts"' not in facts_before_click
+    facts_handler = javascript.split('$("refresh-myfxbook-facts").onclick=', 1)[1].split(
+        '$("csv-import-form")', 1
+    )[0]
+    assert "setInterval" not in facts_handler
+    assert "setTimeout" not in facts_handler
+    assert "/api/paper-order" not in facts_handler
+    assert "/cancel" not in facts_handler
     assert "function chooseMyfxbookAccount(accountId)" in javascript
     assert '$("myfxbook-account-id").value=accountId' in javascript
     assert "nothing was saved automatically" in javascript
