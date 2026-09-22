@@ -189,6 +189,34 @@ def test_myfxbook_settings_routes_have_no_provider_or_execution_dependency():
     assert "get-my-accounts" not in source
 
 
+def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
+    html = Path("app/dashboard/static/index.html").read_text(encoding="utf-8")
+    javascript = Path("app/dashboard/static/app.js").read_text(encoding="utf-8")
+
+    assert 'id="myfxbook-form"' in html
+    assert 'id="myfxbook-account-id"' in html
+    assert 'id="myfxbook-timezone"' in html
+    assert 'id="myfxbook-email"' in html
+    assert 'id="myfxbook-password"' in html
+    assert "READ-ONLY — NO ORDERS THROUGH MYFXBOOK" in html
+    assert 'api("/api/myfxbook/settings")' in javascript
+    assert 'api("/api/myfxbook/settings","POST"' in javascript
+    assert (
+        'window.confirm("Remove the locally stored Myfxbook profile and credentials?")'
+        in javascript
+    )
+    assert '$("myfxbook-email").value=""' in javascript
+    assert '$("myfxbook-password").value=""' in javascript
+    myfxbook_lines = "\n".join(
+        line for line in javascript.splitlines() if "myfxbook" in line.lower()
+    )
+    assert "localStorage" not in myfxbook_lines
+    assert "sessionStorage" not in myfxbook_lines
+    assert "state.email" not in javascript
+    assert "state.password" not in javascript
+    assert "get-my-accounts" not in javascript
+
+
 @pytest.mark.parametrize(
     "changes",
     [
