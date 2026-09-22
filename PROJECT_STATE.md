@@ -7,9 +7,9 @@ this file and `README.md` before making changes.
 
 - Repository: `C:\Users\user\Documents\RevMind-Trading`
 - Canonical branch: `main` (`master` is the local tracking branch)
-- Frozen through: Phase 71 (dedicated Account Context workspace)
-- Frozen commit: `4f723852c3f543b407e4e814765d74e3be628278`
-- Frozen tag: `phase71-frozen` (peeled tag resolves to the frozen commit)
+- Frozen through: Phase 72 (guided Account Context workflow)
+- Frozen commit: `6c02a3b54bf9e5af4dc47379962a20e5b18c5480`
+- Frozen tag: `phase72-frozen` (peeled tag resolves to the frozen commit)
 - Last frozen gate: 1,181 tests passed, Ruff clean, mypy strict clean (115 source files), `git diff --check`
   clean, tracked worktree clean
 - Current capability: deterministic, point-in-time-safe flow from canonical market observations
@@ -153,6 +153,7 @@ These rules survive every future phase:
 | 69 | Explicit date-bounded Myfxbook daily performance endpoint | `phase69-frozen` |
 | 70 | Manual Myfxbook daily-performance review UI | `phase70-frozen` |
 | 71 | Dedicated Account Context workspace | `phase71-frozen` |
+| 72 | Guided three-step Account Context workflow | `phase72-frozen` |
 
 Latest frozen merge SHAs:
 
@@ -201,6 +202,7 @@ Latest frozen merge SHAs:
 - Phase 69: `991b8d8fc82a68a10283f2f5220643dc9d28541b`
 - Phase 70: `0ccfb3a4baedebab25ac26d6dfc6a407231b2fca`
 - Phase 71: `4f723852c3f543b407e4e814765d74e3be628278`
+- Phase 72: `6c02a3b54bf9e5af4dc47379962a20e5b18c5480`
 
 Phases 1–6 predate the frozen-tag convention. Their commits are immutable historical foundations
 and must not be rewritten.
@@ -334,7 +336,7 @@ For Phase `N`, always:
 
 ## Exact next action
 
-Phase 71 is frozen on `phase71-frozen`. RevMind can discover bounded account choices and materialize
+Phase 72 is frozen on `phase72-frozen`. RevMind can discover bounded account choices and materialize
 one selected Myfxbook account, open
 positions, pending orders, at most 50 explicitly incomplete recent transactions, and explicitly
 ranged provider-reported daily gain observations, with explicit terminal session disconnect. It has
@@ -351,9 +353,11 @@ those facts with visible incompleteness and no mutation controls. A strict endpo
 explicit inclusive date range and returns frozen provider-reported daily performance observations,
 with no hidden clock or default range. A manual neutral table now presents those observations without
 prediction or downstream authority. Myfxbook account context is now separated from Alpaca setup in
-the dashboard navigation. Phase 72 will make that workspace a progressive three-step flow—configure,
-inspect current exposure, and review historical performance—without automatic provider requests or
-new authority. See `PHASE71_DESIGN.md` and `PHASE72_DESIGN.md`.
+the dashboard navigation. The workspace now uses a progressive three-step flow—configure, inspect
+current exposure, and review historical performance—without automatic provider requests or new
+authority. Phase 73 will add one explicit manual action that refreshes the current summary and
+exposure facts together, while preserving the individual controls and fail-closed behavior. See
+`PHASE71_DESIGN.md`, `PHASE72_DESIGN.md`, and `PHASE73_DESIGN.md`.
 
 ## Historical continuation record (superseded)
 
