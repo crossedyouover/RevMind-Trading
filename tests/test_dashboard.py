@@ -206,6 +206,16 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert 'api("/api/myfxbook/settings","POST"' in javascript
     assert 'id="test-myfxbook"' in html
     assert 'api("/api/myfxbook/test","POST")' in javascript
+    assert "function chooseMyfxbookAccount(accountId)" in javascript
+    assert '$("myfxbook-account-id").value=accountId' in javascript
+    assert "nothing was saved automatically" in javascript
+    assert "Choose deliberately, then save separately" in javascript
+    choice_function = javascript.split("function chooseMyfxbookAccount", 1)[1].split(
+        "function renderMyfxbookAccounts", 1
+    )[0]
+    assert ".submit(" not in choice_function
+    assert "requestSubmit" not in choice_function
+    assert 'api("' not in choice_function
     assert (
         'window.confirm("Remove the locally stored Myfxbook profile and credentials?")'
         in javascript
