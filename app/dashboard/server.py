@@ -32,8 +32,10 @@ from app.dashboard.live import (
     PaperPlanInput,
 )
 from app.dashboard.myfxbook_probe import (
+    MyfxbookPerformanceRequest,
     probe_myfxbook_accounts,
     probe_myfxbook_facts,
+    probe_myfxbook_performance,
     probe_myfxbook_summary,
 )
 from app.dashboard.settings import DashboardSettings, MyfxbookSettingsRequest, SettingsStore
@@ -332,6 +334,7 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                     "/api/myfxbook/test",
                     "/api/myfxbook/summary",
                     "/api/myfxbook/facts",
+                    "/api/myfxbook/performance",
                     "/api/alpaca/test",
                     "/api/alpaca/research",
                     "/api/alpaca/news",
@@ -416,6 +419,11 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                     if payload != b"{}":
                         raise ValueError("empty request required")
                     value = asyncio.run(probe_myfxbook_facts(app.settings))
+                elif self.path == "/api/myfxbook/performance":
+                    performance_request = MyfxbookPerformanceRequest.model_validate_json(payload)
+                    value = asyncio.run(
+                        probe_myfxbook_performance(app.settings, performance_request)
+                    )
                 else:
                     body = json.loads(payload)
                     if not isinstance(body, dict) or set(body) != {

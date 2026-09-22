@@ -3,7 +3,7 @@
 import json
 import shutil
 import sqlite3
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from http.client import HTTPConnection
 from http.server import ThreadingHTTPServer
@@ -12,10 +12,16 @@ from threading import Thread
 
 import pytest
 
-from app.accounts.models import AccountFactBatch, TradingAccountSnapshot
+from app.accounts.models import (
+    AccountFactBatch,
+    ExternalPerformanceObservation,
+    TradingAccountSnapshot,
+)
 from app.dashboard.myfxbook_probe import (
+    MyfxbookPerformanceRequest,
     probe_myfxbook_accounts,
     probe_myfxbook_facts,
+    probe_myfxbook_performance,
     probe_myfxbook_summary,
 )
 from app.dashboard.server import Dashboard, handler
@@ -430,6 +436,54 @@ async def test_myfxbook_fact_probe_disconnects_on_failure(tmp_path):
 
 
 @pytest.mark.parametrize(
+    "payload",
+    [
+        {"schema_version": "1", "start": "2026-09-01", "end": "2026-09-02"},
+        {"schema_version": 1, "start": "2026-09-03", "end": "2026-09-02"},
+        {"schema_version": 1, "start": "2025-09-01", "end": "2026-09-02"},
+        {"schema_version": 1, "start": "2026-09-01", "end": "2026-09-02", "days": 2},
+    ],
+)
+def test_myfxbook_performance_request_rejects_implicit_or_invalid_ranges(payload):
+    with pytest.raises(ValueError):
+        MyfxbookPerformanceRequest.model_validate(payload)
+
+
+@pytest.mark.asyncio
+async def test_myfxbook_performance_uses_exact_range_and_disconnects(tmp_path):
+    store = SettingsStore(tmp_path / ".revmind")
+    profile = MyfxbookConnectionProfile(provider_account_id="chosen", broker_timezone="UTC")
+    store.save_myfxbook(profile, "mail@example.test", "password-secret", False)
+    request = MyfxbookPerformanceRequest(
+        start=date(2026, 9, 1), end=date(2026, 9, 2)
+    )
+    calls: list[str] = []
+
+    class Probe:
+        async def daily_performance(self, provider_account_id, start, end):
+            calls.append(f"daily:{provider_account_id}:{start}:{end}")
+            return (
+                ExternalPerformanceObservation(
+                    provider="myfxbook",
+                    provider_account_id="chosen",
+                    effective_date=date(2026, 9, 2),
+                    gain_percent=Decimal("1.25"),
+                    observed_at=datetime(2026, 9, 22, tzinfo=UTC),
+                ),
+            )
+
+        async def disconnect(self):
+            calls.append("disconnect")
+
+    result = await probe_myfxbook_performance(store, request, factory=lambda *_: Probe())
+    assert calls == ["daily:chosen:2026-09-01:2026-09-02", "disconnect"]
+    assert result["start"] == "2026-09-01" and result["end"] == "2026-09-02"
+    assert result["observation_count"] == 1
+    assert result["session"] == "DISCONNECTED"
+    assert "password-secret" not in json.dumps(result)
+
+
+@pytest.mark.parametrize(
     "changes",
     [
         {"schema_version": "1"},
@@ -574,6 +628,13 @@ def test_local_session_routes(app):
         assert call("/api/myfxbook/summary", "POST", headers, '{"account":"7"}')[0] == 400
         assert call("/api/myfxbook/facts", "POST", headers, "{}")[0] == 400
         assert call("/api/myfxbook/facts", "POST", headers, '{"account":"7"}')[0] == 400
+        assert call("/api/myfxbook/performance", "POST", headers, "{}")[0] == 400
+        assert call(
+            "/api/myfxbook/performance",
+            "POST",
+            headers,
+            '{"schema_version":1,"start":"2026-09-02","end":"2026-09-01"}',
+        )[0] == 400
         assert call("/api/demo", "POST", headers, '{"path":".env"}')[0] == 400
         status, result, _ = call("/api/demo", "POST", headers, "{}")
         assert status == 200 and json.loads(result)["state"] == "COMPLETE"
