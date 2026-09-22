@@ -206,6 +206,18 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert 'api("/api/myfxbook/settings","POST"' in javascript
     assert 'id="test-myfxbook"' in html
     assert 'api("/api/myfxbook/test","POST")' in javascript
+    assert 'id="refresh-myfxbook-summary"' in html
+    assert 'api("/api/myfxbook/summary","POST")' in javascript
+    assert "function renderMyfxbookSummary(report)" in javascript
+    assert "Current point-in-time provider snapshot" in javascript
+    assert "not a prediction, signal, recommendation, or live stream" in javascript
+    before_click = javascript.split('$("refresh-myfxbook-summary").onclick=', 1)[0]
+    assert 'api("/api/myfxbook/summary"' not in before_click
+    summary_handler = javascript.split('$("refresh-myfxbook-summary").onclick=', 1)[1].split(
+        '$("csv-import-form")', 1
+    )[0]
+    assert "setInterval" not in summary_handler
+    assert "setTimeout" not in summary_handler
     assert "function chooseMyfxbookAccount(accountId)" in javascript
     assert '$("myfxbook-account-id").value=accountId' in javascript
     assert "nothing was saved automatically" in javascript
