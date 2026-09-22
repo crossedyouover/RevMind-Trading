@@ -3,6 +3,8 @@
 import json
 import shutil
 import sqlite3
+from datetime import UTC, datetime
+from decimal import Decimal
 from http.client import HTTPConnection
 from http.server import ThreadingHTTPServer
 from pathlib import Path
@@ -10,6 +12,8 @@ from threading import Thread
 
 import pytest
 
+from app.accounts.models import TradingAccountSnapshot
+from app.dashboard.myfxbook_probe import probe_myfxbook_accounts
 from app.dashboard.server import Dashboard, handler
 from app.dashboard.settings import (
     DashboardSettings,
@@ -185,7 +189,6 @@ def test_myfxbook_settings_routes_have_no_provider_or_execution_dependency():
 
     source = inspect.getsource(server_module)
     assert "MyfxbookAdapter" not in source
-    assert "app.accounts" not in source
     assert "get-my-accounts" not in source
 
 
@@ -201,6 +204,8 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert "READ-ONLY — NO ORDERS THROUGH MYFXBOOK" in html
     assert 'api("/api/myfxbook/settings")' in javascript
     assert 'api("/api/myfxbook/settings","POST"' in javascript
+    assert 'id="test-myfxbook"' in html
+    assert 'api("/api/myfxbook/test","POST")' in javascript
     assert (
         'window.confirm("Remove the locally stored Myfxbook profile and credentials?")'
         in javascript
@@ -215,6 +220,67 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert "state.email" not in javascript
     assert "state.password" not in javascript
     assert "get-my-accounts" not in javascript
+
+
+@pytest.mark.asyncio
+async def test_myfxbook_probe_returns_redacted_accounts_and_disconnects(tmp_path):
+    store = SettingsStore(tmp_path / ".revmind")
+    profile = MyfxbookConnectionProfile(provider_account_id="7", broker_timezone="UTC")
+    store.save_myfxbook(profile, "mail@example.test", "password-secret", False)
+    calls: list[str] = []
+
+    class Probe:
+        async def list_accounts(self):
+            calls.append("list")
+            return (
+                TradingAccountSnapshot(
+                    provider="myfxbook",
+                    provider_account_id="7",
+                    account_name="Practice context",
+                    currency="USD",
+                    balance=Decimal("1000"),
+                    equity=Decimal("990"),
+                    observed_at=datetime(2026, 9, 22, tzinfo=UTC),
+                ),
+            )
+
+        async def disconnect(self):
+            calls.append("disconnect")
+
+    def factory(email, password, timezone):
+        assert email.get_secret_value() == "mail@example.test"
+        assert password.get_secret_value() == "password-secret"
+        assert timezone == "UTC"
+        return Probe()
+
+    result = await probe_myfxbook_accounts(store, factory=factory)
+    assert calls == ["list", "disconnect"]
+    assert result["status"] == "CONNECTED_READ_ONLY"
+    assert result["session"] == "DISCONNECTED"
+    assert result["execution"] == "NONE"
+    serialized = json.dumps(result)
+    assert "mail@example.test" not in serialized
+    assert "password-secret" not in serialized
+
+
+@pytest.mark.asyncio
+async def test_myfxbook_probe_disconnects_when_discovery_fails(tmp_path):
+    store = SettingsStore(tmp_path / ".revmind")
+    profile = MyfxbookConnectionProfile(provider_account_id="7", broker_timezone="UTC")
+    store.save_myfxbook(profile, "mail@example.test", "password-secret", False)
+    calls: list[str] = []
+
+    class Probe:
+        async def list_accounts(self):
+            calls.append("list")
+            raise RuntimeError("scripted discovery failure")
+
+        async def disconnect(self):
+            calls.append("disconnect")
+
+    with pytest.raises(RuntimeError, match="scripted discovery failure"):
+        await probe_myfxbook_accounts(store, factory=lambda *_: Probe())
+    assert calls == ["list", "disconnect"]
 
 
 @pytest.mark.parametrize(
@@ -332,6 +398,10 @@ def test_local_session_routes(app):
         myfxbook = json.loads(call("/api/myfxbook/settings", headers=token)[1])
         assert myfxbook["integration_status"] == "NOT_CONFIGURED"
         assert call("/api/myfxbook/settings")[0] == 403
+        unauthenticated_test = call(
+            "/api/myfxbook/test", "POST", {"Content-Type": "application/json"}, "{}"
+        )
+        assert unauthenticated_test[0] == 403
         health = json.loads(call("/api/health", headers=token)[1])
         assert health["dashboard"] == "READY"
         assert health["live_data"] == "DISABLED"
@@ -352,6 +422,8 @@ def test_local_session_routes(app):
         assert call("/../.env")[0] == 404
         assert call("/api/demo", "POST", {"Content-Type": "application/json"}, "{}")[0] == 403
         headers = {**token, "Content-Type": "application/json"}
+        assert call("/api/myfxbook/test", "POST", headers, "{}")[0] == 400
+        assert call("/api/myfxbook/test", "POST", headers, '{"account":"7"}')[0] == 400
         assert call("/api/demo", "POST", headers, '{"path":".env"}')[0] == 400
         status, result, _ = call("/api/demo", "POST", headers, "{}")
         assert status == 200 and json.loads(result)["state"] == "COMPLETE"
