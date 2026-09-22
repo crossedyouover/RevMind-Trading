@@ -31,7 +31,11 @@ from app.dashboard.live import (
     PaperCancelInput,
     PaperPlanInput,
 )
-from app.dashboard.myfxbook_probe import probe_myfxbook_accounts, probe_myfxbook_summary
+from app.dashboard.myfxbook_probe import (
+    probe_myfxbook_accounts,
+    probe_myfxbook_facts,
+    probe_myfxbook_summary,
+)
 from app.dashboard.settings import DashboardSettings, MyfxbookSettingsRequest, SettingsStore
 from app.data.csv_import import CsvBarImportCoordinator, CsvBarImportRequest
 from app.data.ingestion import SystemUtcClock
@@ -327,6 +331,7 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                     "/api/myfxbook/settings",
                     "/api/myfxbook/test",
                     "/api/myfxbook/summary",
+                    "/api/myfxbook/facts",
                     "/api/alpaca/test",
                     "/api/alpaca/research",
                     "/api/alpaca/news",
@@ -407,6 +412,10 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                     if payload != b"{}":
                         raise ValueError("empty request required")
                     value = asyncio.run(probe_myfxbook_summary(app.settings))
+                elif self.path == "/api/myfxbook/facts":
+                    if payload != b"{}":
+                        raise ValueError("empty request required")
+                    value = asyncio.run(probe_myfxbook_facts(app.settings))
                 else:
                     body = json.loads(payload)
                     if not isinstance(body, dict) or set(body) != {
