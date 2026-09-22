@@ -7,9 +7,9 @@ this file and `README.md` before making changes.
 
 - Repository: `C:\Users\user\Documents\RevMind-Trading`
 - Canonical branch: `main` (`master` is the local tracking branch)
-- Frozen through: Phase 63 (bounded explicit Myfxbook connection/account-discovery test)
-- Frozen commit: `7555546cf68a8cc1eec64a3b34115dc1557e6c60`
-- Frozen tag: `phase63-frozen` (peeled tag resolves to the frozen commit)
+- Frozen through: Phase 64 (explicit Myfxbook account choice in the dashboard)
+- Frozen commit: `1b047861869c685b0c7756e73bc2e4d805cc2f61`
+- Frozen tag: `phase64-frozen` (peeled tag resolves to the frozen commit)
 - Last frozen gate: 1,172 tests passed, Ruff clean, mypy strict clean (115 source files), `git diff --check`
   clean, tracked worktree clean
 - Current capability: deterministic, point-in-time-safe flow from canonical market observations
@@ -145,6 +145,7 @@ These rules survive every future phase:
 | 61 | Authenticated redacted Myfxbook dashboard settings API | `phase61-frozen` |
 | 62 | Understandable read-only Myfxbook settings controls | `phase62-frozen` |
 | 63 | Bounded explicit Myfxbook connection/account-discovery test | `phase63-frozen` |
+| 64 | Explicit Myfxbook account choice in the dashboard | `phase64-frozen` |
 
 Latest frozen merge SHAs:
 
@@ -185,6 +186,7 @@ Latest frozen merge SHAs:
 - Phase 61: `78d3e5bc9f8c81771ac064345c13d9a06ed51bee`
 - Phase 62: `1d2be5cdd9837e4561a865b6d9c3a736a0c1c703`
 - Phase 63: `7555546cf68a8cc1eec64a3b34115dc1557e6c60`
+- Phase 64: `1b047861869c685b0c7756e73bc2e4d805cc2f61`
 
 Phases 1–6 predate the frozen-tag convention. Their commits are immutable historical foundations
 and must not be rewritten.
@@ -318,16 +320,17 @@ For Phase `N`, always:
 
 ## Exact next action
 
-Phase 63 is frozen on `phase63-frozen`. RevMind can discover bounded account choices and materialize
+Phase 64 is frozen on `phase64-frozen`. RevMind can discover bounded account choices and materialize
 one selected Myfxbook account, open
 positions, pending orders, at most 50 explicitly incomplete recent transactions, and explicitly
 ranged provider-reported daily gain observations, with explicit terminal session disconnect. It has
 validated local profile/secret storage, an authenticated loopback settings API, and understandable
 dashboard controls that read only redacted state and save, preserve, or explicitly clear the local
 profile and credential pair. An explicit bounded connection test now verifies credentials, returns
-redacted account choices, and always terminates its provider session. It does not select an account
-or synchronize facts. Phase 64 adds only a deliberate dashboard action that copies one discovered
-account identity into the form for a subsequent explicit save. See `PHASE64_DESIGN.md`.
+redacted account choices, and always terminates its provider session. The operator can deliberately
+copy one discovered account ID into the settings form, but must save separately; discovery never
+mutates configuration. Phase 65 adds only an explicit bounded endpoint for the saved account's
+read-only current summary, with mandatory terminal disconnect. See `PHASE65_DESIGN.md`.
 
 ## Historical continuation record (superseded)
 
