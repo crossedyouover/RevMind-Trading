@@ -241,6 +241,22 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert "setTimeout" not in facts_handler
     assert "/api/paper-order" not in facts_handler
     assert "/cancel" not in facts_handler
+    assert 'id="myfxbook-performance-start" type="date" required' in html
+    assert 'id="myfxbook-performance-end" type="date" required' in html
+    assert 'id="load-myfxbook-performance"' in html
+    assert 'api("/api/myfxbook/performance","POST"' in javascript
+    assert "function renderMyfxbookPerformance(report)" in javascript
+    assert "Past provider-reported performance is context only" in javascript
+    assert "No range is selected automatically" in html
+    performance_before_submit = javascript.split(
+        '$("myfxbook-performance-form").onsubmit=', 1
+    )[0]
+    assert 'api("/api/myfxbook/performance"' not in performance_before_submit
+    performance_handler = javascript.split(
+        '$("myfxbook-performance-form").onsubmit=', 1
+    )[1].split('$("csv-import-form")', 1)[0]
+    assert "setInterval" not in performance_handler
+    assert "setTimeout" not in performance_handler
     assert "function chooseMyfxbookAccount(accountId)" in javascript
     assert '$("myfxbook-account-id").value=accountId' in javascript
     assert "nothing was saved automatically" in javascript
