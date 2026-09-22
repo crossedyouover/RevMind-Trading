@@ -264,6 +264,26 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert 'section==="providers"||section==="account"' in javascript
     assert 'section==="account"' in javascript
     assert "Navigation never contacts Myfxbook" in javascript
+    assert html.index('id="myfxbook-connect-step"') < html.index(
+        'id="myfxbook-current-step"'
+    ) < html.index('id="myfxbook-history-step"')
+    assert "Connect your account" in html
+    assert "Inspect current exposure" in html
+    assert "Review past performance" in html
+    connect_step = html.split('id="myfxbook-connect-step"', 1)[1].split(
+        'id="myfxbook-current-step"', 1
+    )[0]
+    current_step = html.split('id="myfxbook-current-step"', 1)[1].split(
+        'id="myfxbook-history-step"', 1
+    )[0]
+    history_step = html.split('id="myfxbook-history-step"', 1)[1].split(
+        'class="note"', 1
+    )[0]
+    assert 'id="myfxbook-form"' in connect_step
+    assert 'id="myfxbook-test-result"' in connect_step
+    assert 'id="refresh-myfxbook-summary"' in current_step
+    assert 'id="refresh-myfxbook-facts"' in current_step
+    assert 'id="myfxbook-performance-form"' in history_step
     route_body = javascript.split("function highlightNav", 1)[1].split(
         "for(const link of navLinks)", 1
     )[0]
