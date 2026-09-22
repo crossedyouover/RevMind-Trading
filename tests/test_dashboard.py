@@ -283,7 +283,17 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert 'id="myfxbook-test-result"' in connect_step
     assert 'id="refresh-myfxbook-summary"' in current_step
     assert 'id="refresh-myfxbook-facts"' in current_step
+    assert 'id="refresh-myfxbook-current"' in current_step
     assert 'id="myfxbook-performance-form"' in history_step
+    current_handler = javascript.split(
+        '$("refresh-myfxbook-current").onclick=', 1
+    )[1].split("function renderMyfxbookPerformance", 1)[0]
+    assert 'api("/api/myfxbook/summary","POST")' in current_handler
+    assert 'api("/api/myfxbook/facts","POST")' in current_handler
+    assert "PARTIALLY REFRESHED" in current_handler
+    assert "setInterval" not in current_handler
+    assert "setTimeout" not in current_handler
+    assert "/api/paper-order" not in current_handler
     route_body = javascript.split("function highlightNav", 1)[1].split(
         "for(const link of navLinks)", 1
     )[0]
