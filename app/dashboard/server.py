@@ -14,6 +14,7 @@ from typing import Any
 from urllib.parse import urlsplit
 from uuid import UUID, uuid4
 
+from app.accounts.myfxbook import MyfxbookError
 from app.capture.__main__ import SimulatedClock
 from app.capture.coordinator import OfflineCaptureCoordinator
 from app.capture.models import CycleRequest, CycleResult, SealedInputs, digest
@@ -30,6 +31,7 @@ from app.dashboard.live import (
     PaperCancelInput,
     PaperPlanInput,
 )
+from app.dashboard.myfxbook_probe import probe_myfxbook_accounts
 from app.dashboard.settings import DashboardSettings, MyfxbookSettingsRequest, SettingsStore
 from app.data.csv_import import CsvBarImportCoordinator, CsvBarImportRequest
 from app.data.ingestion import SystemUtcClock
@@ -323,6 +325,7 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                     "/api/demo",
                     "/api/settings",
                     "/api/myfxbook/settings",
+                    "/api/myfxbook/test",
                     "/api/alpaca/test",
                     "/api/alpaca/research",
                     "/api/alpaca/news",
@@ -395,6 +398,10 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                         request.password,
                         request.clear_connection,
                     )
+                elif self.path == "/api/myfxbook/test":
+                    if payload != b"{}":
+                        raise ValueError("empty request required")
+                    value = asyncio.run(probe_myfxbook_accounts(app.settings))
                 else:
                     body = json.loads(payload)
                     if not isinstance(body, dict) or set(body) != {
@@ -412,7 +419,7 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                     )
                     app.live.invalidate()
                 self.reply(200, json.dumps(value).encode(), "application/json")
-            except LiveProbeError as exc:
+            except (LiveProbeError, MyfxbookError) as exc:
                 self.reply(502, json.dumps({"error": str(exc)}).encode(), "application/json")
             except (ValueError, TypeError, json.JSONDecodeError):
                 self.reply(400, b'{"error":"Invalid settings or request."}', "application/json")

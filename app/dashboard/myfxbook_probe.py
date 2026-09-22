@@ -1,0 +1,55 @@
+"""Explicit bounded Myfxbook account-discovery probe for the local dashboard."""
+
+from collections.abc import Callable
+from typing import Protocol
+
+from pydantic import SecretStr
+
+from app.accounts.models import TradingAccountSnapshot
+from app.accounts.myfxbook import MyfxbookAdapter
+from app.dashboard.settings import SettingsStore
+from app.data.ingestion import SystemUtcClock
+
+
+class AccountProbe(Protocol):
+    async def list_accounts(self) -> tuple[TradingAccountSnapshot, ...]: ...
+
+    async def disconnect(self) -> None: ...
+
+
+ProbeFactory = Callable[[SecretStr, SecretStr, str], AccountProbe]
+
+
+def _default_factory(email: SecretStr, password: SecretStr, timezone: str) -> AccountProbe:
+    return MyfxbookAdapter(
+        email,
+        password,
+        SystemUtcClock(),
+        broker_timezone=timezone,
+    )
+
+
+async def probe_myfxbook_accounts(
+    settings: SettingsStore,
+    *,
+    factory: ProbeFactory = _default_factory,
+) -> dict[str, object]:
+    """Discover bounded account choices and terminally disconnect before returning."""
+    profile = settings.load_myfxbook_profile()
+    if profile is None:
+        raise ValueError("Myfxbook profile is not configured")
+    email, password = settings.myfxbook_credentials()
+    adapter = factory(email, password, profile.broker_timezone)
+    accounts: tuple[TradingAccountSnapshot, ...] | None = None
+    try:
+        accounts = await adapter.list_accounts()
+    finally:
+        await adapter.disconnect()
+    return {
+        "schema_version": 1,
+        "status": "CONNECTED_READ_ONLY",
+        "account_count": len(accounts),
+        "accounts": [account.model_dump(mode="json") for account in accounts],
+        "session": "DISCONNECTED",
+        "execution": "NONE",
+    }
