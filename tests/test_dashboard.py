@@ -12,8 +12,12 @@ from threading import Thread
 
 import pytest
 
-from app.accounts.models import TradingAccountSnapshot
-from app.dashboard.myfxbook_probe import probe_myfxbook_accounts, probe_myfxbook_summary
+from app.accounts.models import AccountFactBatch, TradingAccountSnapshot
+from app.dashboard.myfxbook_probe import (
+    probe_myfxbook_accounts,
+    probe_myfxbook_facts,
+    probe_myfxbook_summary,
+)
 from app.dashboard.server import Dashboard, handler
 from app.dashboard.settings import (
     DashboardSettings,
@@ -358,6 +362,60 @@ async def test_myfxbook_summary_fails_closed_and_disconnects_for_wrong_account(t
     assert disconnected is True
 
 
+@pytest.mark.asyncio
+async def test_myfxbook_fact_probe_binds_saved_id_redacts_and_disconnects(tmp_path):
+    store = SettingsStore(tmp_path / ".revmind")
+    profile = MyfxbookConnectionProfile(provider_account_id="chosen", broker_timezone="UTC")
+    store.save_myfxbook(profile, "mail@example.test", "password-secret", False)
+    calls: list[str] = []
+    snapshot = TradingAccountSnapshot(
+        provider="myfxbook",
+        provider_account_id="chosen",
+        currency="USD",
+        balance=Decimal("1000"),
+        equity=Decimal("990"),
+        observed_at=datetime(2026, 9, 22, tzinfo=UTC),
+    )
+
+    class Probe:
+        async def sync_account(self, provider_account_id):
+            calls.append("sync:" + provider_account_id)
+            return AccountFactBatch(account=snapshot, history_scope="RECENT_INCOMPLETE")
+
+        async def disconnect(self):
+            calls.append("disconnect")
+
+    result = await probe_myfxbook_facts(store, factory=lambda *_: Probe())
+    assert calls == ["sync:chosen", "disconnect"]
+    assert result["facts"]["account"]["provider_account_id"] == "chosen"
+    assert result["facts"]["history_scope"] == "RECENT_INCOMPLETE"
+    assert result["session"] == "DISCONNECTED"
+    assert result["execution"] == "NONE"
+    serialized = json.dumps(result)
+    assert "mail@example.test" not in serialized
+    assert "password-secret" not in serialized
+
+
+@pytest.mark.asyncio
+async def test_myfxbook_fact_probe_disconnects_on_failure(tmp_path):
+    store = SettingsStore(tmp_path / ".revmind")
+    profile = MyfxbookConnectionProfile(provider_account_id="chosen", broker_timezone="UTC")
+    store.save_myfxbook(profile, "mail@example.test", "password-secret", False)
+    calls: list[str] = []
+
+    class Probe:
+        async def sync_account(self, provider_account_id):
+            calls.append("sync:" + provider_account_id)
+            raise RuntimeError("scripted fact failure")
+
+        async def disconnect(self):
+            calls.append("disconnect")
+
+    with pytest.raises(RuntimeError, match="scripted fact failure"):
+        await probe_myfxbook_facts(store, factory=lambda *_: Probe())
+    assert calls == ["sync:chosen", "disconnect"]
+
+
 @pytest.mark.parametrize(
     "changes",
     [
@@ -501,6 +559,8 @@ def test_local_session_routes(app):
         assert call("/api/myfxbook/test", "POST", headers, '{"account":"7"}')[0] == 400
         assert call("/api/myfxbook/summary", "POST", headers, "{}")[0] == 400
         assert call("/api/myfxbook/summary", "POST", headers, '{"account":"7"}')[0] == 400
+        assert call("/api/myfxbook/facts", "POST", headers, "{}")[0] == 400
+        assert call("/api/myfxbook/facts", "POST", headers, '{"account":"7"}')[0] == 400
         assert call("/api/demo", "POST", headers, '{"path":".env"}')[0] == 400
         status, result, _ = call("/api/demo", "POST", headers, "{}")
         assert status == 200 and json.loads(result)["state"] == "COMPLETE"
