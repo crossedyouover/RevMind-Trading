@@ -257,6 +257,17 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     )[1].split('$("csv-import-form")', 1)[0]
     assert "setInterval" not in performance_handler
     assert "setTimeout" not in performance_handler
+    assert 'data-section="account" href="#account"' in html
+    assert 'id="myfxbook-card"' in html
+    assert 'account:"Account Context"' in javascript
+    assert '"providers","account","history"' in javascript
+    assert 'section==="providers"||section==="account"' in javascript
+    assert 'section==="account"' in javascript
+    assert "Navigation never contacts Myfxbook" in javascript
+    route_body = javascript.split("function highlightNav", 1)[1].split(
+        "for(const link of navLinks)", 1
+    )[0]
+    assert 'api("/api/myfxbook/' not in route_body
     assert "function chooseMyfxbookAccount(accountId)" in javascript
     assert '$("myfxbook-account-id").value=accountId' in javascript
     assert "nothing was saved automatically" in javascript
