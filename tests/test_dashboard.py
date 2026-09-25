@@ -259,6 +259,10 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert "setTimeout" not in performance_handler
     assert 'data-section="account" href="#account"' in html
     assert 'id="myfxbook-card"' in html
+    assert 'id="myfxbook-readiness"' in html
+    assert 'id="myfxbook-readiness-title"' in html
+    assert 'id="myfxbook-readiness-copy"' in html
+    assert 'id="myfxbook-next-action"' in html
     assert 'account:"Account Context"' in javascript
     assert '"providers","account","history"' in javascript
     assert 'section==="providers"||section==="account"' in javascript
@@ -329,6 +333,30 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert "api(" not in detail_markup
     assert "setInterval" not in detail_markup
     assert "setTimeout" not in detail_markup
+
+    readiness_renderer = javascript.split("function renderMyfxbookReadiness()", 1)[1].split(
+        '$("myfxbook-next-action").onclick=', 1
+    )[0]
+    assert "Complete the local setup" in readiness_renderer
+    assert "Verify the saved connection" in readiness_renderer
+    assert "Load the current account facts" in readiness_renderer
+    assert "Current facts are ready to review" in readiness_renderer
+    assert 'action.dataset.next="setup"' in readiness_renderer
+    assert 'action.dataset.next="test"' in readiness_renderer
+    assert 'action.dataset.next="current"' in readiness_renderer
+    assert 'action.dataset.next="history"' in readiness_renderer
+    assert "api(" not in readiness_renderer
+    assert "setInterval" not in readiness_renderer
+    assert "setTimeout" not in readiness_renderer
+    assert "localStorage" not in readiness_renderer
+    assert "sessionStorage" not in readiness_renderer
+    next_action = javascript.split('$("myfxbook-next-action").onclick=', 1)[1].split(
+        "function showMyfxbookSettings", 1
+    )[0]
+    assert '$("test-myfxbook").click()' in next_action
+    assert '$("refresh-myfxbook-current").click()' in next_action
+    assert '$("myfxbook-performance-start").focus()' in next_action
+    assert "api(" not in next_action
     route_body = javascript.split("function highlightNav", 1)[1].split(
         "for(const link of navLinks)", 1
     )[0]
