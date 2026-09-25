@@ -375,6 +375,11 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert "Verify the saved connection" in readiness_renderer
     assert "Load the current account facts" in readiness_renderer
     assert "Current facts are ready to review" in readiness_renderer
+    assert "Testing the saved connection" in readiness_renderer
+    assert "Refreshing current account facts" in readiness_renderer
+    assert 'action.textContent="Testing connection…"' in readiness_renderer
+    assert 'action.textContent="Refreshing current account…"' in readiness_renderer
+    assert "action.disabled=Boolean(myfxbookActionBusy)" in readiness_renderer
     assert 'action.dataset.next="setup"' in readiness_renderer
     assert 'action.dataset.next="test"' in readiness_renderer
     assert 'action.dataset.next="current"' in readiness_renderer
@@ -390,6 +395,7 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     )[0]
     assert '(location.hash||"#desk")!=="#account"' in guide_sync
     assert 'pageAction.textContent=localAction.textContent' in guide_sync
+    assert 'pageAction.disabled=localAction.disabled' in guide_sync
     assert 'pageAction.onclick=()=>localAction.click()' in guide_sync
     assert "api(" not in guide_sync
     assert "setInterval" not in guide_sync
@@ -478,6 +484,13 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
         "function renderMyfxbookSummary", 1
     )[0]
     assert '$("test-myfxbook").disabled=!myfxbookConfigured' in test_handler
+    assert 'myfxbookActionBusy="test"' in test_handler
+    assert "myfxbookActionBusy=null" in test_handler
+    current_handler = javascript.split('$("refresh-myfxbook-current").onclick=', 1)[1].split(
+        "function renderMyfxbookPerformance", 1
+    )[0]
+    assert 'myfxbookActionBusy="current"' in current_handler
+    assert "myfxbookActionBusy=null" in current_handler
     navigation = javascript.split("function highlightNav", 1)[1].split(
         "function route", 1
     )[0]
