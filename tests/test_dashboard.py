@@ -266,6 +266,7 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert 'id="myfxbook-connect-state"' in html
     assert 'id="myfxbook-current-state"' in html
     assert 'id="myfxbook-history-state"' in html
+    assert 'id="myfxbook-setup-details"' in html
     assert 'account:"Account Context"' in javascript
     assert '"providers","account","history"' in javascript
     assert 'section==="providers"||section==="account"' in javascript
@@ -375,6 +376,15 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert '$("refresh-myfxbook-current").click()' in next_action
     assert '$("myfxbook-performance-start").focus()' in next_action
     assert "api(" not in next_action
+    setup_markup = connect_step.split('id="myfxbook-setup-details"', 1)[1]
+    assert "Setup and connection test" in setup_markup
+    assert 'id="myfxbook-form"' in setup_markup
+    assert 'id="myfxbook-test-result"' in setup_markup
+    assert '$("myfxbook-setup-details").open=true' in next_action
+    assert '$("myfxbook-setup-details").open=false' in javascript
+    assert "api(" not in setup_markup
+    assert "setInterval" not in setup_markup
+    assert "setTimeout" not in setup_markup
     step_renderer = javascript.split("function renderMyfxbookStepStates()", 1)[1].split(
         '$("myfxbook-next-action").onclick=', 1
     )[0]
