@@ -7,9 +7,9 @@ this file and `README.md` before making changes.
 
 - Repository: `C:\Users\user\Documents\RevMind-Trading`
 - Canonical branch: `main` (`master` is the local tracking branch)
-- Frozen through: Phase 74 (factual current account snapshot)
-- Frozen commit: `b121f2f5db23d83afaabe19326968cf55649ed19`
-- Frozen tag: `phase74-frozen` (peeled tag resolves to the frozen commit)
+- Frozen through: Phase 75 (progressive account detail disclosure)
+- Frozen commit: `8d2c4873d27ee98b37434e03317128ab9c8e6b25`
+- Frozen tag: `phase75-frozen` (peeled tag resolves to the frozen commit)
 - Last frozen gate: 1,181 tests passed, Ruff clean, mypy strict clean (115 source files), `git diff --check`
   clean, tracked worktree clean
 - Current capability: deterministic, point-in-time-safe flow from canonical market observations
@@ -32,16 +32,16 @@ Set-Location "C:\Users\user\Documents\RevMind-Trading"
 git status --short --branch
 git rev-parse HEAD
 git rev-parse origin/main
-git rev-parse "phase36-frozen^{}"
-git merge-base --is-ancestor "phase36-frozen^{}" HEAD
+git rev-parse "phase75-frozen^{}"
+git merge-base --is-ancestor "phase75-frozen^{}" HEAD
 .\.venv\Scripts\python.exe -m pytest -q --basetemp=.pytest_continuation_tmp
 .\.venv\Scripts\python.exe -m ruff check app tests
 .\.venv\Scripts\python.exe -m mypy app
 git diff --check
 ```
 
-`HEAD` and `origin/main` must match, the peeled Phase 36 tag must resolve to
-`e28ea07ae4861c2fc866daf36b41287919cebced`, and the ancestry check must exit successfully. The
+`HEAD` and `origin/main` must match, the peeled Phase 75 tag must resolve to
+`8d2c4873d27ee98b37434e03317128ab9c8e6b25`, and the ancestry check must exit successfully. The
 continuation-contract documentation may legitimately follow the frozen implementation tag.
 
 Phases 23–26 passed their feature-branch and merge gates with respectively 978, 985, 991, and
@@ -340,7 +340,7 @@ For Phase `N`, always:
 
 ## Exact next action
 
-Phase 74 is frozen on `phase74-frozen`. RevMind can discover bounded account choices and materialize
+Phase 75 is frozen on `phase75-frozen`. RevMind can discover bounded account choices and materialize
 one selected Myfxbook account, open
 positions, pending orders, at most 50 explicitly incomplete recent transactions, and explicitly
 ranged provider-reported daily gain observations, with explicit terminal session disconnect. It has
@@ -362,9 +362,11 @@ current exposure, and review historical performance—without automatic provider
 authority. One explicit manual action now refreshes the current summary and exposure facts together,
 while preserving individual controls and honest partial-failure reporting. A successful combined
 refresh now shows a compact factual snapshot for balance, equity, open-position count, pending-order
-count, and both independent receipt times; account/currency mismatches refuse composition. Phase 75
-will keep this snapshot primary while placing verbose provider details behind explicit disclosure
-controls that never trigger network requests. See `PHASE71_DESIGN.md` through `PHASE75_DESIGN.md`.
+count, and both independent receipt times; account/currency mismatches refuse composition. The
+snapshot remains primary while verbose provider details sit behind explicit disclosure controls that
+never trigger network requests. Phase 76 will add one factual readiness guide with a single explicit
+next action based only on redacted local configuration state and the current in-page result state.
+See `PHASE71_DESIGN.md` through `PHASE76_DESIGN.md`.
 
 ## Historical continuation record (superseded)
 
