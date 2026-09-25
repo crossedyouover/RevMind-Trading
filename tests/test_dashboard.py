@@ -284,6 +284,7 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert 'id="refresh-myfxbook-summary"' in current_step
     assert 'id="refresh-myfxbook-facts"' in current_step
     assert 'id="refresh-myfxbook-current"' in current_step
+    assert 'id="myfxbook-current-snapshot"' in current_step
     assert 'id="myfxbook-performance-form"' in history_step
     current_handler = javascript.split(
         '$("refresh-myfxbook-current").onclick=', 1
@@ -294,6 +295,24 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert "setInterval" not in current_handler
     assert "setTimeout" not in current_handler
     assert "/api/paper-order" not in current_handler
+    assert "function renderMyfxbookCurrentSnapshot(summaryReport,factsReport)" in javascript
+    assert 'account.balance+" "+account.currency' in javascript
+    assert 'account.equity+" "+account.currency' in javascript
+    assert 'facts.positions.length' in javascript
+    assert 'facts.orders.length' in javascript
+    assert "CURRENT ACCOUNT SNAPSHOT · FACTS ONLY" in javascript
+    assert '"Summary observed "+account.observed_at' in javascript
+    assert '" · exposure observed "+facts.account.observed_at' in javascript
+    assert "no score, prediction, recommendation, or action" in javascript
+    assert "function clearMyfxbookCurrentSnapshot()" in javascript
+    assert "Combined snapshot incomplete" in javascript
+    assert "renderMyfxbookCurrentSnapshot(summaryReport,factsReport)" in current_handler
+    assert "clearMyfxbookCurrentSnapshot()" in current_handler
+    assert "snapshot identity mismatch; results were not combined" in current_handler
+    assert "summaryReport.account.provider_account_id" in current_handler
+    assert "factsReport.facts.account.provider_account_id" in current_handler
+    assert "summaryReport.account.currency" in current_handler
+    assert "factsReport.facts.account.currency" in current_handler
     route_body = javascript.split("function highlightNav", 1)[1].split(
         "for(const link of navLinks)", 1
     )[0]
