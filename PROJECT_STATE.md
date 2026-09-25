@@ -369,8 +369,9 @@ only on redacted local configuration state and successful actions in the current
 step-state labels now distinguish setup required, ready, loading, incomplete, and completed in this
 page session. The combined current-account refresh is now the sole visible default; specialist
 partial-refresh actions remain available behind a local advanced disclosure that performs no request
-when opened. The next phase must be designed narrowly from this checkpoint. See `PHASE71_DESIGN.md`
-through `PHASE78_DESIGN.md`.
+when opened. Phase 79 will place the connection form and account-discovery result behind an explicit
+setup disclosure that remains open while attention is required and closes only after a successful
+manual connection test. See `PHASE71_DESIGN.md` through `PHASE79_DESIGN.md`.
 
 ## Historical continuation record (superseded)
 
