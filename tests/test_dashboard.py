@@ -292,6 +292,7 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert 'id="refresh-myfxbook-facts"' in current_step
     assert 'id="refresh-myfxbook-current"' in current_step
     assert 'id="myfxbook-current-snapshot"' in current_step
+    assert 'id="myfxbook-partial-refresh"' in current_step
     assert 'id="myfxbook-summary-details"' in current_step
     assert 'id="myfxbook-exposure-details"' in current_step
     assert "Account numbers and timestamps" in current_step
@@ -332,6 +333,20 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     )[1].split("function renderMyfxbookCurrentSnapshot", 1)[0]
     assert '$("myfxbook-summary-details").open=true' in summary_refresh_handler
     assert '$("myfxbook-exposure-details").open=true' in facts_refresh_handler
+    partial_refresh = current_step.split('id="myfxbook-partial-refresh"', 1)[1].split(
+        'id="myfxbook-current-snapshot"', 1
+    )[0]
+    assert "Advanced: refresh only part of the account" in partial_refresh
+    assert "does not produce the complete snapshot" in partial_refresh
+    assert 'id="refresh-myfxbook-summary"' in partial_refresh
+    assert 'id="refresh-myfxbook-facts"' in partial_refresh
+    primary_controls = current_step.split('id="myfxbook-partial-refresh"', 1)[0]
+    assert 'id="refresh-myfxbook-current"' in primary_controls
+    assert 'id="refresh-myfxbook-summary"' not in primary_controls
+    assert 'id="refresh-myfxbook-facts"' not in primary_controls
+    assert "api(" not in partial_refresh
+    assert "setInterval" not in partial_refresh
+    assert "setTimeout" not in partial_refresh
     detail_markup = current_step.split('id="myfxbook-summary-details"', 1)[1]
     assert "api(" not in detail_markup
     assert "setInterval" not in detail_markup
