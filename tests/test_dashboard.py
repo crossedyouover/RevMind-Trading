@@ -466,6 +466,13 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
         "function renderMyfxbookSummary", 1
     )[0]
     assert '$("test-myfxbook").disabled=!myfxbookConfigured' in test_handler
+    navigation = javascript.split("function highlightNav", 1)[1].split(
+        "function route", 1
+    )[0]
+    assert 'account:[$("myfxbook-next-action").textContent' in navigation
+    assert '()=>$("myfxbook-next-action").click()' in navigation
+    assert 'account:[$("refresh-myfxbook-summary").disabled' not in navigation
+    assert "api(" not in navigation
     route_body = javascript.split("function highlightNav", 1)[1].split(
         "for(const link of navLinks)", 1
     )[0]
