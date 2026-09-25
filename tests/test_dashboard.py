@@ -257,6 +257,14 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     )[1].split('$("csv-import-form")', 1)[0]
     assert "setInterval" not in performance_handler
     assert "setTimeout" not in performance_handler
+    performance_renderer = javascript.split("function renderMyfxbookPerformance(report)", 1)[
+        1
+    ].split('$("myfxbook-performance-form").onsubmit=', 1)[0]
+    assert "HISTORICAL RANGE · FACTS ONLY" in performance_renderer
+    assert "provider-reported daily observation" in performance_renderer
+    assert '$("myfxbook-performance-details").open=false' in performance_renderer
+    assert "reduce(" not in performance_renderer
+    assert "Math." not in performance_renderer
     assert 'data-section="account" href="#account"' in html
     assert 'id="myfxbook-card"' in html
     assert 'id="myfxbook-readiness"' in html
@@ -299,6 +307,13 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert "Account numbers and timestamps" in current_step
     assert "Positions, pending orders, and recent transactions" in current_step
     assert 'id="myfxbook-performance-form"' in history_step
+    assert 'id="myfxbook-performance-snapshot"' in history_step
+    assert 'id="myfxbook-performance-details"' in history_step
+    assert "Provider-reported daily observations" in history_step
+    performance_markup = history_step.split('id="myfxbook-performance-details"', 1)[1]
+    assert "api(" not in performance_markup
+    assert "setInterval" not in performance_markup
+    assert "setTimeout" not in performance_markup
     current_handler = javascript.split(
         '$("refresh-myfxbook-current").onclick=', 1
     )[1].split("function renderMyfxbookPerformance", 1)[0]
