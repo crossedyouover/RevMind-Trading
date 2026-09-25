@@ -263,6 +263,9 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert 'id="myfxbook-readiness-title"' in html
     assert 'id="myfxbook-readiness-copy"' in html
     assert 'id="myfxbook-next-action"' in html
+    assert 'id="myfxbook-connect-state"' in html
+    assert 'id="myfxbook-current-state"' in html
+    assert 'id="myfxbook-history-state"' in html
     assert 'account:"Account Context"' in javascript
     assert '"providers","account","history"' in javascript
     assert 'section==="providers"||section==="account"' in javascript
@@ -357,6 +360,25 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert '$("refresh-myfxbook-current").click()' in next_action
     assert '$("myfxbook-performance-start").focus()' in next_action
     assert "api(" not in next_action
+    step_renderer = javascript.split("function renderMyfxbookStepStates()", 1)[1].split(
+        '$("myfxbook-next-action").onclick=', 1
+    )[0]
+    assert "VERIFIED THIS SESSION" in step_renderer
+    assert "SAVED · TEST NEXT" in step_renderer
+    assert "SETUP REQUIRED" in step_renderer
+    assert "LOADED THIS SESSION" in step_renderer
+    assert "INCOMPLETE · RETRY" in step_renderer
+    assert "api(" not in step_renderer
+    assert "setInterval" not in step_renderer
+    assert "setTimeout" not in step_renderer
+    assert "localStorage" not in step_renderer
+    assert "sessionStorage" not in step_renderer
+    assert 'myfxbookCurrentState="LOADING"' in javascript
+    assert 'myfxbookCurrentState="COMPLETE"' in javascript
+    assert 'myfxbookCurrentState="INCOMPLETE"' in javascript
+    assert 'myfxbookHistoryState="LOADING"' in javascript
+    assert 'myfxbookHistoryState="COMPLETE"' in javascript
+    assert 'myfxbookHistoryState="INCOMPLETE"' in javascript
     route_body = javascript.split("function highlightNav", 1)[1].split(
         "for(const link of navLinks)", 1
     )[0]
