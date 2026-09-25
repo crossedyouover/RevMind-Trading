@@ -214,7 +214,7 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert "READ-ONLY — NO ORDERS THROUGH MYFXBOOK" in html
     assert 'api("/api/myfxbook/settings")' in javascript
     assert 'api("/api/myfxbook/settings","POST"' in javascript
-    assert 'id="test-myfxbook"' in html
+    assert 'id="test-myfxbook" disabled' in html
     assert 'api("/api/myfxbook/test","POST")' in javascript
     assert 'id="refresh-myfxbook-summary"' in html
     assert 'api("/api/myfxbook/summary","POST")' in javascript
@@ -451,6 +451,21 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     )[0]
     assert "invalidateMyfxbookResults()" in save_handler
     assert "invalidateMyfxbookResults()" in clear_handler
+    settings_renderer = javascript.split("function showMyfxbookSettings(state)", 1)[1].split(
+        "async function loadMyfxbookSettings", 1
+    )[0]
+    assert (
+        "myfxbookConfigured=state.profile_configured&&state.credentials_configured"
+        in settings_renderer
+    )
+    assert '$("test-myfxbook").disabled=!myfxbookConfigured' in settings_renderer
+    assert "api(" not in settings_renderer
+    assert "setInterval" not in settings_renderer
+    assert "setTimeout" not in settings_renderer
+    test_handler = javascript.split('$("test-myfxbook").onclick=', 1)[1].split(
+        "function renderMyfxbookSummary", 1
+    )[0]
+    assert '$("test-myfxbook").disabled=!myfxbookConfigured' in test_handler
     route_body = javascript.split("function highlightNav", 1)[1].split(
         "for(const link of navLinks)", 1
     )[0]
