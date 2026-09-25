@@ -285,6 +285,10 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert 'id="refresh-myfxbook-facts"' in current_step
     assert 'id="refresh-myfxbook-current"' in current_step
     assert 'id="myfxbook-current-snapshot"' in current_step
+    assert 'id="myfxbook-summary-details"' in current_step
+    assert 'id="myfxbook-exposure-details"' in current_step
+    assert "Account numbers and timestamps" in current_step
+    assert "Positions, pending orders, and recent transactions" in current_step
     assert 'id="myfxbook-performance-form"' in history_step
     current_handler = javascript.split(
         '$("refresh-myfxbook-current").onclick=', 1
@@ -313,6 +317,18 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert "factsReport.facts.account.provider_account_id" in current_handler
     assert "summaryReport.account.currency" in current_handler
     assert "factsReport.facts.account.currency" in current_handler
+    summary_refresh_handler = javascript.split(
+        '$("refresh-myfxbook-summary").onclick=', 1
+    )[1].split("function myfxbookFactSection", 1)[0]
+    facts_refresh_handler = javascript.split(
+        '$("refresh-myfxbook-facts").onclick=', 1
+    )[1].split("function renderMyfxbookCurrentSnapshot", 1)[0]
+    assert '$("myfxbook-summary-details").open=true' in summary_refresh_handler
+    assert '$("myfxbook-exposure-details").open=true' in facts_refresh_handler
+    detail_markup = current_step.split('id="myfxbook-summary-details"', 1)[1]
+    assert "api(" not in detail_markup
+    assert "setInterval" not in detail_markup
+    assert "setTimeout" not in detail_markup
     route_body = javascript.split("function highlightNav", 1)[1].split(
         "for(const link of navLinks)", 1
     )[0]
