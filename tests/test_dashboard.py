@@ -384,6 +384,18 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert "setTimeout" not in readiness_renderer
     assert "localStorage" not in readiness_renderer
     assert "sessionStorage" not in readiness_renderer
+    assert "syncMyfxbookPageGuideAction()" in readiness_renderer
+    guide_sync = javascript.split("function syncMyfxbookPageGuideAction()", 1)[1].split(
+        "function renderMyfxbookReadiness", 1
+    )[0]
+    assert '(location.hash||"#desk")!=="#account"' in guide_sync
+    assert 'pageAction.textContent=localAction.textContent' in guide_sync
+    assert 'pageAction.onclick=()=>localAction.click()' in guide_sync
+    assert "api(" not in guide_sync
+    assert "setInterval" not in guide_sync
+    assert "setTimeout" not in guide_sync
+    assert "localStorage" not in guide_sync
+    assert "sessionStorage" not in guide_sync
     next_action = javascript.split('$("myfxbook-next-action").onclick=', 1)[1].split(
         "function showMyfxbookSettings", 1
     )[0]
