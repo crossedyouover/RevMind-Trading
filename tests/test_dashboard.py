@@ -419,6 +419,38 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert 'myfxbookHistoryState="LOADING"' in javascript
     assert 'myfxbookHistoryState="COMPLETE"' in javascript
     assert 'myfxbookHistoryState="INCOMPLETE"' in javascript
+    invalidation = javascript.split("function invalidateMyfxbookResults()", 1)[1].split(
+        '$("myfxbook-next-action").onclick=', 1
+    )[0]
+    for surface in (
+        "myfxbook-test-result",
+        "myfxbook-current-snapshot",
+        "myfxbook-summary-result",
+        "myfxbook-facts-result",
+        "myfxbook-performance-snapshot",
+        "myfxbook-performance-result",
+    ):
+        assert f'$("{surface}").replaceChildren' in invalidation
+    for disclosure in (
+        "myfxbook-summary-details",
+        "myfxbook-exposure-details",
+        "myfxbook-performance-details",
+        "myfxbook-partial-refresh",
+    ):
+        assert f'$("{disclosure}").open=false' in invalidation
+    assert "api(" not in invalidation
+    assert "setInterval" not in invalidation
+    assert "setTimeout" not in invalidation
+    assert "localStorage" not in invalidation
+    assert "sessionStorage" not in invalidation
+    save_handler = javascript.split('$("myfxbook-form").onsubmit=', 1)[1].split(
+        '$("clear-myfxbook").onclick=', 1
+    )[0]
+    clear_handler = javascript.split('$("clear-myfxbook").onclick=', 1)[1].split(
+        "function chooseMyfxbookAccount", 1
+    )[0]
+    assert "invalidateMyfxbookResults()" in save_handler
+    assert "invalidateMyfxbookResults()" in clear_handler
     route_body = javascript.split("function highlightNav", 1)[1].split(
         "for(const link of navLinks)", 1
     )[0]
