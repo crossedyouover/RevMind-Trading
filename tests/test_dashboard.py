@@ -377,8 +377,10 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert "Current facts are ready to review" in readiness_renderer
     assert "Testing the saved connection" in readiness_renderer
     assert "Refreshing current account facts" in readiness_renderer
+    assert "Loading historical account facts" in readiness_renderer
     assert 'action.textContent="Testing connection…"' in readiness_renderer
     assert 'action.textContent="Refreshing current account…"' in readiness_renderer
+    assert 'action.textContent="Loading historical range…"' in readiness_renderer
     assert "action.disabled=Boolean(myfxbookActionBusy)" in readiness_renderer
     assert 'action.dataset.next="setup"' in readiness_renderer
     assert 'action.dataset.next="test"' in readiness_renderer
@@ -491,6 +493,14 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     )[0]
     assert 'myfxbookActionBusy="current"' in current_handler
     assert "myfxbookActionBusy=null" in current_handler
+    performance_handler = javascript.split(
+        '$("myfxbook-performance-form").onsubmit=', 1
+    )[1].split('$("csv-import-form").onsubmit=', 1)[0]
+    assert 'myfxbookActionBusy="history"' in performance_handler
+    assert "myfxbookActionBusy=null" in performance_handler
+    assert performance_handler.index('myfxbookActionBusy="history"') < performance_handler.index(
+        'api("/api/myfxbook/performance"'
+    )
     navigation = javascript.split("function highlightNav", 1)[1].split(
         "function route", 1
     )[0]
