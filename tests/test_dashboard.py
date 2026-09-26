@@ -377,6 +377,10 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert "Current facts are ready to review" in readiness_renderer
     assert "Account context is ready to review" in readiness_renderer
     assert "Review loaded history" in readiness_renderer
+    assert "Historical range needs attention" in readiness_renderer
+    assert "Current account facts remain available" in readiness_renderer
+    assert 'action.textContent="Retry historical dates"' in readiness_renderer
+    assert 'myfxbookHistoryState==="INCOMPLETE"' in readiness_renderer
     assert "Testing the saved connection" in readiness_renderer
     assert "Refreshing current account facts" in readiness_renderer
     assert "Loading historical account facts" in readiness_renderer
