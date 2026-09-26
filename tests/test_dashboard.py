@@ -275,7 +275,7 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert 'id="myfxbook-current-state"' in html
     assert 'id="myfxbook-history-state"' in html
     assert 'id="myfxbook-setup-details"' in html
-    assert 'account:"Account Context"' in javascript
+    assert 'account:"My Account"' in javascript
     assert '"providers","account","history"' in javascript
     assert 'section==="providers"||section==="account"' in javascript
     assert 'section==="account"' in javascript
@@ -850,12 +850,16 @@ def test_local_session_routes(app):
         assert b"CSV IMPORT AVAILABLE" in javascript
         assert b"Download CSV template" in javascript
         assert b"ALPACA CONFIGURED" in javascript
-        assert b'plainNav={desk:"Home"' in javascript
+        assert b'plainNav={desk:"Home",opportunities:"Find Ideas"' in javascript
         assert b"READY means the checks passed" in javascript
         assert b"PLAIN-LANGUAGE ANSWER" in javascript
         assert b"Show detailed evidence" in javascript
         assert b"What to do next" in javascript
-        assert b"What deserves your attention now?" in html
+        assert b"What should I do now?" in html
+        assert b'id="view-toggle"' in html
+        assert b'class="simple-ui"' in html
+        assert b"THE SIMPLE REASON" in javascript
+        assert b"revmind.interface-mode.v1" in javascript
         assert b'id="page-guide-title"' in javascript
         assert b'id="page-guide-action"' in javascript
         assert b'"Check prices now"' in javascript
