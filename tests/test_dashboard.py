@@ -375,6 +375,8 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert "Verify the saved connection" in readiness_renderer
     assert "Load the current account facts" in readiness_renderer
     assert "Current facts are ready to review" in readiness_renderer
+    assert "Account context is ready to review" in readiness_renderer
+    assert "Review loaded history" in readiness_renderer
     assert "Testing the saved connection" in readiness_renderer
     assert "Refreshing current account facts" in readiness_renderer
     assert "Loading historical account facts" in readiness_renderer
@@ -386,6 +388,7 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert 'action.dataset.next="test"' in readiness_renderer
     assert 'action.dataset.next="current"' in readiness_renderer
     assert 'action.dataset.next="history"' in readiness_renderer
+    assert 'action.dataset.next="history-review"' in readiness_renderer
     assert "api(" not in readiness_renderer
     assert "setInterval" not in readiness_renderer
     assert "setTimeout" not in readiness_renderer
@@ -410,6 +413,8 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert '$("test-myfxbook").click()' in next_action
     assert '$("refresh-myfxbook-current").click()' in next_action
     assert '$("myfxbook-performance-start").focus()' in next_action
+    assert 'next==="history-review"' in next_action
+    assert '$("myfxbook-performance-snapshot").scrollIntoView' in next_action
     assert "api(" not in next_action
     setup_markup = connect_step.split('id="myfxbook-setup-details"', 1)[1]
     assert "Setup and connection test" in setup_markup
