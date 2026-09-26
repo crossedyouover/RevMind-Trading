@@ -373,6 +373,9 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     )[0]
     assert "Complete the local setup" in readiness_renderer
     assert "Verify the saved connection" in readiness_renderer
+    assert "Connection test needs attention" in readiness_renderer
+    assert 'action.textContent="Retry connection test"' in readiness_renderer
+    assert 'myfxbookConnectionState==="INCOMPLETE"' in readiness_renderer
     assert "Load the current account facts" in readiness_renderer
     assert "Current facts are ready to review" in readiness_renderer
     assert "Account context is ready to review" in readiness_renderer
@@ -437,6 +440,7 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert "SETUP REQUIRED" in step_renderer
     assert "LOADED THIS SESSION" in step_renderer
     assert "INCOMPLETE · RETRY" in step_renderer
+    assert "FAILED SAFELY · RETRY" in step_renderer
     assert "api(" not in step_renderer
     assert "setInterval" not in step_renderer
     assert "setTimeout" not in step_renderer
@@ -496,6 +500,9 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     )[0]
     assert '$("test-myfxbook").disabled=!myfxbookConfigured' in test_handler
     assert 'myfxbookActionBusy="test"' in test_handler
+    assert 'myfxbookConnectionState="LOADING"' in test_handler
+    assert 'myfxbookConnectionState="COMPLETE"' in test_handler
+    assert 'myfxbookConnectionState="INCOMPLETE"' in test_handler
     assert "myfxbookActionBusy=null" in test_handler
     current_handler = javascript.split('$("refresh-myfxbook-current").onclick=', 1)[1].split(
         "function renderMyfxbookPerformance", 1
