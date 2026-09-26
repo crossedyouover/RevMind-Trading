@@ -2,6 +2,10 @@
 
 Provider-agnostic AI-assisted market intelligence and paper-trading research platform.
 
+**Release:** v1.0 is complete as a local decision-support and explicitly approved paper-trading
+application. Read [RELEASE_STATUS.md](RELEASE_STATUS.md) for the exact capability, practical
+workflow, acceptance gate, and deliberate safety boundaries.
+
 ## Open the local dashboard
 
 Double-click **Start-RevMind.cmd** to open the local research dashboard in your browser.

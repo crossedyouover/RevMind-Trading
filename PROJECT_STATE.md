@@ -7,9 +7,9 @@ this file and `README.md` before making changes.
 
 - Repository: `C:\Users\user\Documents\RevMind-Trading`
 - Canonical branch: `main` (`master` is the local tracking branch)
-- Frozen through: Phase 88 (historical failure recovery state)
-- Frozen commit: `9d2678266cd532209e2b1503e68d9fc4bf88b524`
-- Frozen tag: `phase88-frozen` (peeled tag resolves to the frozen commit)
+- Frozen through: Phase 90 (v1.0 local paper-research release)
+- Frozen commit: the commit peeled from `phase90-frozen` and `v1.0.0`
+- Frozen tags: `phase90-frozen` and `v1.0.0` (both peeled tags resolve to the frozen commit)
 - Last frozen gate: 1,181 tests passed, Ruff clean, mypy strict clean (115 source files), `git diff --check`
   clean, tracked worktree clean
 - Current capability: deterministic, point-in-time-safe flow from canonical market observations
@@ -20,7 +20,8 @@ this file and `README.md` before making changes.
   an explicit-policy deterministic paper risk gate, and QUIET/WATCHLIST/ALERT research composition.
   Local application infrastructure now adds a durable alert outbox, append-only evaluation journal,
   explicit-clock restartable offline shadow runtime, and versioned grant-scoped control contracts
-- Trading status: no broker execution, automatic trading, or real-money authority exists
+- Trading status: explicitly confirmed Alpaca paper bracket orders exist; automatic trading and
+  real-money authority do not
 - Deployment status: no live delivery adapter, continuous live-market trial, background scheduler,
   network control endpoint, or real Angelo OS integration is enabled. Local grants require a trusted
   host; they are not remote authentication. See `SHADOW_RUN_GUIDE.md` for the verified offline demo
@@ -32,17 +33,17 @@ Set-Location "C:\Users\user\Documents\RevMind-Trading"
 git status --short --branch
 git rev-parse HEAD
 git rev-parse origin/main
-git rev-parse "phase88-frozen^{}"
-git merge-base --is-ancestor "phase88-frozen^{}" HEAD
+git rev-parse "phase90-frozen^{}"
+git rev-parse "v1.0.0^{}"
+git merge-base --is-ancestor "phase90-frozen^{}" HEAD
 .\.venv\Scripts\python.exe -m pytest -q --basetemp=.pytest_continuation_tmp
 .\.venv\Scripts\python.exe -m ruff check app tests
 .\.venv\Scripts\python.exe -m mypy app
 git diff --check
 ```
 
-`HEAD` and `origin/main` must match, the peeled Phase 88 tag must resolve to
-`9d2678266cd532209e2b1503e68d9fc4bf88b524`, and the ancestry check must exit successfully. The
-continuation-contract documentation may legitimately follow the frozen implementation tag.
+`HEAD`, `origin/main`, and both peeled Phase 90 release tags must match, and the ancestry check must
+exit successfully.
 
 Phases 23–26 passed their feature-branch and merge gates with respectively 978, 985, 991, and
 1,003 total tests (9, 7, 6, and 12 focused tests). Each remote main and peeled frozen tag was
@@ -340,7 +341,9 @@ For Phase `N`, always:
 
 ## Exact next action
 
-Phase 88 is frozen on `phase88-frozen`. RevMind can discover bounded account choices and materialize
+Phase 90 closes RevMind v1.0 as a local decision-support and explicitly approved paper-trading
+release. The project is finished within the capability and deliberate safety boundaries in
+`RELEASE_STATUS.md`. RevMind can discover bounded account choices and materialize
 one selected Myfxbook account, open
 positions, pending orders, at most 50 explicitly incomplete recent transactions, and explicitly
 ranged provider-reported daily gain observations, with explicit terminal session disconnect. It has
@@ -382,9 +385,10 @@ during connection tests and current-account refreshes so repeated actions are vi
 the bounded request is in flight. Exact historical-range loading now follows that same honest busy-
 state contract. A completed Account workflow state now appears after history loads and provides a
 direct local review action. An incomplete historical request is now equally explicit and routes the
-operator back to the exact date controls for a deliberate retry. Phase 89 will preserve and expose an
-explicit connection-test failure state with a manual retry action. See `PHASE71_DESIGN.md` through
-`PHASE89_DESIGN.md`.
+operator back to the exact date controls for a deliberate retry. An explicit connection-test failure
+state now preserves the failure and offers a manual retry without hidden requests. No additional
+development phase is scheduled. Future work requires a new, explicit product objective; see
+`PHASE90_DESIGN.md` and `RELEASE_STATUS.md`.
 
 ## Historical continuation record (superseded)
 

@@ -1,5 +1,8 @@
 # Open RevMind
 
+RevMind v1.0 is a local decision-support and explicitly approved paper-trading application. For the
+exact shipped capability and safety boundaries, see [RELEASE_STATUS.md](RELEASE_STATUS.md).
+
 Double-click **Start-RevMind.cmd** in this repository. It starts the local server and opens your
 default browser at **http://127.0.0.1:8765**. Keep the launcher window open while using RevMind;
 close it or press Ctrl+C there to stop the server. It does not install an automatic startup service.
