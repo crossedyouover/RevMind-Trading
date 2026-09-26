@@ -7,9 +7,9 @@ this file and `README.md` before making changes.
 
 - Repository: `C:\Users\user\Documents\RevMind-Trading`
 - Canonical branch: `main` (`master` is the local tracking branch)
-- Frozen through: Phase 86 (historical range busy state)
-- Frozen commit: `f6884f5700d0c959cc6acf2fa9cd1fe771660195`
-- Frozen tag: `phase86-frozen` (peeled tag resolves to the frozen commit)
+- Frozen through: Phase 87 (completed account workflow state)
+- Frozen commit: `b4fa3ea0f3ffe3eced90032a06d664e0cd17d236`
+- Frozen tag: `phase87-frozen` (peeled tag resolves to the frozen commit)
 - Last frozen gate: 1,181 tests passed, Ruff clean, mypy strict clean (115 source files), `git diff --check`
   clean, tracked worktree clean
 - Current capability: deterministic, point-in-time-safe flow from canonical market observations
@@ -32,16 +32,16 @@ Set-Location "C:\Users\user\Documents\RevMind-Trading"
 git status --short --branch
 git rev-parse HEAD
 git rev-parse origin/main
-git rev-parse "phase86-frozen^{}"
-git merge-base --is-ancestor "phase86-frozen^{}" HEAD
+git rev-parse "phase87-frozen^{}"
+git merge-base --is-ancestor "phase87-frozen^{}" HEAD
 .\.venv\Scripts\python.exe -m pytest -q --basetemp=.pytest_continuation_tmp
 .\.venv\Scripts\python.exe -m ruff check app tests
 .\.venv\Scripts\python.exe -m mypy app
 git diff --check
 ```
 
-`HEAD` and `origin/main` must match, the peeled Phase 86 tag must resolve to
-`f6884f5700d0c959cc6acf2fa9cd1fe771660195`, and the ancestry check must exit successfully. The
+`HEAD` and `origin/main` must match, the peeled Phase 87 tag must resolve to
+`b4fa3ea0f3ffe3eced90032a06d664e0cd17d236`, and the ancestry check must exit successfully. The
 continuation-contract documentation may legitimately follow the frozen implementation tag.
 
 Phases 23–26 passed their feature-branch and merge gates with respectively 978, 985, 991, and
@@ -340,7 +340,7 @@ For Phase `N`, always:
 
 ## Exact next action
 
-Phase 86 is frozen on `phase86-frozen`. RevMind can discover bounded account choices and materialize
+Phase 87 is frozen on `phase87-frozen`. RevMind can discover bounded account choices and materialize
 one selected Myfxbook account, open
 positions, pending orders, at most 50 explicitly incomplete recent transactions, and explicitly
 ranged provider-reported daily gain observations, with explicit terminal session disconnect. It has
@@ -380,8 +380,10 @@ refresh. That global action now stays synchronized immediately when the local re
 changes, without navigation or provider requests. Both Account actions now expose explicit busy states
 during connection tests and current-account refreshes so repeated actions are visibly blocked while
 the bounded request is in flight. Exact historical-range loading now follows that same honest busy-
-state contract. Phase 87 will show a completed Account workflow state after history loads and provide
-a direct local review action. See `PHASE71_DESIGN.md` through `PHASE87_DESIGN.md`.
+state contract. A completed Account workflow state now appears after history loads and provides a
+direct local review action. Phase 88 will make an incomplete historical request equally explicit and
+route the operator back to the exact date controls for a deliberate retry. See `PHASE71_DESIGN.md`
+through `PHASE88_DESIGN.md`.
 
 ## Historical continuation record (superseded)
 
