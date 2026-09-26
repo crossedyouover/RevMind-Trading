@@ -852,11 +852,15 @@ def test_local_session_routes(app):
         assert b"ALPACA CONFIGURED" in javascript
         assert b'plainNav={desk:"Home"' in javascript
         assert b"READY means the checks passed" in javascript
+        assert b"PLAIN-LANGUAGE ANSWER" in javascript
+        assert b"Show detailed evidence" in javascript
+        assert b"What to do next" in javascript
+        assert b"What deserves your attention now?" in html
         assert b'id="page-guide-title"' in javascript
         assert b'id="page-guide-action"' in javascript
         assert b'"Check prices now"' in javascript
         assert b'"Download example CSV"' in javascript
-        assert b"Show technical validation and past measurements" in javascript
+        assert b"Show scan history and calibration" in javascript
         assert b'"technical-results"' in javascript
         assert b"Advanced settings" in javascript
         assert b'"advanced-setup"' in javascript
