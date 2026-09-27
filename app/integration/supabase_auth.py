@@ -67,7 +67,7 @@ class SupabasePrincipal:
     expires_at: datetime
 
 
-class _SigningKeyClient(Protocol):
+class SigningKeyClient(Protocol):
     def get_signing_key_from_jwt(self, token: str) -> PyJWK: ...
 
 
@@ -93,7 +93,7 @@ class SupabaseJwtVerifier:
         self,
         config: SupabaseAuthConfig,
         *,
-        key_client: _SigningKeyClient | None = None,
+        key_client: SigningKeyClient | None = None,
         clock: Callable[[], datetime] | None = None,
     ) -> None:
         self.config = config

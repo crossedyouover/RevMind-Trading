@@ -7,10 +7,10 @@ this file and `README.md` before making changes.
 
 - Repository: `C:\Users\user\Documents\RevMind-Trading`
 - Canonical branch: `main` (`master` is the local tracking branch)
-- Frozen through: Phase 100 locally (pinned-origin read-only ASGI transport)
-- Frozen commit: the commit peeled from `phase100-frozen`
-- Frozen tags: `phase100-frozen` plus all preserved earlier frozen and release tags
-- Last frozen gate: 1,257 tests passed, Ruff clean, mypy strict clean (121 source files), JavaScript
+- Frozen through: Phase 101 locally (fail-closed hosted composition and deployment handoff)
+- Frozen commit: the commit peeled from `phase101-frozen`
+- Frozen tags: `phase101-frozen` plus all preserved earlier frozen and release tags
+- Last frozen gate: 1,265 tests passed, Ruff clean, mypy strict clean (122 source files), JavaScript
   syntax clean, `git diff --check`
   clean, tracked worktree clean
 - Current capability: deterministic, point-in-time-safe flow from canonical market observations
@@ -342,21 +342,23 @@ For Phase `N`, always:
 
 ## Exact next action
 
-Phase 100 adds a minimal dependency-free ASGI transport for the read-only hosted contracts. It
-accepts one explicitly configured HTTPS frontend origin, returns CORS only to that exact origin,
-limits preflight to GET/OPTIONS and Authorization/Content-Type, bounds request paths and query data,
-and rejects duplicate or malformed headers. It exposes no new domain capability: every mutation
-still receives 405 and the facade still has no settings, credentials, billing, administration,
-paper-order, live-order, or execution route. No server was installed or started, no real Lovable
-origin was guessed, and no remote Supabase/Lovable resource was changed. The next narrow phase is a
-fail-closed environment composition root plus deployment documentation and an end-to-end hosted
-read test using local mock identity and data transports. See `PHASE100_DESIGN.md`.
+Phase 101 adds a fail-closed composition root requiring separate central RevMind OS issuer/audience,
+Trading Supabase origin/service key, and final Trading frontend origin values. It composes only the
+verified JWT boundary, tenant-scoped research reader, read-only API, and pinned-origin ASGI host.
+The deployment handoff records the authoritative architecture: RevMind OS Website and PeptMind and
+Prospecting are Lovable projects; RevMind Trading is this independent app/data project; RevMind CRM
+is the future Emergent app/data project. No existing project is recreated, combined, renamed, or
+overwritten. No environment, remote Supabase/Lovable resource, DNS record, subdomain, server,
+credential, or production secret was changed. The code-side hosted read path is complete; actual
+deployment awaits the user's real project values and final Trading origin. See
+`PHASE101_DESIGN.md` and `HOSTED_DEPLOYMENT_GUIDE.md`.
 
 ### Phase 100 transport record
 
-The ASGI layer is transport only. It cannot weaken the Phase 97 signature checks, Phase 98 route
-allowlist, or Phase 99 double tenant validation. Production remains blocked on user-owned RevMind OS
-issuer/audience, Trading Supabase project URL/backend secret, and the final Lovable production origin.
+The ASGI layer and composition root are transport/configuration only. They cannot weaken the Phase
+97 signature checks, Phase 98 route allowlist, or Phase 99 double tenant validation. Production
+remains blocked on user-owned RevMind OS issuer/audience, Trading Supabase project URL/backend secret,
+and the final Lovable production origin.
 
 ### Phase 99 data-plane record
 
