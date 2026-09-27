@@ -16,6 +16,11 @@ from app.integration.supabase_auth import (
     SupabasePrincipal,
     bearer_token,
 )
+from app.integration.supabase_research import (
+    SupabaseResearchConfig,
+    SupabaseResearchConfigurationError,
+    SupabaseResearchRunReader,
+)
 
 __all__ = [
     "AuthConfigurationError",
@@ -28,6 +33,9 @@ __all__ = [
     "SupabaseAuthConfig",
     "SupabaseJwtVerifier",
     "SupabasePrincipal",
+    "SupabaseResearchConfig",
+    "SupabaseResearchConfigurationError",
+    "SupabaseResearchRunReader",
     "bearer_token",
     "build_hosted_api",
 ]
