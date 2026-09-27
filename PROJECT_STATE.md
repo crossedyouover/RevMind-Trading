@@ -7,10 +7,10 @@ this file and `README.md` before making changes.
 
 - Repository: `C:\Users\user\Documents\RevMind-Trading`
 - Canonical branch: `main` (`master` is the local tracking branch)
-- Frozen through: Phase 98 locally (tenant-scoped read-only hosted API facade)
-- Frozen commit: the commit peeled from `phase90-frozen` and `v1.0.0`
-- Frozen tags: `phase90-frozen` and `v1.0.0` (both peeled tags resolve to the frozen commit)
-- Last frozen gate: 1,228 tests passed, Ruff clean, mypy strict clean (119 source files), JavaScript
+- Frozen through: Phase 99 locally (RevMind OS-aligned Supabase research reader)
+- Frozen commit: the commit peeled from `phase99-frozen`
+- Frozen tags: `phase99-frozen` plus the preserved `phase90-frozen` and `v1.0.0` release tags
+- Last frozen gate: 1,248 tests passed, Ruff clean, mypy strict clean (120 source files), JavaScript
   syntax clean, `git diff --check`
   clean, tracked worktree clean
 - Current capability: deterministic, point-in-time-safe flow from canonical market observations
@@ -342,15 +342,24 @@ For Phase `N`, always:
 
 ## Exact next action
 
-Phase 98 adds a framework-neutral, read-only hosted API facade for the future Lovable frontend.
-Public health exposes no infrastructure details; authenticated identity and bounded research-run
-listing derive user and optional organization scope only from the verified Phase 97 principal.
-Caller-supplied identity fields are rejected, and returned records receive a second ownership check
-before serialization. Every non-GET request is refused, and settings, credentials, provider tests,
-paper plans/orders, execution, billing and administration have no hosted route. No HTTP server,
-deployment, Lovable edit, Supabase mutation, database adapter or CORS policy was added. The next
-narrow phase is the tenant-scoped Supabase/PostgreSQL research-run reader. See
-`PHASE98_DESIGN.md`.
+Phase 99 aligns the separate RevMind Trading data project with future central RevMind OS UUIDs,
+removes the incorrect dependency on app-local Supabase Auth, introduces organization membership and
+research ownership, and denies browser roles direct table access. Its backend-only PostgREST reader
+pins the Supabase project origin, applies exact verified user and optional organization predicates,
+bounds time and response size, decodes only public research summaries, and rejects cross-tenant or
+malformed results. No remote Supabase/Lovable mutation, credential creation, HTTP host, CORS policy,
+write route, trading route, billing route, or execution authority was added. The next narrow phase
+is a minimal read-only HTTP deployment adapter composing the Phase 97 verifier, Phase 98 API, and
+Phase 99 reader; its allowed Lovable origin must remain unset until the real frontend origin exists.
+See `PHASE99_DESIGN.md`.
+
+### Phase 99 data-plane record
+
+The app-specific Supabase project is now explicitly a private data plane behind RevMind Trading's
+hosted API, not a second identity authority. The browser must never receive the backend service key
+or query these tables directly. Both the storage adapter and API facade independently verify tenant
+ownership. The migrations and reader remain local artifacts and have not been applied to a remote
+project.
 
 ### Phase 97 identity record
 
