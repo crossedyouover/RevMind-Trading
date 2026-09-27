@@ -7,10 +7,11 @@ this file and `README.md` before making changes.
 
 - Repository: `C:\Users\user\Documents\RevMind-Trading`
 - Canonical branch: `main` (`master` is the local tracking branch)
-- Frozen through: Phase 94; Phase 95 authentication and subscription work is in verification
+- Frozen through: Phase 95 (local authentication and subscription administration)
 - Frozen commit: the commit peeled from `phase90-frozen` and `v1.0.0`
 - Frozen tags: `phase90-frozen` and `v1.0.0` (both peeled tags resolve to the frozen commit)
-- Last frozen gate: 1,181 tests passed, Ruff clean, mypy strict clean (115 source files), `git diff --check`
+- Last frozen gate: 1,188 tests passed, Ruff clean, mypy strict clean (116 source files), JavaScript
+  syntax clean, `git diff --check`
   clean, tracked worktree clean
 - Current capability: deterministic, point-in-time-safe flow from canonical market observations
   through technical analysis, market evidence, setup composition, and multi-instrument scanning,
