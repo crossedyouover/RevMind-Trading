@@ -16,6 +16,20 @@ open; server-side continuous ingestion and real-money trading remain disabled.
 
 > **Current status: local Alpaca research and explicitly approved paper orders are available. Automatic and real-money execution do not exist.**
 
+## Accounts and master admin
+
+The first browser visit asks you to create the single local master-admin account. Use a unique
+password containing at least 12 characters, one letter, and one number. First-run setup closes
+permanently after that account is created. Later visits require sign-in; sessions expire after 12
+hours and can be revoked with **Sign out**.
+
+The master admin can open **Master Admin** to create users, define subscription plans, assign or
+cancel access, and create bounded promo codes. Promo codes can record a percentage discount or add
+subscription days. RevMind does not yet collect payments, renew subscriptions, send password-reset
+email, or connect to a billing provider. Those require a separately selected payment provider and
+credentials. Authentication and commercial access never change research, risk vetoes, or
+paper-order approval.
+
 ## Purpose
 
 RevMind Trading is intended to become an AI-assisted market-intelligence, trading-research, paper-trading, and decision-support system. Deterministic quantitative and risk controls remain separate from configurable specialist AI desks.
