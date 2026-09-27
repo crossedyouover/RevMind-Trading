@@ -30,6 +30,15 @@ email, or connect to a billing provider. Those require a separately selected pay
 credentials. Authentication and commercial access never change research, risk vetoes, or
 paper-order approval.
 
+## Lovable + Supabase migration
+
+The hosted migration foundation is in [`PHASE96_DESIGN.md`](PHASE96_DESIGN.md) and
+[`supabase/migrations/202609270001_revmind_core.sql`](supabase/migrations/202609270001_revmind_core.sql).
+It is intentionally not applied automatically: connect your own Supabase project in Lovable, review
+the migration, and apply it through the Supabase migration workflow. The Lovable browser must use
+only Supabase Auth and the publishable key. The deterministic Python engine, broker integrations,
+and all secret keys remain behind a separately hosted authenticated API.
+
 ## Purpose
 
 RevMind Trading is intended to become an AI-assisted market-intelligence, trading-research, paper-trading, and decision-support system. Deterministic quantitative and risk controls remain separate from configurable specialist AI desks.
