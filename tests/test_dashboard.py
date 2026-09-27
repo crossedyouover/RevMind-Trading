@@ -248,13 +248,11 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert "function renderMyfxbookPerformance(report)" in javascript
     assert "Past provider-reported performance is context only" in javascript
     assert "No range is selected automatically" in html
-    performance_before_submit = javascript.split(
-        '$("myfxbook-performance-form").onsubmit=', 1
-    )[0]
+    performance_before_submit = javascript.split('$("myfxbook-performance-form").onsubmit=', 1)[0]
     assert 'api("/api/myfxbook/performance"' not in performance_before_submit
-    performance_handler = javascript.split(
-        '$("myfxbook-performance-form").onsubmit=', 1
-    )[1].split('$("csv-import-form")', 1)[0]
+    performance_handler = javascript.split('$("myfxbook-performance-form").onsubmit=', 1)[1].split(
+        '$("csv-import-form")', 1
+    )[0]
     assert "setInterval" not in performance_handler
     assert "setTimeout" not in performance_handler
     performance_renderer = javascript.split("function renderMyfxbookPerformance(report)", 1)[
@@ -280,9 +278,11 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert 'section==="providers"||section==="account"' in javascript
     assert 'section==="account"' in javascript
     assert "Navigation never contacts Myfxbook" in javascript
-    assert html.index('id="myfxbook-connect-step"') < html.index(
-        'id="myfxbook-current-step"'
-    ) < html.index('id="myfxbook-history-step"')
+    assert (
+        html.index('id="myfxbook-connect-step"')
+        < html.index('id="myfxbook-current-step"')
+        < html.index('id="myfxbook-history-step"')
+    )
     assert "Connect your account" in html
     assert "Inspect current exposure" in html
     assert "Review past performance" in html
@@ -292,9 +292,7 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     current_step = html.split('id="myfxbook-current-step"', 1)[1].split(
         'id="myfxbook-history-step"', 1
     )[0]
-    history_step = html.split('id="myfxbook-history-step"', 1)[1].split(
-        'class="note"', 1
-    )[0]
+    history_step = html.split('id="myfxbook-history-step"', 1)[1].split('class="note"', 1)[0]
     assert 'id="myfxbook-form"' in connect_step
     assert 'id="myfxbook-test-result"' in connect_step
     assert 'id="refresh-myfxbook-summary"' in current_step
@@ -314,9 +312,9 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert "api(" not in performance_markup
     assert "setInterval" not in performance_markup
     assert "setTimeout" not in performance_markup
-    current_handler = javascript.split(
-        '$("refresh-myfxbook-current").onclick=', 1
-    )[1].split("function renderMyfxbookPerformance", 1)[0]
+    current_handler = javascript.split('$("refresh-myfxbook-current").onclick=', 1)[1].split(
+        "function renderMyfxbookPerformance", 1
+    )[0]
     assert 'api("/api/myfxbook/summary","POST")' in current_handler
     assert 'api("/api/myfxbook/facts","POST")' in current_handler
     assert "PARTIALLY REFRESHED" in current_handler
@@ -326,8 +324,8 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert "function renderMyfxbookCurrentSnapshot(summaryReport,factsReport)" in javascript
     assert 'account.balance+" "+account.currency' in javascript
     assert 'account.equity+" "+account.currency' in javascript
-    assert 'facts.positions.length' in javascript
-    assert 'facts.orders.length' in javascript
+    assert "facts.positions.length" in javascript
+    assert "facts.orders.length" in javascript
     assert "CURRENT ACCOUNT SNAPSHOT · FACTS ONLY" in javascript
     assert '"Summary observed "+account.observed_at' in javascript
     assert '" · exposure observed "+facts.account.observed_at' in javascript
@@ -341,12 +339,12 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     assert "factsReport.facts.account.provider_account_id" in current_handler
     assert "summaryReport.account.currency" in current_handler
     assert "factsReport.facts.account.currency" in current_handler
-    summary_refresh_handler = javascript.split(
-        '$("refresh-myfxbook-summary").onclick=', 1
-    )[1].split("function myfxbookFactSection", 1)[0]
-    facts_refresh_handler = javascript.split(
-        '$("refresh-myfxbook-facts").onclick=', 1
-    )[1].split("function renderMyfxbookCurrentSnapshot", 1)[0]
+    summary_refresh_handler = javascript.split('$("refresh-myfxbook-summary").onclick=', 1)[
+        1
+    ].split("function myfxbookFactSection", 1)[0]
+    facts_refresh_handler = javascript.split('$("refresh-myfxbook-facts").onclick=', 1)[1].split(
+        "function renderMyfxbookCurrentSnapshot", 1
+    )[0]
     assert '$("myfxbook-summary-details").open=true' in summary_refresh_handler
     assert '$("myfxbook-exposure-details").open=true' in facts_refresh_handler
     partial_refresh = current_step.split('id="myfxbook-partial-refresh"', 1)[1].split(
@@ -406,9 +404,9 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
         "function renderMyfxbookReadiness", 1
     )[0]
     assert '(location.hash||"#desk")!=="#account"' in guide_sync
-    assert 'pageAction.textContent=localAction.textContent' in guide_sync
-    assert 'pageAction.disabled=localAction.disabled' in guide_sync
-    assert 'pageAction.onclick=()=>localAction.click()' in guide_sync
+    assert "pageAction.textContent=localAction.textContent" in guide_sync
+    assert "pageAction.disabled=localAction.disabled" in guide_sync
+    assert "pageAction.onclick=()=>localAction.click()" in guide_sync
     assert "api(" not in guide_sync
     assert "setInterval" not in guide_sync
     assert "setTimeout" not in guide_sync
@@ -509,17 +507,15 @@ def test_myfxbook_dashboard_controls_are_read_only_and_do_not_persist_secrets():
     )[0]
     assert 'myfxbookActionBusy="current"' in current_handler
     assert "myfxbookActionBusy=null" in current_handler
-    performance_handler = javascript.split(
-        '$("myfxbook-performance-form").onsubmit=', 1
-    )[1].split('$("csv-import-form").onsubmit=', 1)[0]
+    performance_handler = javascript.split('$("myfxbook-performance-form").onsubmit=', 1)[1].split(
+        '$("csv-import-form").onsubmit=', 1
+    )[0]
     assert 'myfxbookActionBusy="history"' in performance_handler
     assert "myfxbookActionBusy=null" in performance_handler
     assert performance_handler.index('myfxbookActionBusy="history"') < performance_handler.index(
         'api("/api/myfxbook/performance"'
     )
-    navigation = javascript.split("function highlightNav", 1)[1].split(
-        "function route", 1
-    )[0]
+    navigation = javascript.split("function highlightNav", 1)[1].split("function route", 1)[0]
     assert 'account:[$("myfxbook-next-action").textContent' in navigation
     assert '()=>$("myfxbook-next-action").click()' in navigation
     assert 'account:[$("refresh-myfxbook-summary").disabled' not in navigation
@@ -741,9 +737,7 @@ async def test_myfxbook_performance_uses_exact_range_and_disconnects(tmp_path):
     store = SettingsStore(tmp_path / ".revmind")
     profile = MyfxbookConnectionProfile(provider_account_id="chosen", broker_timezone="UTC")
     store.save_myfxbook(profile, "mail@example.test", "password-secret", False)
-    request = MyfxbookPerformanceRequest(
-        start=date(2026, 9, 1), end=date(2026, 9, 2)
-    )
+    request = MyfxbookPerformanceRequest(start=date(2026, 9, 1), end=date(2026, 9, 2))
     calls: list[str] = []
 
     class Probe:
@@ -805,6 +799,8 @@ def test_settings_reject_implicit_or_malformed_instruments(changes):
 
 
 def test_local_session_routes(app):
+    app.auth.bootstrap_admin("admin@example.test", "SecurePassword123")
+    session, _ = app.auth.create_session("admin@example.test", "SecurePassword123")
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler(app, "test-session"))
     thread = Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -857,7 +853,9 @@ def test_local_session_routes(app):
         assert b"What to do next" in javascript
         assert b"What should I do now?" in html
         assert b'id="view-toggle"' in html
-        assert b'class="simple-ui"' in html
+        assert b'class="simple-ui auth-pending"' in html
+        assert b'id="auth-gate"' in html
+        assert b'id="admin-nav"' in html
         assert b"THE SIMPLE REASON" in javascript
         assert b"revmind.interface-mode.v1" in javascript
         assert b'id="page-guide-title"' in javascript
@@ -874,7 +872,7 @@ def test_local_session_routes(app):
         assert b'window.scrollTo({top:0,behavior:"smooth"})' in javascript
         assert b"TRADE IDEAS" in html
         assert b'querySelectorAll("main > section")' in javascript
-        assert b'REVMIND / UPLOAD PRICES' in javascript
+        assert b"REVMIND / UPLOAD PRICES" in javascript
         status, stylesheet, _ = call("/style.css")
         assert status == 200 and b"[hidden]{display:none!important}" in stylesheet
         assert (
@@ -884,7 +882,10 @@ def test_local_session_routes(app):
         status, logo, _ = call("/revmind-logo-lockup.png")
         assert status == 200 and logo.startswith(b"\x89PNG\r\n\x1a\n")
         assert call("/api/runs")[0] == 403
-        token = {"X-RevMind-Token": "test-session"}
+        token = {
+            "X-RevMind-Token": "test-session",
+            "Cookie": f"revmind_session={session}",
+        }
         assert json.loads(call("/api/runs", headers=token)[1]) == []
         assert json.loads(call("/api/paper-orders", headers=token)[1]) == []
         settings = json.loads(call("/api/settings", headers=token)[1])
@@ -908,9 +909,7 @@ def test_local_session_routes(app):
         assert providers["schema_version"] == 1
         assert providers["providers"][0]["provider_id"] == "alpaca"
         assert providers["providers"][0]["execution"] == "PAPER_EXPLICIT_APPROVAL"
-        assert all(
-            provider["execution"] == "NONE" for provider in providers["providers"][1:]
-        )
+        assert all(provider["execution"] == "NONE" for provider in providers["providers"][1:])
         assert call("/", headers={"Host": "attacker.example"})[0] == 403
         assert call("/", headers={"Sec-Fetch-Site": "cross-site"})[0] == 403
         assert call("/api/runs", headers={**token, "Origin": "https://attacker.example"})[0] == 403
@@ -924,12 +923,15 @@ def test_local_session_routes(app):
         assert call("/api/myfxbook/facts", "POST", headers, "{}")[0] == 400
         assert call("/api/myfxbook/facts", "POST", headers, '{"account":"7"}')[0] == 400
         assert call("/api/myfxbook/performance", "POST", headers, "{}")[0] == 400
-        assert call(
-            "/api/myfxbook/performance",
-            "POST",
-            headers,
-            '{"schema_version":1,"start":"2026-09-02","end":"2026-09-01"}',
-        )[0] == 400
+        assert (
+            call(
+                "/api/myfxbook/performance",
+                "POST",
+                headers,
+                '{"schema_version":1,"start":"2026-09-02","end":"2026-09-01"}',
+            )[0]
+            == 400
+        )
         assert call("/api/demo", "POST", headers, '{"path":".env"}')[0] == 400
         status, result, _ = call("/api/demo", "POST", headers, "{}")
         assert status == 200 and json.loads(result)["state"] == "COMPLETE"
@@ -970,46 +972,65 @@ def test_local_session_routes(app):
         )
         assert status == 200
         assert json.loads(preserved_body)["credentials_configured"] is True
-        assert call(
-            "/api/myfxbook/settings",
-            "POST",
-            headers,
-            json.dumps({**myfxbook_envelope, "unexpected": True}),
-        )[0] == 400
-        assert call(
-            "/api/myfxbook/settings",
-            "POST",
-            headers,
-            json.dumps({**myfxbook_envelope, "broker_timezone": "Not/AZone"}),
-        )[0] == 400
-        assert call(
-            "/api/myfxbook/settings",
-            "POST",
-            headers,
-            json.dumps({**myfxbook_envelope, "password": None}),
-        )[0] == 400
+        assert (
+            call(
+                "/api/myfxbook/settings",
+                "POST",
+                headers,
+                json.dumps({**myfxbook_envelope, "unexpected": True}),
+            )[0]
+            == 400
+        )
+        assert (
+            call(
+                "/api/myfxbook/settings",
+                "POST",
+                headers,
+                json.dumps({**myfxbook_envelope, "broker_timezone": "Not/AZone"}),
+            )[0]
+            == 400
+        )
+        assert (
+            call(
+                "/api/myfxbook/settings",
+                "POST",
+                headers,
+                json.dumps({**myfxbook_envelope, "password": None}),
+            )[0]
+            == 400
+        )
         assert call("/api/myfxbook/settings", "POST", headers, "not-json")[0] == 400
-        assert call(
-            "/api/myfxbook/settings",
-            "POST",
-            headers,
-            json.dumps({**myfxbook_envelope, "schema_version": "1"}),
-        )[0] == 400
-        assert call(
-            "/api/myfxbook/settings",
-            "POST",
-            headers,
-            json.dumps({**myfxbook_envelope, "clear_connection": True}),
-        )[0] == 400
-        assert call(
-            "/api/myfxbook/settings",
-            "POST",
-            headers,
-            json.dumps({**myfxbook_envelope, "padding": "x" * 33_000}),
-        )[0] == 400
-        assert json.loads(call("/api/myfxbook/settings", headers=token)[1])[
-            "integration_status"
-        ] == "CONFIGURED_NOT_ACTIVE"
+        assert (
+            call(
+                "/api/myfxbook/settings",
+                "POST",
+                headers,
+                json.dumps({**myfxbook_envelope, "schema_version": "1"}),
+            )[0]
+            == 400
+        )
+        assert (
+            call(
+                "/api/myfxbook/settings",
+                "POST",
+                headers,
+                json.dumps({**myfxbook_envelope, "clear_connection": True}),
+            )[0]
+            == 400
+        )
+        assert (
+            call(
+                "/api/myfxbook/settings",
+                "POST",
+                headers,
+                json.dumps({**myfxbook_envelope, "padding": "x" * 33_000}),
+            )[0]
+            == 400
+        )
+        assert (
+            json.loads(call("/api/myfxbook/settings", headers=token)[1])["integration_status"]
+            == "CONFIGURED_NOT_ACTIVE"
+        )
         clear_myfxbook = {
             "schema_version": 1,
             "provider_account_id": None,
@@ -1039,8 +1060,7 @@ def test_local_session_routes(app):
                 "source_name": "manual-export",
             },
             "csv_text": (
-                "timestamp,open,high,low,close,volume\n"
-                "2026-09-12T10:00:00Z,1.1,1.2,1.0,1.15,100\n"
+                "timestamp,open,high,low,close,volume\n2026-09-12T10:00:00Z,1.1,1.2,1.0,1.15,100\n"
             ),
         }
         status, imported, _ = call(

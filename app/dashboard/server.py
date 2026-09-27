@@ -18,6 +18,7 @@ from app.accounts.myfxbook import MyfxbookError
 from app.capture.__main__ import SimulatedClock
 from app.capture.coordinator import OfflineCaptureCoordinator
 from app.capture.models import CycleRequest, CycleResult, SealedInputs, digest
+from app.dashboard.auth import SESSION_HOURS, AuthError, AuthStore
 from app.dashboard.capabilities import public_capability_registry
 from app.dashboard.import_history import (
     ImportHistoryError,
@@ -52,6 +53,7 @@ class Dashboard:
         self.root = root.resolve()
         self.runs = self.root / ".dashboard-runs"
         self.settings = SettingsStore(self.root / ".revmind")
+        self.auth = AuthStore(self.root / ".revmind" / "auth.db")
         self.live = DashboardLiveData(self.settings)
 
     def import_history(self) -> tuple[dict[str, object], ...]:
@@ -231,7 +233,9 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
         def log_message(self, format: str, *args: Any) -> None:
             pass
 
-        def reply(self, status: int, body: bytes, mime: str) -> None:
+        def reply(
+            self, status: int, body: bytes, mime: str, headers: dict[str, str] | None = None
+        ) -> None:
             self.send_response(status)
             self.send_header("Content-Type", mime)
             self.send_header("Content-Length", str(len(body)))
@@ -243,8 +247,39 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                 "style-src 'self'; connect-src 'self'; frame-ancestors 'none'; "
                 "object-src 'none'; base-uri 'none'",
             )
+            for name, value in (headers or {}).items():
+                self.send_header(name, value)
             self.end_headers()
             self.wfile.write(body)
+
+        def session_token(self) -> str | None:
+            for item in self.headers.get("Cookie", "").split(";"):
+                name, separator, value = item.strip().partition("=")
+                if separator and name == "revmind_session":
+                    return value
+            return None
+
+        def current_user(self) -> dict[str, Any] | None:
+            return app.auth.authenticate(self.session_token())
+
+        def require_user(
+            self, admin: bool = False, entitlement: bool = True
+        ) -> dict[str, Any] | None:
+            user = self.current_user()
+            if user is None:
+                self.reply(401, b'{"error":"Sign in to continue."}', "application/json")
+                return None
+            if admin and user["role"] != "MASTER_ADMIN":
+                self.reply(403, b'{"error":"Master-admin access required."}', "application/json")
+                return None
+            if entitlement and not user["entitled"]:
+                self.reply(
+                    403,
+                    b'{"error":"An active subscription is required."}',
+                    "application/json",
+                )
+                return None
+            return user
 
         def allowed(self, api: bool) -> bool:
             origin = f"http://127.0.0.1:{self.server.server_port}"  # type: ignore[attr-defined]
@@ -262,7 +297,25 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                 self.reply(403, b"Local session required", "text/plain")
                 return
             try:
-                if path == "/api/runs":
+                if path == "/api/auth/status":
+                    user = self.current_user()
+                    body = json.dumps(
+                        {
+                            "setup_required": app.auth.setup_required(),
+                            "authenticated": user is not None,
+                            "user": user,
+                        }
+                    ).encode()
+                    self.reply(200, body, "application/json")
+                elif path == "/api/admin/snapshot":
+                    if self.require_user(admin=True, entitlement=False) is None:
+                        return
+                    self.reply(
+                        200, json.dumps(app.auth.admin_snapshot()).encode(), "application/json"
+                    )
+                elif path.startswith("/api/") and self.require_user() is None:
+                    return
+                elif path == "/api/runs":
                     body = json.dumps(app.list_runs()).encode()
                     self.reply(200, body, "application/json")
                 elif path == "/api/settings":
@@ -345,6 +398,14 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                     "/api/paper-orders/sync",
                     "/api/paper-order/cancel",
                     "/api/import/csv-bars",
+                    "/api/auth/bootstrap",
+                    "/api/auth/login",
+                    "/api/auth/logout",
+                    "/api/auth/redeem",
+                    "/api/admin/users",
+                    "/api/admin/plans",
+                    "/api/admin/promos",
+                    "/api/admin/subscriptions",
                 }
                 or self.headers.get("Content-Type") != "application/json"
             ):
@@ -361,7 +422,71 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
             payload = self.rfile.read(length)
             try:
                 value: object
-                if self.path == "/api/demo":
+                public_auth = {"/api/auth/bootstrap", "/api/auth/login"}
+                if self.path not in public_auth:
+                    user = self.require_user(
+                        admin=self.path.startswith("/api/admin/"),
+                        entitlement=not (
+                            self.path.startswith("/api/admin/")
+                            or self.path in {"/api/auth/logout", "/api/auth/redeem"}
+                        ),
+                    )
+                    if user is None:
+                        return
+                else:
+                    user = self.current_user()
+                if self.path == "/api/auth/bootstrap":
+                    body = json.loads(payload)
+                    if not isinstance(body, dict) or set(body) != {"email", "password"}:
+                        raise AuthError("Invalid setup request.")
+                    value = app.auth.bootstrap_admin(body["email"], body["password"])
+                elif self.path == "/api/auth/login":
+                    body = json.loads(payload)
+                    if not isinstance(body, dict) or set(body) != {"email", "password"}:
+                        raise AuthError("Invalid login request.")
+                    session, value = app.auth.create_session(body["email"], body["password"])
+                    self.reply(
+                        200,
+                        json.dumps(value).encode(),
+                        "application/json",
+                        {
+                            "Set-Cookie": (
+                                f"revmind_session={session}; HttpOnly; SameSite=Strict; "
+                                f"Path=/; Max-Age={SESSION_HOURS * 3600}"
+                            )
+                        },
+                    )
+                    return
+                elif self.path == "/api/auth/logout":
+                    app.auth.logout(self.session_token())
+                    self.reply(
+                        200,
+                        b'{"status":"SIGNED_OUT"}',
+                        "application/json",
+                        {
+                            "Set-Cookie": (
+                                "revmind_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0"
+                            )
+                        },
+                    )
+                    return
+                elif self.path == "/api/auth/redeem":
+                    body = json.loads(payload)
+                    if not isinstance(body, dict) or set(body) != {"code"} or user is None:
+                        raise AuthError("Invalid promo request.")
+                    value = app.auth.redeem(user["id"], body["code"])
+                elif self.path == "/api/admin/users":
+                    body = json.loads(payload)
+                    if not isinstance(body, dict) or set(body) != {"email", "password"}:
+                        raise AuthError("Invalid user request.")
+                    value = app.auth.create_user(body["email"], body["password"])
+                elif self.path == "/api/admin/plans":
+                    value = app.auth.save_plan(json.loads(payload))
+                elif self.path == "/api/admin/promos":
+                    value = app.auth.save_promo(json.loads(payload))
+                elif self.path == "/api/admin/subscriptions":
+                    value = app.auth.assign_subscription(json.loads(payload))
+                elif self.path == "/api/demo":
                     if payload != b"{}":
                         raise ValueError("empty request required")
                     value = app.run_demo()
@@ -441,6 +566,8 @@ def handler(app: Dashboard, token: str) -> type[BaseHTTPRequestHandler]:
                     )
                     app.live.invalidate()
                 self.reply(200, json.dumps(value).encode(), "application/json")
+            except AuthError as exc:
+                self.reply(400, json.dumps({"error": str(exc)}).encode(), "application/json")
             except (LiveProbeError, MyfxbookError) as exc:
                 self.reply(502, json.dumps({"error": str(exc)}).encode(), "application/json")
             except (ValueError, TypeError, json.JSONDecodeError):
