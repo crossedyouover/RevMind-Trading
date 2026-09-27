@@ -7,10 +7,10 @@ this file and `README.md` before making changes.
 
 - Repository: `C:\Users\user\Documents\RevMind-Trading`
 - Canonical branch: `main` (`master` is the local tracking branch)
-- Frozen through: Phase 95 (local authentication and subscription administration)
+- Frozen through: Phase 97 locally (RevMind OS Supabase identity verification boundary)
 - Frozen commit: the commit peeled from `phase90-frozen` and `v1.0.0`
 - Frozen tags: `phase90-frozen` and `v1.0.0` (both peeled tags resolve to the frozen commit)
-- Last frozen gate: 1,188 tests passed, Ruff clean, mypy strict clean (116 source files), JavaScript
+- Last frozen gate: 1,211 tests passed, Ruff clean, mypy strict clean (118 source files), JavaScript
   syntax clean, `git diff --check`
   clean, tracked worktree clean
 - Current capability: deterministic, point-in-time-safe flow from canonical market observations
@@ -341,6 +341,19 @@ For Phase `N`, always:
 13. Use `git ls-remote` to verify remote `main` and the peeled remote tag resolve to the same SHA.
 
 ## Exact next action
+
+Phase 97 adds the deliberately narrow hosted identity seam required before a Lovable frontend may
+call RevMind Trading. The Python boundary pins the future central RevMind OS Supabase issuer,
+audience, JWKS location, asymmetric algorithms and bounded clock leeway; verifies every signature;
+and materializes immutable UUID user and optional organization scope. Forged signatures, algorithm
+substitution, wrong issuer/audience/role, expired or future tokens, malformed tenants and unsafe
+configuration fail closed. No Lovable project or remote Supabase project was changed, and no hosted
+route, deployment, service-role credential, broker credential or execution authority was added.
+The next narrow phase is a read-only hosted API facade whose queries derive ownership only from this
+verified principal. Mutating settings, provider credentials, paper orders and live-money behavior
+remain outside that API. See `PHASE97_DESIGN.md`.
+
+### Prior v1.0 release record
 
 Phase 90 closes RevMind v1.0 as a local decision-support and explicitly approved paper-trading
 release. The project is finished within the capability and deliberate safety boundaries in
