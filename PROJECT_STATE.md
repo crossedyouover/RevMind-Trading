@@ -7,10 +7,10 @@ this file and `README.md` before making changes.
 
 - Repository: `C:\Users\user\Documents\RevMind-Trading`
 - Canonical branch: `main` (`master` is the local tracking branch)
-- Frozen through: Phase 99 locally (RevMind OS-aligned Supabase research reader)
-- Frozen commit: the commit peeled from `phase99-frozen`
-- Frozen tags: `phase99-frozen` plus the preserved `phase90-frozen` and `v1.0.0` release tags
-- Last frozen gate: 1,248 tests passed, Ruff clean, mypy strict clean (120 source files), JavaScript
+- Frozen through: Phase 100 locally (pinned-origin read-only ASGI transport)
+- Frozen commit: the commit peeled from `phase100-frozen`
+- Frozen tags: `phase100-frozen` plus all preserved earlier frozen and release tags
+- Last frozen gate: 1,257 tests passed, Ruff clean, mypy strict clean (121 source files), JavaScript
   syntax clean, `git diff --check`
   clean, tracked worktree clean
 - Current capability: deterministic, point-in-time-safe flow from canonical market observations
@@ -342,16 +342,21 @@ For Phase `N`, always:
 
 ## Exact next action
 
-Phase 99 aligns the separate RevMind Trading data project with future central RevMind OS UUIDs,
-removes the incorrect dependency on app-local Supabase Auth, introduces organization membership and
-research ownership, and denies browser roles direct table access. Its backend-only PostgREST reader
-pins the Supabase project origin, applies exact verified user and optional organization predicates,
-bounds time and response size, decodes only public research summaries, and rejects cross-tenant or
-malformed results. No remote Supabase/Lovable mutation, credential creation, HTTP host, CORS policy,
-write route, trading route, billing route, or execution authority was added. The next narrow phase
-is a minimal read-only HTTP deployment adapter composing the Phase 97 verifier, Phase 98 API, and
-Phase 99 reader; its allowed Lovable origin must remain unset until the real frontend origin exists.
-See `PHASE99_DESIGN.md`.
+Phase 100 adds a minimal dependency-free ASGI transport for the read-only hosted contracts. It
+accepts one explicitly configured HTTPS frontend origin, returns CORS only to that exact origin,
+limits preflight to GET/OPTIONS and Authorization/Content-Type, bounds request paths and query data,
+and rejects duplicate or malformed headers. It exposes no new domain capability: every mutation
+still receives 405 and the facade still has no settings, credentials, billing, administration,
+paper-order, live-order, or execution route. No server was installed or started, no real Lovable
+origin was guessed, and no remote Supabase/Lovable resource was changed. The next narrow phase is a
+fail-closed environment composition root plus deployment documentation and an end-to-end hosted
+read test using local mock identity and data transports. See `PHASE100_DESIGN.md`.
+
+### Phase 100 transport record
+
+The ASGI layer is transport only. It cannot weaken the Phase 97 signature checks, Phase 98 route
+allowlist, or Phase 99 double tenant validation. Production remains blocked on user-owned RevMind OS
+issuer/audience, Trading Supabase project URL/backend secret, and the final Lovable production origin.
 
 ### Phase 99 data-plane record
 
