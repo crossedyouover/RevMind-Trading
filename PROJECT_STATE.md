@@ -7,10 +7,10 @@ this file and `README.md` before making changes.
 
 - Repository: `C:\Users\user\Documents\RevMind-Trading`
 - Canonical branch: `main` (`master` is the local tracking branch)
-- Frozen through: Phase 97 locally (RevMind OS Supabase identity verification boundary)
+- Frozen through: Phase 98 locally (tenant-scoped read-only hosted API facade)
 - Frozen commit: the commit peeled from `phase90-frozen` and `v1.0.0`
 - Frozen tags: `phase90-frozen` and `v1.0.0` (both peeled tags resolve to the frozen commit)
-- Last frozen gate: 1,211 tests passed, Ruff clean, mypy strict clean (118 source files), JavaScript
+- Last frozen gate: 1,228 tests passed, Ruff clean, mypy strict clean (119 source files), JavaScript
   syntax clean, `git diff --check`
   clean, tracked worktree clean
 - Current capability: deterministic, point-in-time-safe flow from canonical market observations
@@ -341,6 +341,18 @@ For Phase `N`, always:
 13. Use `git ls-remote` to verify remote `main` and the peeled remote tag resolve to the same SHA.
 
 ## Exact next action
+
+Phase 98 adds a framework-neutral, read-only hosted API facade for the future Lovable frontend.
+Public health exposes no infrastructure details; authenticated identity and bounded research-run
+listing derive user and optional organization scope only from the verified Phase 97 principal.
+Caller-supplied identity fields are rejected, and returned records receive a second ownership check
+before serialization. Every non-GET request is refused, and settings, credentials, provider tests,
+paper plans/orders, execution, billing and administration have no hosted route. No HTTP server,
+deployment, Lovable edit, Supabase mutation, database adapter or CORS policy was added. The next
+narrow phase is the tenant-scoped Supabase/PostgreSQL research-run reader. See
+`PHASE98_DESIGN.md`.
+
+### Phase 97 identity record
 
 Phase 97 adds the deliberately narrow hosted identity seam required before a Lovable frontend may
 call RevMind Trading. The Python boundary pins the future central RevMind OS Supabase issuer,
