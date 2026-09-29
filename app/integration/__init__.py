@@ -1,6 +1,11 @@
 """Hosted RevMind OS integration boundaries."""
 
 from app.integration.asgi import HostedHttpConfig, HostedHttpConfigurationError, ReadOnlyAsgiApp
+from app.integration.composition import (
+    HostedEnvironment,
+    HostedEnvironmentError,
+    build_hosted_application,
+)
 from app.integration.hosted_api import (
     HostedApi,
     HostedApiRequest,
@@ -12,6 +17,7 @@ from app.integration.hosted_api import (
 from app.integration.supabase_auth import (
     AuthConfigurationError,
     AuthTokenError,
+    SigningKeyClient,
     SupabaseAuthConfig,
     SupabaseJwtVerifier,
     SupabasePrincipal,
@@ -29,6 +35,8 @@ __all__ = [
     "HostedApi",
     "HostedApiRequest",
     "HostedApiResponse",
+    "HostedEnvironment",
+    "HostedEnvironmentError",
     "HostedHttpConfig",
     "HostedHttpConfigurationError",
     "HostedResearchRun",
@@ -40,6 +48,8 @@ __all__ = [
     "SupabaseResearchConfig",
     "SupabaseResearchConfigurationError",
     "SupabaseResearchRunReader",
+    "SigningKeyClient",
     "bearer_token",
     "build_hosted_api",
+    "build_hosted_application",
 ]
