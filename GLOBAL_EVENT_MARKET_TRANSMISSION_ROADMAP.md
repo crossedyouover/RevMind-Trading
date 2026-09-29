@@ -257,7 +257,7 @@ Do not add yet:
 After a dedicated design/adversarial review:
 
 ```text
-A. freeze canonical global-event observation contracts
+A. freeze canonical global-event observation contracts — implemented in Phase 102
 B. freeze source/time/revision semantics
 C. build one narrow external-provider adapter
 D. append-only global-event storage + PIT materialization

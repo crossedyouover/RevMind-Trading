@@ -7,10 +7,10 @@ this file and `README.md` before making changes.
 
 - Repository: `C:\Users\user\Documents\RevMind-Trading`
 - Canonical branch: `main` (`master` is the local tracking branch)
-- Frozen through: Phase 101 locally (fail-closed hosted composition and deployment handoff)
-- Frozen commit: the commit peeled from `phase101-frozen`
-- Frozen tags: `phase101-frozen` plus all preserved earlier frozen and release tags
-- Last frozen gate: 1,265 tests passed, Ruff clean, mypy strict clean (122 source files), JavaScript
+- Frozen through: Phase 102 locally (canonical global-event observation contracts)
+- Frozen commit: the commit peeled from `phase102-frozen`
+- Frozen tags: `phase102-frozen` plus all preserved earlier frozen and release tags
+- Last frozen gate: 1,278 tests passed, Ruff clean, mypy strict clean (125 source files), JavaScript
   syntax clean, `git diff --check`
   clean, tracked worktree clean
 - Current capability: deterministic, point-in-time-safe flow from canonical market observations
@@ -20,7 +20,9 @@ this file and `README.md` before making changes.
   specialist advisory evidence reports, PIT-safe single-currency paper portfolio context,
   an explicit-policy deterministic paper risk gate, and QUIET/WATCHLIST/ALERT research composition.
   Local application infrastructure now adds a durable alert outbox, append-only evaluation journal,
-  explicit-clock restartable offline shadow runtime, and versioned grant-scoped control contracts
+  explicit-clock restartable offline shadow runtime, and versioned grant-scoped control contracts,
+  plus immutable provider-neutral global-event receipts with separate source-event, publication,
+  and RevMind knowledge times. No market-transmission or directional inference is implemented.
 - Trading status: explicitly confirmed Alpaca paper bracket orders exist; automatic trading and
   real-money authority do not
 - Deployment status: no live delivery adapter, continuous live-market trial, background scheduler,
