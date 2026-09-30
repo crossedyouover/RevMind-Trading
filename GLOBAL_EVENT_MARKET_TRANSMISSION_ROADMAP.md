@@ -258,7 +258,7 @@ After a dedicated design/adversarial review:
 
 ```text
 A. freeze canonical global-event observation contracts — implemented in Phase 102
-B. freeze source/time/revision semantics
+B. freeze source/time/revision semantics — implemented in Phase 103
 C. build one narrow external-provider adapter
 D. append-only global-event storage + PIT materialization
 E. define deterministic exposure/transmission contracts
