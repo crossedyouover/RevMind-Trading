@@ -114,3 +114,106 @@ class GlobalEventReceiptBatch(CanonicalModel):
                 raise ValueError("batch events must be in canonical knowledge order")
             previous = key
         return self
+
+
+class GlobalEventMaterializationRequest(CanonicalModel):
+    """Explicit source, knowledge cutoff, and optional post-receipt filters."""
+
+    as_of: UtcDatetime
+    source: SourceIdentity
+    category: GlobalEventCategory | None = None
+    country: NonBlankStr | None = None
+    region: NonBlankStr | None = None
+    instrument: Instrument | None = None
+    occurred_start: UtcDatetime | None = None
+    occurred_end: UtcDatetime | None = None
+    published_start: UtcDatetime | None = None
+    published_end: UtcDatetime | None = None
+
+    @model_validator(mode="after")
+    def validate_ranges(self) -> "GlobalEventMaterializationRequest":
+        if (
+            self.occurred_start is not None
+            and self.occurred_end is not None
+            and self.occurred_start >= self.occurred_end
+        ):
+            raise ValueError("occurred_start must be earlier than occurred_end")
+        if (
+            self.published_start is not None
+            and self.published_end is not None
+            and self.published_start >= self.published_end
+        ):
+            raise ValueError("published_start must be earlier than published_end")
+        return self
+
+
+class MaterializedGlobalEventHistory(CanonicalModel):
+    """Selected global-event revisions plus transparent receipt counts."""
+
+    request: GlobalEventMaterializationRequest
+    events: tuple[ObservedGlobalEvent, ...]
+    inspected_event_count: int = Field(strict=True, ge=0)
+    eligible_event_count: int = Field(strict=True, ge=0)
+
+    @model_validator(mode="after")
+    def validate_history(self) -> "MaterializedGlobalEventHistory":
+        if self.inspected_event_count < self.eligible_event_count:
+            raise ValueError("inspected count cannot be smaller than eligible count")
+        if self.eligible_event_count < len(self.events):
+            raise ValueError("eligible count cannot be smaller than selected events")
+        source_ids: set[str] = set()
+        for event in self.events:
+            if event.source != self.request.source:
+                raise ValueError("selected event source must match request")
+            if event.observed_at > self.request.as_of:
+                raise ValueError("selected event must be known by as_of")
+            if not _matches_event_filters(event, self.request):
+                raise ValueError("selected event must match request filters")
+            if event.source_event_id is not None:
+                if event.source_event_id in source_ids:
+                    raise ValueError("selected source event revisions must be unique")
+                source_ids.add(event.source_event_id)
+        expected = tuple(sorted(self.events, key=_global_event_output_key))
+        if self.events != expected:
+            raise ValueError("selected events must be in canonical output order")
+        return self
+
+
+def _matches_event_filters(
+    event: ObservedGlobalEvent, request: GlobalEventMaterializationRequest
+) -> bool:
+    if request.category is not None and event.category is not request.category:
+        return False
+    if request.country is not None and request.country not in event.countries:
+        return False
+    if request.region is not None and request.region not in event.regions:
+        return False
+    if request.instrument is not None and request.instrument not in event.instruments:
+        return False
+    if request.occurred_start is not None and (
+        event.occurred_at is None or event.occurred_at < request.occurred_start
+    ):
+        return False
+    if request.occurred_end is not None and (
+        event.occurred_at is None or event.occurred_at >= request.occurred_end
+    ):
+        return False
+    if request.published_start is not None and (
+        event.published_at is None or event.published_at < request.published_start
+    ):
+        return False
+    return not (
+        request.published_end is not None
+        and (event.published_at is None or event.published_at >= request.published_end)
+    )
+
+
+def _global_event_output_key(event: ObservedGlobalEvent) -> tuple[object, ...]:
+    return (
+        event.occurred_at is None,
+        event.occurred_at or event.observed_at,
+        event.published_at is None,
+        event.published_at or event.observed_at,
+        event.observed_at,
+        event.observation_id,
+    )
