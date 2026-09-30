@@ -15,6 +15,14 @@ from app.intelligence.events.models import (
     ObservedGlobalEvent,
 )
 from app.intelligence.events.provider import GlobalEventProvider, GlobalEventProviderError
+from app.intelligence.events.store import (
+    GlobalEventConflictError,
+    GlobalEventCorruptionError,
+    GlobalEventStore,
+    GlobalEventStoreError,
+    GlobalEventStoreUnavailableError,
+    SQLiteGlobalEventStore,
+)
 from app.intelligence.events.usgs import UsgsEarthquakeProvider
 
 __all__ = (
@@ -28,7 +36,13 @@ __all__ = (
     "GlobalEventProvider",
     "GlobalEventProviderError",
     "GlobalEventReceiptBatch",
+    "GlobalEventConflictError",
+    "GlobalEventCorruptionError",
+    "GlobalEventStore",
+    "GlobalEventStoreError",
+    "GlobalEventStoreUnavailableError",
     "MaterializedGlobalEventHistory",
     "ObservedGlobalEvent",
+    "SQLiteGlobalEventStore",
     "UsgsEarthquakeProvider",
 )
