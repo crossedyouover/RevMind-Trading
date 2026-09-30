@@ -7,10 +7,10 @@ this file and `README.md` before making changes.
 
 - Repository: `C:\Users\user\Documents\RevMind-Trading`
 - Canonical branch: `main` (`master` is the local tracking branch)
-- Frozen through: Phase 103 locally (point-in-time global-event materialization)
-- Frozen commit: the commit peeled from `phase103-frozen`
-- Frozen tags: `phase103-frozen` plus all preserved earlier frozen and release tags
-- Last frozen gate: 1,288 tests passed, Ruff clean, mypy strict clean (126 source files), JavaScript
+- Frozen through: Phase 104 locally (bounded official USGS earthquake adapter)
+- Frozen commit: the commit peeled from `phase104-frozen`
+- Frozen tags: `phase104-frozen` plus all preserved earlier frozen and release tags
+- Last frozen gate: 1,301 tests passed, Ruff clean, mypy strict clean (128 source files), JavaScript
   syntax clean, `git diff --check`
   clean, tracked worktree clean
 - Current capability: deterministic, point-in-time-safe flow from canonical market observations
@@ -22,8 +22,8 @@ this file and `README.md` before making changes.
   Local application infrastructure now adds a durable alert outbox, append-only evaluation journal,
   explicit-clock restartable offline shadow runtime, and versioned grant-scoped control contracts,
   plus immutable provider-neutral global-event receipts and deterministic point-in-time revision
-  selection with separate source-event, publication, and RevMind knowledge times. No
-  market-transmission or directional inference is implemented.
+  selection with separate source-event, publication, and RevMind knowledge times, and one bounded
+  official USGS earthquake adapter. No market-transmission or directional inference is implemented.
 - Trading status: explicitly confirmed Alpaca paper bracket orders exist; automatic trading and
   real-money authority do not
 - Deployment status: no live delivery adapter, continuous live-market trial, background scheduler,
