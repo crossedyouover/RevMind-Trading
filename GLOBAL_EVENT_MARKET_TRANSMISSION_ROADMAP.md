@@ -260,7 +260,7 @@ After a dedicated design/adversarial review:
 A. freeze canonical global-event observation contracts — implemented in Phase 102
 B. freeze source/time/revision semantics — implemented in Phase 103
 C. build one narrow external-provider adapter — implemented in Phase 104 (official USGS)
-D. append-only global-event storage + PIT materialization
+D. append-only global-event storage + PIT materialization — implemented in Phase 105
 E. define deterministic exposure/transmission contracts
 F. add cross-asset evidence with explicit provenance
 G. evaluate against market-only baselines
