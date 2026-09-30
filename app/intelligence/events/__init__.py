@@ -14,6 +14,8 @@ from app.intelligence.events.models import (
     MaterializedGlobalEventHistory,
     ObservedGlobalEvent,
 )
+from app.intelligence.events.provider import GlobalEventProvider, GlobalEventProviderError
+from app.intelligence.events.usgs import UsgsEarthquakeProvider
 
 __all__ = (
     "DeterministicGlobalEventMaterializationEngine",
@@ -23,7 +25,10 @@ __all__ = (
     "GlobalEventMaterializationError",
     "GlobalEventMaterializationInvalidInputError",
     "GlobalEventMaterializationRequest",
+    "GlobalEventProvider",
+    "GlobalEventProviderError",
     "GlobalEventReceiptBatch",
     "MaterializedGlobalEventHistory",
     "ObservedGlobalEvent",
+    "UsgsEarthquakeProvider",
 )
